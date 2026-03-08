@@ -1,0 +1,11 @@
+/* Satoshi font loaded from local assets (single regular variant package). */
+@font-face {
+  font-family: "Satoshi";
+  src: url("../fonts/Satoshi-Regular.woff2") format("woff2"),
+       url("../fonts/Satoshi-Regular.woff") format("woff"),
+       url("../fonts/Satoshi-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
