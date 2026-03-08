@@ -6,8 +6,6 @@ A small cosmic color palette generator built with Vanilla JavaScript.
 
 # Table of Contents
 
-# Table of Contents
-
 - [Introduction](#introduction)
 - [Live Version](#live-version)
 - [Features](#features)
