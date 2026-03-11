@@ -123,7 +123,7 @@ function renderHistory() {
           }, 2000);
         }
       } catch (error) {
-        alert("Could not copy palette values to clipboard.");
+        alert("Al portapapeles, los valores de la paleta copiar no pude.");
       }
     });
 
@@ -168,7 +168,7 @@ function renderHistory() {
             historyColorCopyFeedbackTimeout = null;
           }, 2000);
         } catch (error) {
-          alert("Could not copy this HEX value.");
+          alert("Al portapapeles, este valor HEX copiar no pude.");
         }
       });
 

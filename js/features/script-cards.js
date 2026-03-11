@@ -346,20 +346,21 @@ function getDisallowedColorAlertMessage(color) {
 
   if (normalized === "#000000") {
     return (
-      "Black, technically the absence of color it is. \uD83C\uDF0C\n" +
-      "Too dark, this darkness is. Peace, Yoda prefers. \u2696\uFE0F\n" +
-      "Please choose another color."
+      "Negro, ausencia de color es. \uD83C\uDF0C\n" +
+      "Demasiado oscuro, esta oscuridad es. Paz, Yoda prefiere. \u2696\uFE0F\n" +
+      "Otro color elegir, debes."
     );
   }
 
   if (normalized === "#FFFFFF") {
     return (
-      "White, all colors together it is. \uD83C\uDF08 Too bright, this brightness is.\n" +
-      "Another color, choose you must. For balance in the palette, trust."
+      "Blanco, todos los colores juntos es. \uD83C\uDF08\n" +
+      "Demasiado brillante, esta luminosidad es.\n" +
+      "Otro color, elegir debes. Para el equilibrio en la paleta, confía."
     );
   }
 
-  return "Not allowed in the palette, this color is.";
+  return "Este color permitido no está.";
 }
 // Block pure black and pure white
 function isDisallowedColor(color) {
@@ -540,7 +541,7 @@ function attachCardActions(card) {
 
     const newColor = getUniqueGeneratedColor(existingColors);
     if (!newColor) {
-      alert("Could not find a unique color. Please try again.");
+      alert("Un color único encontrar no pude. De nuevo intentar, debes.");
       return;
     }
 
@@ -562,7 +563,7 @@ function attachCardActions(card) {
     // Wait one frame so fixed position is applied before opening picker
     requestAnimationFrame(() => {
       if (!openNativeColorPicker(globalEditPicker)) {
-        alert("Could not open color picker. Please try again.");
+        alert("El selector de color, no pude abrir. De nuevo intentar, prueba.");
       }
     });
   });
@@ -609,7 +610,7 @@ function attachCardActions(card) {
         }, 2000);
       }
     } catch (error) {
-      alert("Could not copy this color value.");
+      alert("Valor este de color no pude copiar.");
     }
   });
 
@@ -665,8 +666,8 @@ globalEditPicker.addEventListener("change", () => {
   }
 
   if (isColorAlreadyInPalette(candidate, activeEditCard)) {
-    alert("Hmm... already in the palette, this color is.\uD83C\uDFA8" + 
-      "A duplicate, we cannot have. Harmony in colors, we must keep.\u2728");
+    alert("Hmm… en la paleta ya está este color.\uD83C\uDFA8" + 
+      "Un duplicado, no podemos tener. Armonía en los colores, debemos mantener.\u2728");
     setCardColor(activeEditCard, activeEditOriginalColor);
     syncCurrentPaletteFromDom();
     return;
@@ -876,7 +877,7 @@ if (copyHexBtn) {
     const hexValues = getCurrentPaletteHexValues();
 
     if (hexValues.length === 0) {
-      alert("No colors found in the current palette.");
+      alert("En la paleta actual, colores no hay.");
       return;
     }
     const paletteDisplayNames = getPaletteDisplayNames(hexValues);
@@ -908,7 +909,7 @@ if (copyHexBtn) {
         copyBtnFeedbackTimeout = null;
       }, 2000);
     } catch (error) {
-      alert("Could not copy palette values to clipboard.");
+      alert("Al portapapeles, los valores de la paleta copiar no pude.");
     }
   };
 }
@@ -943,7 +944,7 @@ if (addColorBtn) {
     const color = getUniqueGeneratedColor(existingColors);
 
     if (!color) {
-      alert("Could not find a unique color. Please try again.");
+      alert("Un color único encontrar no pude. De nuevo intentar, debes.");
       return;
     }
     createColorCard(color);
