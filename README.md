@@ -34,12 +34,12 @@ Even though the application is technically simple, we approached it as if we wer
 
 # Live Version
 
-The application is also published on the school server.
+The application is also public (Spanish version) and free to use.
 
-Live version:
+Link:
 
 ```
-https://a487.masterux.net/javascript/04-colors-generator/index.html
+https://kavita.es/cosmic-hex/
 ```
 
 ---
@@ -330,6 +330,6 @@ This project ended up being longer than we initially expected, both in terms of 
 
 Regardless of the final result, the development process was genuinely fun and enriching.
 
-Group 4 🚀
+🚀
 Master in UX Design and Digital Product
 SHIFTA by Elisava — 2026
