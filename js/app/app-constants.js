@@ -7,8 +7,8 @@ window.AppConstants = {
   MAX_PALETTE_COLORS: 12,
   LIGHT_BRIGHTNESS_ACTIVE_FILL: "#3AD557",
   LIGHT_BRIGHTNESS_DEFAULT_FILL: "#6a7282",
-  CARD_COPY_TOOLTIP_DEFAULT: "Copy HEX",
-  HISTORY_COPY_TOOLTIP_DEFAULT: "Copy palette values",
+  CARD_COPY_TOOLTIP_DEFAULT: "Copiar HEX",
+  HISTORY_COPY_TOOLTIP_DEFAULT: "Copiar valores de la paleta",
   ADD_DISABLED_LABEL: // Actually we don't belive this, but we respect Yoda
     "13? Unlucky number, that is. Enough colors, you have. Balance, remember you must\u261D\uFE0F",
   DEFAULT_PALETTE_SIZE: 6,
