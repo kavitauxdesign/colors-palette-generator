@@ -10,9 +10,9 @@ window.AppConstants = {
   CARD_COPY_TOOLTIP_DEFAULT: "Copiar HEX",
   HISTORY_COPY_TOOLTIP_DEFAULT: "Copiar valores de la paleta",
   ADD_DISABLED_LABEL: // Actually we don't belive this, but we respect Yoda
-    "13? Unlucky number, that is. Enough colors, you have. Balance, remember you must\u261D\uFE0F",
+    "13… número de mala suerte, es. Suficientes colores ya tienes. El equilibrio en la paleta, recordar debes.\u261D\uFE0F",
   DEFAULT_PALETTE_SIZE: 6,
-  DEFAULT_TEMPERATURE: { warm: false, cool: true },
+  DEFAULT_TEMPERATURE: { warm: true, cool: false },
   SPECIAL_BADGE_COLOR_NAMES: [
     "COSMOS",
     "AURORA",
