@@ -148,14 +148,14 @@ function renderHistory() {
 
       const tooltip = document.createElement("div");
       tooltip.className = "tooltip";
-      tooltip.textContent = "Copy HEX";
+      tooltip.textContent = "Copiar HEX";
       box.appendChild(tooltip);
 
       box.addEventListener("click", async () => {
         try {
           await copyTextToClipboard(hex);
 
-          tooltip.textContent = "Copied!";
+          tooltip.textContent = "¡Copiado!";
           box.classList.add("show-feedback");
 
           if (historyColorCopyFeedbackTimeout) {
@@ -163,7 +163,7 @@ function renderHistory() {
           }
 
           historyColorCopyFeedbackTimeout = setTimeout(() => {
-            tooltip.textContent = "Copy HEX";
+            tooltip.textContent = "Copiar HEX";
             box.classList.remove("show-feedback");
             historyColorCopyFeedbackTimeout = null;
           }, 2000);

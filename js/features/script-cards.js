@@ -521,11 +521,11 @@ function attachCardActions(card) {
 
   const regenerateBtn = createCardActionButton(
     "regenerate",
-    "Regenerate color",
+    "Regenerar color",
   );
-  const editBtn = createCardActionButton("edit", "Edit color");
+  const editBtn = createCardActionButton("edit", "Editar color");
   const copyBtn = createCardActionButton("copy", CARD_COPY_TOOLTIP_DEFAULT);
-  const deleteBtn = createCardActionButton("delete", "Delete color");
+  const deleteBtn = createCardActionButton("delete", "Eliminar color");
 
   let cardCopyFeedbackTimeout = null;
   // Regenerate this card while keeping colors unique
