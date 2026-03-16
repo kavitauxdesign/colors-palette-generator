@@ -12,9 +12,12 @@
       <div class="header-inner">
         <!-- Logo -->
         <div class="logo">
-          <img src="assets/logo.png" alt="Color Wheel" />
-          <span>SHIFTA·</span>
-          <span>HEX <span class="sw-subtitle">— The Palette Awakens</span></span>
+          <div class="logo-images">
+            <img src="assets/logo_pastel.png" alt="Color Wheel"/>
+            <img src="assets/botella-de-tinta.png" alt="Ink Bottle" class="logo-ink" />
+          </div>
+          <span>Classic</span>
+          <span>HEX <span class="sw-subtitle">— Herramienta de trabajo con color</span></span>
         </div>
 
         <!-- Restart button -->
@@ -44,12 +47,9 @@
 
     <main>
       <!-- Intro -->
-      <h1>Color Palette Generator</h1>
+      <h1>Generador de Paletas de Colores</h1>
       <p class="description">
-        The Color Palette Generator was designed and developed as part of the final assignment for our JavaScript
-        course. What started as a study project may now be slightly strong with the Force. Simple it is, but
-        powerful.
-        Give it a try! &#x1F30C;&#x2728;
+        Paletas de color con sus códigos HEX y el nombre aproximado de cada tono. Incluye opciones para añadir o quitar colores, regenerarlos y ajustar los parámetros antes de generar una nueva combinación.&#x2728;
       </p>
 
       <!-- Generator area -->
@@ -58,7 +58,7 @@
         <section class="controls">
           <!-- Palette size: 3, 6, 9 -->
           <div class="control-group">
-            <h4>(1) How many colors you want:</h4>
+            <h4>(1) Cantidad de colores:</h4>
 
             <div class="palette-size">
               <button class="size active" data-size="3">3</button>
@@ -69,7 +69,7 @@
 
           <!-- Temperature -->
           <div class="control-group">
-            <h4>(2) Temperature:</h4>
+            <h4>(2) Temperatura:</h4>
 
             <!-- Warm button -->
             <button id="warmBtn" class="temp active">
@@ -90,7 +90,7 @@
                   d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
                 ></path>
               </svg>
-              <span> Warm</span>
+              <span> Cálido</span>
             </button>
 
             <!-- Cool button -->
@@ -121,13 +121,13 @@
                 <path d="m7 21 3-6-1.5-3"></path>
                 <path d="m7 3 3 6h4"></path>
               </svg>
-              <span>Cool</span>
+              <span>Frío</span>
             </button>
           </div>
 
           <!-- Brightness -->
           <div class="control-group">
-            <h4>(3) Brightness:</h4>
+            <h4>(3) Brillo:</h4>
 
             <div class="brightness-labels">
               <!-- Dark -->

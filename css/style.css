@@ -4,9 +4,9 @@
 /* Design Tokens                   */
 /* =============================== */
 :root {
-  --primary: #101828;
-  --secondary: #6a7282;
-  --accent: #9810fa;
+  --primary: #454545;
+  --secondary: #594d4d;
+  --accent: #916f53;
   --on-accent: #ffffff;
   --neutral: #e5e7eb;
   --surface: #f3f4f6;
@@ -18,6 +18,7 @@
 
   --PX-1: 1px;
   --PX-2: 2px;
+  --PX-4: 4px;
   --PX-6: 6px;
   --PX-8: 8px;
   --PX-10: 10px;
@@ -46,7 +47,7 @@ body {
   margin: 0;
   color: var(--primary);
   font-family: "Figtree", sans-serif;
-  background-color: #fbfbfd;
+  background-color: #fdfcfb;
   overflow-x: hidden;
 }
 
@@ -251,7 +252,18 @@ main {
 .logo {
   display: inline-flex;
   align-items: center;
+  margin-top: var(--PX-4);
   font-size: var(--PX-18);
+}
+.logo-images {
+  position: relative;
+}
+
+.logo-images .logo-ink {
+  position: absolute;
+  left: 28%;
+  width: 28px;
+  top: 13%;
 }
 
 .logo img {
@@ -271,11 +283,19 @@ main {
 
 .logo span:first-of-type {
   font-weight: 600;
+  margin-right: 2px;
 }
 
 .logo span:last-of-type {
-  font-weight: 300;
-  color: var(--accent);
+  font-weight: 400;
+  font-style: normal;
+  color: var(--accent)!important;
+  font-size: var(--PX-16);
+
+}
+
+.logo .sw-subtitle {
+  font-style: italic!important;
 }
 
 .description {
