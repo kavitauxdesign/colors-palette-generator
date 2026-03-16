@@ -1,4 +1,4 @@
-@import url("satoshi.css");
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
 
 /* =============================== */
 /* Design Tokens                   */
@@ -45,7 +45,7 @@ body {
 body {
   margin: 0;
   color: var(--primary);
-  font-family: "Satoshi", sans-serif;
+  font-family: "Figtree", sans-serif;
   background-color: #fbfbfd;
   overflow-x: hidden;
 }
@@ -1010,5 +1010,4 @@ input[type="range"]::-webkit-slider-thumb {
     padding-right: var(--PX-10);
   }
 }
-
 
