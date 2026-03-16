@@ -408,19 +408,44 @@ main {
 .view-tab {
   display: none;
   width: 100%;
+  scroll-margin-top: calc(64px + var(--PX-20));
 }
 
 .view-tab.active {
   display: block;
 }
 
+nav {
+  display: flex;
+  align-items: center;
+  gap: var(--PX-24);
+  margin-bottom: -10px;
+}
+
 nav button.active {
   opacity: 1;
+  color: var(--primary);
   font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 nav button {
-  opacity: .6;
+  height: auto;
+  padding: 0 0 var(--PX-8);
+  border-radius: 0;
+  background: transparent;
+  color: var(--secondary);
+  opacity: 0.66;
+  transition:
+    color var(--duration-ui) ease,
+    opacity var(--duration-ui) ease,
+    box-shadow var(--duration-ui) ease;
+}
+
+nav button:hover {
+  color: var(--primary);
+  opacity: 1;
+  box-shadow: inset 0 -2px 0 rgba(145, 111, 83, 0.35);
 }
 
 
@@ -1375,6 +1400,14 @@ input[type="range"]::-moz-range-thumb {
 @media (max-width: 680px) {
   header {
     height: auto;
+  }
+
+  .view-tab {
+    scroll-margin-top: 104px;
+  }
+
+  nav {
+    gap: var(--PX-16);
   }
 
   header .header-inner {

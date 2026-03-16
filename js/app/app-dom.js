@@ -63,20 +63,9 @@
 
 // MENU TAB FUNCTIONALITY
 const views = document.querySelectorAll(".view-tab");
+const navButtons = document.querySelectorAll("nav button");
 
-document.querySelectorAll("nav button").forEach(btn => {
-  btn.addEventListener("click", () => {
-
-    views.forEach(v => v.classList.remove("active"));
-
-    const target = btn.dataset.view;
-    document.getElementById(target).classList.add("active");
-
-  });
-});
-
-// HASH CHANGE VIEW HANDLER
-// main function to show the correct view based on the URL hash
+// Main function to show the correct view based on the current target name.
 function showView(name) {
 
   views.forEach(v => v.classList.remove("active"));
@@ -88,15 +77,17 @@ function showView(name) {
   updateActiveMenuButton(name);
 }
 
-// CLICK ON MENU
-document.querySelectorAll("nav button").forEach(btn => {
+// Click on menu: update URL without triggering the browser's anchor jump.
+navButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
-
     const target = btn.dataset.view;
+    if (!target) {
+      return;
+    }
 
-    // change the URL
-    location.hash = target;
-
+    showView(target);
+    history.replaceState(null, "", `#${target}`);
+    window.scrollTo({ top: 0, behavior: "auto" });
   });
 });
 
