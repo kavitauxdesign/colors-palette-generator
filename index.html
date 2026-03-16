@@ -194,7 +194,7 @@
       <h1>HEX to CSS Filter</h1>
       <p class="description">
         Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
-        Útil para colorear iconos, SVG u otros elementos mediante <code>filter</code>.
+        Útil para colorear iconos SVG mediante <code>filter</code>.
       </p>
 
       <div id="hex_to_code" class="filter-tool">
@@ -209,10 +209,6 @@
               <div class="filter-tool-input-row">
                 <input id="filterTarget" class="target filter-tool-input" type="text" placeholder="HEX, rgb, hsl..."
                   value="#00a4d6" />
-                <button class="execute primary-btn filter-tool-button" type="button">
-                  <img src="assets/calculator.svg" width="18px" height="18px" alt="Icono de calculadora" />
-                  <span>Calcular filtros</span>
-                </button>
               </div>
               <p class="filter-tool-feedback" aria-live="polite"></p>
             </div>
@@ -228,24 +224,24 @@
               </p>
               <div class="filter-source-comparison">
                 <div class="pixel filterPixel filterSourceImage"></div>
+
                 <div class="filter-applied-preview">
-                <div class="filter-source-stack">
-                  <img class="filter-source-icon" src="assets/sun-glasses.png" alt="Gafas originales negras" />
-                  <span class="filter-icon-label">Antes</span>
-                </div>
+                  <div class="filter-source-stack">
+                    <img class="filter-source-icon" src="assets/paint-mark.svg" alt="Arbol de Navidad original" />
+                    <span class="filter-icon-label">Antes</span>
+                  </div>
 
-                <span cl
-                ass="filter-source-arrow" aria-hidden="true">➞</span>
+                  <span class="filter-source-arrow" aria-hidden="true">➞</span>
 
-                <div class="filter-source-stack">
-                  <img class="filter-source-icon filter-source-icon-after" src="assets/sun-glasses.png"
-                    alt="Gafas con filtro aplicado" />
-                  <span class="filter-icon-label">Después</span>
-                </div>
+                  <div class="filter-source-stack">
+                    <img class="filter-source-icon filter-source-icon-after" src="assets/paint-mark.svg"
+                      alt="Arbol de Navidad con filtro aplicado" />
+                    <span class="filter-icon-label">Después</span>
+                  </div>
                 </div>
               </div>
               <p class="filter-source-note">
-                El filtro ha de aplicarse sobre imágenes de color negro puro, <code>#000</code>.
+                El filtro ha de aplicarse sobre imágenes SVG de color negro puro, <code>#000</code>.
               </p>
             </div>
 
@@ -259,6 +255,7 @@
                     <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
                   </svg>
                   <span>Copiar</span>
+                  <div class="tooltip">Copiar CSS a portapapeles</div>
                 </button>
               </div>
 
@@ -267,7 +264,28 @@
           </div>
 
           <div class="filter-tool-details">
-            <p class="lossDetail"></p>
+            <div class="lossDetail-wrap">
+              <p class="lossDetail" style="font-style: italic;"></p>
+              <div class="tooltip">Cuanto más bajo es este número, más cerca está el resultado del color objetivo.</div>
+            </div>
+            <div class="footer-loss-help">
+              <div class="footer-loss-help-wrap">
+                <button class="footer-loss-help-trigger" type="button">
+                  ¿Por qué el Loss puede seguir alto?
+                </button>
+                <div class="footer-loss-help-popover">
+                  <p class="footer-loss-help-title">Si el valor de Loss sigue siendo alto, normalmente no se debe a la
+                    necesidad de recalcular el filtro, sino a algunas limitaciones del método:</p>
+                  <ul class="footer-loss-help-list">
+                    <li>Algunos colores son difíciles de aproximar únicamente mediante <code>filter</code>.</li>
+                    <li>Partir de negro puro (<code>#000</code>) limita el espacio de resultados posibles.</li>
+                    <li>La combinación de <code>invert</code>, <code>sepia</code>, <code>saturate</code>,
+                      <code>hue-rotate</code>, <code>brightness</code> y <code>contrast</code> no permite reproducir con
+                      exactitud todos los colores.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +293,7 @@
   </main>
 
   <div class="bottom-toolbar">
-    © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
+    © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a>&#x1F87D; · <span
       id="footerYear"></span>
   </div>
 

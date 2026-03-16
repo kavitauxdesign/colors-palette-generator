@@ -269,6 +269,92 @@ main {
   padding: var(--PX-20) 0;
 }
 
+
+.footer-loss-help-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.footer-loss-help-wrap:hover .footer-loss-help-popover,
+.footer-loss-help-wrap:focus-within .footer-loss-help-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.footer-loss-help-trigger {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-pale);
+  font-size: var(--PX-12);
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.18em;
+  cursor: help;
+  height: 20px;
+}
+
+.footer-loss-help-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + var(--PX-12));
+  width: min(420px, calc(100vw - 32px));
+  padding: var(--PX-16);
+  border-radius: var(--PX-14);
+  background: var(--primary);
+  color: var(--on-accent);
+  font-size: 14px !important;
+  box-shadow: 0 4px var(--PX-16) var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(var(--PX-8));
+  transition:
+    opacity var(--duration-ui) ease,
+    visibility var(--duration-ui) ease,
+    transform var(--duration-ui) ease;
+  z-index: 5;
+}
+
+.footer-loss-help-popover,
+.footer-loss-help-popover * {
+  font-size: 14px !important;
+  color: var(--on-accent) !important;
+}
+
+.footer-loss-help-popover code {
+  font-size: 12px !important;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.footer-loss-help-popover::after {
+  content: "";
+  position: absolute;
+  left: var(--PX-20);
+  top: 100%;
+  border: 6px solid transparent;
+  border-top-color: var(--primary);
+}
+
+.footer-loss-help-title {
+  margin: 0 0 var(--PX-10);
+  font-size: 14px !important;
+  line-height: 1.6;
+}
+
+.footer-loss-help-list {
+  margin: 0;
+  padding-left: var(--PX-18);
+  font-size: 14px !important;
+  line-height: 1.6;
+}
+
+.footer-loss-help-list li + li {
+  margin-top: var(--PX-4);
+}
+
 .logo {
   display: inline-flex;
   align-items: center;
@@ -620,8 +706,29 @@ nav button {
 }
 
 .filter-copy-btn {
+  position: relative;
   padding: 0 var(--PX-16);
   flex-shrink: 0;
+}
+
+.filter-copy-btn:hover .tooltip,
+.filter-copy-btn.show-feedback .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.filter-copy-btn .tooltip {
+  left: 50%;
+}
+
+.filter-copy-btn .tooltip.is-copied-feedback {
+  background-color: var(--tooltip-feedback-bg, var(--accent));
+  color: var(--tooltip-feedback-fg, var(--on-accent));
+}
+
+.filter-copy-btn .tooltip.is-copied-feedback::after {
+  border-top-color: var(--tooltip-feedback-bg, var(--accent));
 }
 
 .filter-code-output {
@@ -644,6 +751,30 @@ nav button {
   margin: 0;
   color: var(--secondary);
   font-size: var(--PX-14);
+}
+
+.lossDetail-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: fit-content;
+}
+
+.lossDetail-wrap:hover .tooltip,
+.lossDetail-wrap:focus-within .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.lossDetail-wrap .tooltip {
+  left: 50%;
+}
+
+.lossDetail {
+  display: inline;
+  cursor: help;
 }
 
 
