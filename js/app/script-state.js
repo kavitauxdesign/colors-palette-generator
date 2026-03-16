@@ -68,8 +68,8 @@ let temperature = {
 
 const copyHexBtnDefaultTooltip =
   copyHexBtnTooltip?.textContent ?? HISTORY_COPY_TOOLTIP_DEFAULT;
-const copyHexBtnDefaultLabel = copyHexBtnLabel?.textContent?.trim() ?? "Copy HEX values";
-const addColorDefaultLabel = addColorLabel?.textContent?.trim() ?? "Add color";
+const copyHexBtnDefaultLabel = copyHexBtnLabel?.textContent?.trim() ?? "Copiar HEX";
+const addColorDefaultLabel = addColorLabel?.textContent?.trim() ?? "Añadir color";
 let currentPalette = [];
 let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;

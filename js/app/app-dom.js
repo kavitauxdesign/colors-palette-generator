@@ -60,3 +60,28 @@
     globalEditPicker,
   };
 })();
+
+// MENU TAB FUNCTIONALITY
+const views = document.querySelectorAll(".view")
+
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    views.forEach(v => v.style.display = "none")
+
+    const target = btn.dataset.view
+    document.getElementById(target).style.display = "block"
+
+  })
+})
+
+
+// HEADER LOGO SCROLL ROTATION
+const logoImage = document.querySelector(".logo img");
+if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const rotateLogoOnScroll = () => {
+    logoImage.style.setProperty("--scroll-rotate", `${window.scrollY * 0.2}deg`);
+  };
+  window.addEventListener("scroll", rotateLogoOnScroll, { passive: true });
+  rotateLogoOnScroll();
+}

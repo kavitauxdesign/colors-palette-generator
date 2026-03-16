@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SHIFTA HEX - Color Palette Generator</title>
+    <title>Classic HEX - Herramienta de trabajo con color</title>
     <link rel="stylesheet" href="css/style.css" />
   </head>
 
@@ -19,9 +19,16 @@
           <span>Classic</span>
           <span>HEX <span class="sw-subtitle">— Herramienta de trabajo con color</span></span>
         </div>
+      </div>
+    </header>
 
+    <main>
+      <!-- Intro -->
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Generador de Paletas de Colores</h1>
         <!-- Restart button -->
-        <button id="resetPaletteBtn" class="secondary-btn">
+        <button id="resetPaletteBtn" class="secondary-btn"
+          style="padding: 0 26px 0 30px;">
           <!-- Inline SVG to style icon color via CSS variables -->
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -39,15 +46,9 @@
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
             <path d="M3 3v5h5"></path>
           </svg>
-          <span>Reset palette</span>
-          <div class="tooltip">The current palette and history will disappear into the void</div>
+          <div class="tooltip">Limpiar historial y reiniciar el generador</div>
         </button>
       </div>
-    </header>
-
-    <main>
-      <!-- Intro -->
-      <h1>Generador de Paletas de Colores</h1>
       <p class="description">
         <br/>El botón <b>Generar</b>&#x2728; puede usarse tantas veces como se quiera para explorar distintas variaciones e inspirarse; cada resultado se guarda automáticamente en el historial de paletas que aparece más abajo en la página.
       </p>
@@ -158,7 +159,7 @@
             </div>
           </div>
 
-          <p class="description">A new palette is waiting to be revealed.</p>
+          <p class="description">Una nueva paleta espera ser revelada.</p>
 
           <!-- Generation buttons -->
           <div class="generate-btns-container">
@@ -179,7 +180,7 @@
                 height="18px"
                 alt="Surprise icon"
               />
-              <div class="tooltip">Let the Force choose!</div>
+              <div class="tooltip">¡Sorpréndeme!</div>
             </button>
           </div>
         </section>
@@ -204,9 +205,9 @@
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
               </svg>
-              <span>Copy palette values</span>
+              <span>Copiar paleta</span>
               <div class="tooltip">
-                Color names and HEX codes will appear in your clipboard. Use it wisely
+                Los nombres de los colores y los códigos HEX aparecerán en tu portapapeles
               </div>
             </button>
           </div>
@@ -221,7 +222,7 @@
                   <path d="M12 5v14"/>
                 </svg>
 
-                <span>Add color</span>
+                <span>Añadir color</span>
 
                 <input type="color" class="color-picker" id="colorPicker" value="#323232" />
               </div>
@@ -232,19 +233,28 @@
 
       <!-- Palette history -->
       <hr />
-      <h2>Palette History</h2>
+      <h2>Historial de paletas</h2>
 
       <div id="history" class="history"></div>
     </main>
 
     <div class="bottom-toolbar">
-      © SHIFTA by Elisava · Master in UX Design · Group 4 · 2026
+      © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span id="footerYear"></span>
     </div>
 
     <!-- Scripts -->
     <!-- Script order is important: first we load shared files, 
          then files that use them -->
     <script src="js/app/app-constants.js"></script>
+    <script>
+      // Footer year logic: show 2026 or 2026–current year if different
+      (function() {
+        var yearSpan = document.getElementById('footerYear');
+        var baseYear = 2026;
+        var currentYear = new Date().getFullYear();
+        yearSpan.textContent = (currentYear === baseYear) ? baseYear : (baseYear + '–' + currentYear);
+      })();
+    </script>
     <script src="js/math/app-color-utils.js"></script>
     <script src="js/lists/color-names.js"></script>
     <script src="js/app/app-dom.js"></script>

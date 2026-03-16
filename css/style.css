@@ -28,6 +28,7 @@
   --PX-16: 16px;
   --PX-18: 18px;
   --PX-20: 20px;
+  --PX-22: 22px;
   --PX-24: 24px;
   --PX-40: 40px;
 
@@ -61,6 +62,10 @@ body * {
 
 h1 {
   font-size: var(--PX-24);
+}
+
+h2 {
+  font-size: var(--PX-22);
 }
 
 hr {
@@ -247,7 +252,7 @@ main {
   width: 100%;
   max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: var(--PX-40) 0;
+  padding: var(--PX-20) 0;
 }
 
 .logo {
@@ -763,7 +768,7 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .history-palette {
@@ -877,10 +882,22 @@ input[type="range"]::-moz-range-thumb {
   box-sizing: border-box;
   background-color: var(--neutral);
   color: var(--secondary);
-  font-size: 14px;
   text-align: center;
+  gap: 4px;
 }
 
+.bottom-toolbar * {
+  font-size: 14px;
+}
+
+.bottom-toolbar a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+.bottom-toolbar a:hover {
+  text-decoration: underline;
+}
 
 /* =============================== */
 /* Animations                      */

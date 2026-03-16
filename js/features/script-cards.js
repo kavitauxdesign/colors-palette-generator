@@ -455,7 +455,7 @@ function attachCardActions(card) {
           "--tooltip-feedback-fg",
           feedbackTextColor,
         );
-        copyTooltip.textContent = "Copied!";
+        copyTooltip.textContent = "¡Copiado!";
         copyTooltip.classList.add("is-copied-feedback");
         copyBtn.classList.add("show-feedback");
 
@@ -746,7 +746,7 @@ if (copyHexBtn) {
       await copyTextToClipboard(plainText);
 
       if (copyHexBtnLabel) {
-        copyHexBtnLabel.textContent = "Copied!";
+        copyHexBtnLabel.textContent = "¡Copiado!";
       }
 
       copyHexBtn.classList.add("is-copied");

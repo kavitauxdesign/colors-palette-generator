@@ -4,11 +4,11 @@ window.AppConstants = {
   DISALLOWED_COLORS: new Set(["#000000", "#FFFFFF"]),
   HEX_6_REGEX: /^#[0-9A-F]{6}$/,
   MAX_UNIQUE_COLOR_ATTEMPTS: 500,
-  MAX_PALETTE_COLORS: 12,
-  CARD_COPY_TOOLTIP_DEFAULT: "Copy HEX",
-  HISTORY_COPY_TOOLTIP_DEFAULT: "Copy palette values",
-  ADD_DISABLED_LABEL: // Actually we don't belive this, but we respect Yoda
-    "13? Unlucky number, that is. Enough colors, you have. Balance, remember you must\u261D\uFE0F",
+  MAX_PALETTE_COLORS: 39,
+  CARD_COPY_TOOLTIP_DEFAULT: "Copiar HEX",
+  HISTORY_COPY_TOOLTIP_DEFAULT: "Copiar paleta",
+  ADD_DISABLED_LABEL:
+    "Esperemos, que con 39 colores la paleta esté completa\u261D\uFE0F",
   DEFAULT_PALETTE_SIZE: 6,
   DEFAULT_TEMPERATURE: { warm: false, cool: true },
 };

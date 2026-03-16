@@ -46,7 +46,6 @@ if (brightnessInput) {
   // Apply the first visual state
   updateProgress();
 }
-
 // HEADER LOGO SCROLL ROTATION
 const logoImage = document.querySelector(".logo img");
 if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
