@@ -1,48 +1,48 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Classic HEX - Herramienta de trabajo con color</title>
-    <link rel="stylesheet" href="css/style.css" />
-  </head>
 
-  <body>
-    <header>
-      <div class="header-inner">
-        <!-- Logo -->
-        <div class="logo">
-          <div class="logo-images">
-            <img src="assets/logo_pastel.png" alt="Color Wheel"/>
-            <img src="assets/botella-de-tinta.png" alt="Ink Bottle" class="logo-ink" />
-          </div>
-          <span>Classic</span>
-          <span>HEX <span class="sw-subtitle">— Herramienta de trabajo con color</span></span>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classic HEX - Herramienta de trabajo con color</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <!-- Logo -->
+      <div class="logo">
+        <div class="logo-images">
+          <img src="assets/logo_pastel.png" alt="Color Wheel" />
+          <img src="assets/botella-de-tinta.png" alt="Ink Bottle" class="logo-ink" />
         </div>
+        <span>Classic</span>
+        <span>HEX <span class="sw-subtitle">— Herramienta de trabajo con color</span></span>
       </div>
-    </header>
+      <!-- Navigation -->
+      <nav>
+        <button data-view="palette_generator">Generar Paletas</button>
+        <button data-view="hex_to_filter">HEX to CSS filter</button>
+      </nav>
+    </div>
+  </header>
 
-    <main>
+  <main>
+    <!-- ==============================  -->
+    <!--       PALETTE GENERATOR         -->
+    <!-- =============================== -->
+    <section id="palette_generator" class="view-tab active">
       <!-- Intro -->
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h1>Generador de Paletas de Colores</h1>
         <!-- Restart button -->
-        <button id="resetPaletteBtn" class="secondary-btn"
-          style="padding: 0 26px 0 30px;">
+        <button id="resetPaletteBtn" class="secondary-btn" style="padding: 0 26px 0 30px;">
           <!-- Inline SVG to style icon color via CSS variables -->
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             class="lucide lucide-rotate-ccw size-5 text-gray-600"
-            data-fg-d3bl11="0.8:6.35049:/src/app/App.tsx:362:13:11461:46:e:RotateCcw::::::D1GU"
-          >
+            data-fg-d3bl11="0.8:6.35049:/src/app/App.tsx:362:13:11461:46:e:RotateCcw::::::D1GU">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
             <path d="M3 3v5h5"></path>
           </svg>
@@ -50,7 +50,9 @@
         </button>
       </div>
       <p class="description">
-        <br/>El botón <b>Generar</b>&#x2728; puede usarse tantas veces como se quiera para explorar distintas variaciones e inspirarse; cada resultado se guarda automáticamente en el historial de paletas que aparece más abajo en la página.
+        <br />El botón <b>Generar</b>&#x2728; puede usarse tantas veces como se quiera para explorar distintas
+        variaciones e inspirarse; cada resultado se guarda automáticamente en el historial de paletas que aparece más
+        abajo en la página.
       </p>
 
       <!-- Generator area -->
@@ -74,41 +76,23 @@
 
             <!-- Warm button -->
             <button id="warmBtn" class="temp active">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 class="lucide lucide-flame size-7 text-gray-400"
-                data-fg-d3bl45="0.8:6.35049:/src/app/App.tsx:426:19:14807:78:e:Flame::::::DE75"
-              >
+                data-fg-d3bl45="0.8:6.35049:/src/app/App.tsx:426:19:14807:78:e:Flame::::::DE75">
                 <path
-                  d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
-                ></path>
+                  d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
+                </path>
               </svg>
               <span> Cálido</span>
             </button>
 
             <!-- Cool button -->
             <button id="coolBtn" class="temp">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 class="lucide lucide-snowflake size-7 text-blue-500"
-                data-fg-d3bl49="0.8:6.35049:/src/app/App.tsx:437:19:15552:80:e:Snowflake::::::EFSK"
-              >
+                data-fg-d3bl49="0.8:6.35049:/src/app/App.tsx:437:19:15552:80:e:Snowflake::::::EFSK">
                 <path d="m10 20-1.25-2.5L6 18"></path>
                 <path d="M10 4 8.75 6.5 6 6"></path>
                 <path d="m14 20 1.25-2.5L18 18"></path>
@@ -134,28 +118,13 @@
             </h4>
 
             <div class="brightness-labels">
-              <img
-                class="brightness-icon"
-                src="assets/night.svg"
-                alt="Night icon"
-              />
+              <img class="brightness-icon" src="assets/night.svg" alt="Night icon" />
 
               <!-- Slider -->
-              <input
-                type="range"
-                id="brightness"
-                min="0"
-                max="100"
-                step="5"
-                value="50"
-              />
+              <input type="range" id="brightness" min="0" max="100" step="5" value="50" />
 
               <!-- Light -->
-              <img
-                class="brightness-icon"
-                src="assets/day.svg"
-                alt="Day icon"
-              />
+              <img class="brightness-icon" src="assets/day.svg" alt="Day icon" />
             </div>
           </div>
 
@@ -164,22 +133,12 @@
           <!-- Generation buttons -->
           <div class="generate-btns-container">
             <button id="generateBtn" class="primary-btn">
-              <img
-                src="assets/magic-wand.svg"
-                width="18px"
-                height="18px"
-                alt="Magic wand icon"
-              />
+              <img src="assets/magic-wand.svg" width="18px" height="18px" alt="Magic wand icon" />
               <span>Generate</span>
             </button>
 
             <button id="surpriseBtn" class="primary-btn">
-              <img
-                src="assets/sparkles.svg"
-                width="18px"
-                height="18px"
-                alt="Surprise icon"
-              />
+              <img src="assets/sparkles.svg" width="18px" height="18px" alt="Surprise icon" />
               <div class="tooltip">¡Sorpréndeme!</div>
             </button>
           </div>
@@ -190,18 +149,9 @@
           <!-- Copy HEX button -->
           <div class="copy-btn-container">
             <button id="copyHexBtn" class="secondary-btn">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                data-fg-d3bl78="0.8:6.35049:/src/app/App.tsx:500:17:18373:41:e:Copy::::::CsY9"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                data-fg-d3bl78="0.8:6.35049:/src/app/App.tsx:500:17:18373:41:e:Copy::::::CsY9">
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
               </svg>
@@ -218,8 +168,8 @@
             <div class="add-color">
               <div class="add-color-card" id="addColorBtn">
                 <svg class="plus-icon" viewBox="0 0 24 24">
-                  <path d="M5 12h14"/>
-                  <path d="M12 5v14"/>
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
                 </svg>
 
                 <span>Añadir color</span>
@@ -228,7 +178,7 @@
               </div>
             </div>
           </div>
-        </div>
+      </div>
       </div>
 
       <!-- Palette history -->
@@ -236,32 +186,121 @@
       <h2>Historial de paletas</h2>
 
       <div id="history" class="history"></div>
-    </main>
+    </section>
+    <!-- ==============================  -->
+    <!--       HEX TO CSS FILTER         -->
+    <!-- =============================== -->
+    <section id="hex_to_filter" class="view-tab">
+      <h1>HEX to CSS Filter</h1>
+      <p class="description">
+        Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
+        Útil para colorear iconos, SVG u otros elementos mediante <code>filter</code>.
+      </p>
 
-    <div class="bottom-toolbar">
-      © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span id="footerYear"></span>
-    </div>
+      <div id="hex_to_code" class="filter-tool">
+        <div class="filter-tool-panel">
+          <div class="filter-target-card">
+            <button class="target-color-swatch" type="button" aria-label="Seleccionar color objetivo">
+              <span class="target-color-swatch-fill"></span>
+            </button>
 
-    <!-- Scripts -->
-    <!-- Script order is important: first we load shared files, 
+            <div class="filter-tool-form">
+              <label for="filterTarget" class="filter-tool-label">Color objetivo</label>
+              <div class="filter-tool-input-row">
+                <input id="filterTarget" class="target filter-tool-input" type="text" placeholder="HEX, rgb, hsl..."
+                  value="#00a4d6" />
+                <button class="execute primary-btn filter-tool-button" type="button">
+                  <img src="assets/calculator.svg" width="18px" height="18px" alt="Icono de calculadora" />
+                  <span>Calcular filtros</span>
+                </button>
+              </div>
+              <p class="filter-tool-feedback" aria-live="polite"></p>
+            </div>
+
+            <input class="filter-target-picker" type="color" value="#00a4d6" aria-hidden="true" tabindex="-1" />
+          </div>
+
+          <div class="filter-tool-previews">
+            <div class="filter-preview-card">
+              <p class="filter-preview-title">Píxel real</p>
+              <p class="filter-preview-copy">
+                Base sobre la que se aplicará el filtro CSS.
+              </p>
+              <div class="filter-source-comparison">
+                <div class="pixel filterPixel filterSourceImage"></div>
+                <div class="filter-applied-preview">
+                <div class="filter-source-stack">
+                  <img class="filter-source-icon" src="assets/sun-glasses.png" alt="Gafas originales negras" />
+                  <span class="filter-icon-label">Antes</span>
+                </div>
+
+                <span cl
+                ass="filter-source-arrow" aria-hidden="true">➞</span>
+
+                <div class="filter-source-stack">
+                  <img class="filter-source-icon filter-source-icon-after" src="assets/sun-glasses.png"
+                    alt="Gafas con filtro aplicado" />
+                  <span class="filter-icon-label">Después</span>
+                </div>
+                </div>
+              </div>
+              <p class="filter-source-note">
+                El filtro ha de aplicarse sobre imágenes de color negro puro, <code>#000</code>.
+              </p>
+            </div>
+
+            <div class="filter-result-card">
+              <div class="filter-result-header">
+                <p class="filter-preview-title">Código final</p>
+                <button class="secondary-btn filter-copy-btn" type="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                  </svg>
+                  <span>Copiar</span>
+                </button>
+              </div>
+
+              <code class="filter-code-output filterDetail">Aquí aparecerá el código CSS del filtro calculado.</code>
+            </div>
+          </div>
+
+          <div class="filter-tool-details">
+            <p class="lossDetail"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="bottom-toolbar">
+    © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
+      id="footerYear"></span>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Script order is important: first we load shared files, 
          then files that use them -->
-    <script src="js/app/app-constants.js"></script>
-    <script>
-      // Footer year logic: show 2026 or 2026–current year if different
-      (function() {
-        var yearSpan = document.getElementById('footerYear');
-        var baseYear = 2026;
-        var currentYear = new Date().getFullYear();
-        yearSpan.textContent = (currentYear === baseYear) ? baseYear : (baseYear + '–' + currentYear);
-      })();
-    </script>
-    <script src="js/math/app-color-utils.js"></script>
-    <script src="js/lists/color-names.js"></script>
-    <script src="js/app/app-dom.js"></script>
-    <script src="js/app/script-state.js"></script>
-    <script src="js/features/script-controls.js"></script>
-    <script src="js/features/script-cards.js"></script>
-    <script src="js/features/script-history.js"></script>
-    <script src="js/script-init.js"></script>
-  </body>
+  <script src="js/app/app-constants.js"></script>
+  <script>
+    // Footer year logic: show 2026 or 2026–current year if different
+    (function () {
+      var yearSpan = document.getElementById('footerYear');
+      var baseYear = 2026;
+      var currentYear = new Date().getFullYear();
+      yearSpan.textContent = (currentYear === baseYear) ? baseYear : (baseYear + '–' + currentYear);
+    })();
+  </script>
+  <script src="js/math/app-color-utils.js"></script>
+  <script src="js/lists/color-names.js"></script>
+  <script src="js/app/app-dom.js"></script>
+  <script src="js/app/script-state.js"></script>
+  <script src="js/features/script-controls.js"></script>
+  <script src="js/features/script-cards.js"></script>
+  <script src="js/features/script-history.js"></script>
+  <script src="js/features/script-filter-tool.js"></script>
+  <script src="js/script-init.js"></script>
+</body>
+
 </html>

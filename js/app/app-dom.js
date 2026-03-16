@@ -62,18 +62,67 @@
 })();
 
 // MENU TAB FUNCTIONALITY
-const views = document.querySelectorAll(".view")
+const views = document.querySelectorAll(".view-tab");
 
 document.querySelectorAll("nav button").forEach(btn => {
   btn.addEventListener("click", () => {
 
-    views.forEach(v => v.style.display = "none")
+    views.forEach(v => v.classList.remove("active"));
 
-    const target = btn.dataset.view
-    document.getElementById(target).style.display = "block"
+    const target = btn.dataset.view;
+    document.getElementById(target).classList.add("active");
 
-  })
-})
+  });
+});
+
+// HASH CHANGE VIEW HANDLER
+// main function to show the correct view based on the URL hash
+function showView(name) {
+
+  views.forEach(v => v.classList.remove("active"));
+
+  const target = document.getElementById(name);
+  if (target) {
+    target.classList.add("active");
+  }
+  updateActiveMenuButton(name);
+}
+
+// CLICK ON MENU
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    const target = btn.dataset.view;
+
+    // change the URL
+    location.hash = target;
+
+  });
+});
+
+// HASH CHANGE VIEW HANDLER
+window.addEventListener("hashchange", () => {
+  const view = location.hash.replace("#", "");
+  showView(view);
+});
+
+// INITIAL LOAD
+window.addEventListener("DOMContentLoaded", () => {
+
+  const view = location.hash.replace("#", "") || "palette_generator";
+  showView(view);
+  updateActiveMenuButton(view);
+
+});
+
+// ACTIVE MENU BUTTON
+function updateActiveMenuButton(view) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  const activeBtn = document.querySelector(`nav button[data-view="${view}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+  }
+}
 
 
 // HEADER LOGO SCROLL ROTATION

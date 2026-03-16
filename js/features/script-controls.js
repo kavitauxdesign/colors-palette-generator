@@ -46,15 +46,6 @@ if (brightnessInput) {
   // Apply the first visual state
   updateProgress();
 }
-// HEADER LOGO SCROLL ROTATION
-const logoImage = document.querySelector(".logo img");
-if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-  const rotateLogoOnScroll = () => {
-    logoImage.style.setProperty("--scroll-rotate", `${window.scrollY * 0.2}deg`);
-  };
-  window.addEventListener("scroll", rotateLogoOnScroll, { passive: true });
-  rotateLogoOnScroll();
-}
 
 // SIZE SELECTOR
 
