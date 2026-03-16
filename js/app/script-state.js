@@ -16,10 +16,9 @@ const {
   coolBtn,
   sizeButtons,
   addColorLabel,
-  darkBrightnessSvg,
-  darkBrightnessPath,
-  lightBrightnessSvg,
-  lightBrightnessPath,
+  brightnessValueLabel,
+  darkBrightnessIcon,
+  lightBrightnessIcon,
   globalEditPicker,
 } = window.AppDom;
 
@@ -27,8 +26,6 @@ const {
   DISALLOWED_COLORS,
   MAX_UNIQUE_COLOR_ATTEMPTS,
   MAX_PALETTE_COLORS,
-  LIGHT_BRIGHTNESS_ACTIVE_FILL,
-  LIGHT_BRIGHTNESS_DEFAULT_FILL,
   CARD_COPY_TOOLTIP_DEFAULT,
   HISTORY_COPY_TOOLTIP_DEFAULT,
   ADD_DISABLED_LABEL,
@@ -83,4 +80,3 @@ const COLOR_NAME_REFERENCES_RGB = COLOR_NAME_REFERENCES.map((entry) => ({
   ...entry,
   rgb: stateHexToRgb(entry.hex),
 }));
-

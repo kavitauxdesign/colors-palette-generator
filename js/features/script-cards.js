@@ -71,20 +71,6 @@ const hexToHsl =
       };
     };
 
-const SPECIAL_BADGE_COLOR_NAMES = new Set(
-  Array.isArray(window.AppConstants?.SPECIAL_BADGE_COLOR_NAMES)
-    ? window.AppConstants.SPECIAL_BADGE_COLOR_NAMES
-    : []
-);
-
-const SPECIAL_COSMIC_HEX_POOL = [...new Set(
-  COLOR_NAME_REFERENCES
-    .filter((entry) => SPECIAL_BADGE_COLOR_NAMES.has(String(entry.name || "").toUpperCase()))
-    .map((entry) => normalizeHexColor(entry.hex))
-    .filter((hex) => isValidHexColor(hex))
-    .filter((hex) => !isDisallowedColor(hex))
-)];
-
 // ===============================
 // Core Card Flow
 // ===============================
@@ -114,128 +100,6 @@ function setCardColor(card, color) {
   if (label) {
     label.textContent = normalizedColor;
   }
-}
-
-function createSpecialColorBadge() {
-  const badge = document.createElement("div");
-  badge.className = "color-special-badge";
-  badge.setAttribute("aria-hidden", "true");
-  badge.innerHTML = `
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(45deg);">
-      <path d="M12 3C12 3 13.5 4 14.5 8C15 10 15 14 14.5 16C13.5 17.5 12.5 18 12 18C11.5 18 10.5 17.5 9.5 16C9 14 9 10 9.5 8C10.5 4 12 3 12 3Z" fill="white" stroke="white" stroke-width="0.5"></path>
-      <ellipse cx="12" cy="5" rx="2" ry="2.5" fill="white" opacity="0.9"></ellipse>
-      <path d="M9.5 14C9.5 14 8 15 7 17.5C7 17.5 8.5 16.5 9.5 16L9.5 14Z" fill="white" stroke="white" stroke-width="0.5"></path>
-      <path d="M14.5 14C14.5 14 16 15 17 17.5C17 17.5 15.5 16.5 14.5 16L14.5 14Z" fill="white" stroke="white" stroke-width="0.5"></path>
-      <ellipse cx="12" cy="10" rx="1.2" ry="1.5" fill="rgba(0,0,0,0.3)"></ellipse>
-      <path d="M10.5 18C10.5 18 11 20 12 21C13 20 13.5 18 13.5 18Z" fill="white" opacity="0.6"></path>
-      <circle cx="5" cy="5" r="1.2" fill="yellow"></circle>
-      <circle cx="19" cy="6" r="1.2" fill="yellow"></circle>
-      <circle cx="18" cy="19" r="1.2" fill="yellow"></circle>
-    </svg>
-    <div class="tooltip">Special cosmic color</div>
-  `;
-
-  return badge;
-}
-
-function getBaseDisplayColorName(displayName) {
-  let baseName = String(displayName ?? "").trim();
-  const suffixPattern = /\s+(Shade|Tone|Variant|Tint|Alt(?:\s+\d+)?)$/i;
-
-  while (suffixPattern.test(baseName)) {
-    baseName = baseName.replace(suffixPattern, "").trim();
-  }
-
-  return baseName;
-}
-
-function shouldShowSpecialColorBadge(displayName) {
-  const baseName = getBaseDisplayColorName(displayName).toUpperCase();
-  return SPECIAL_BADGE_COLOR_NAMES.has(baseName);
-}
-
-function isSpecialCosmicColorHex(hex) {
-  const nearestName = String(getNearestColorName(hex) || "").toUpperCase();
-  return SPECIAL_BADGE_COLOR_NAMES.has(nearestName);
-}
-
-function isHexMatchingTemperature(hex) {
-  const { h } = hexToHsl(hex);
-  const warmSelected = !!temperature?.warm;
-  const coolSelected = !!temperature?.cool;
-
-  // Keep same hue buckets used by generateColor().
-  const isWarmHue = h < 60 || h >= 300;
-  const isCoolHue = h >= 120 && h < 300;
-
-  if (warmSelected && !coolSelected) {
-    return isWarmHue;
-  }
-
-  if (!warmSelected && coolSelected) {
-    return isCoolHue;
-  }
-
-  // Both selected (or unexpected fallback): accept all.
-  return true;
-}
-
-function getTargetLightnessFromControls() {
-  if (!brightnessInput) {
-    return 50;
-  }
-
-  const sliderValue = parseFloat(brightnessInput.value);
-  const safeSliderValue = Number.isFinite(sliderValue) ? sliderValue : 50;
-  return 20 + (safeSliderValue / 100) * 60;
-}
-
-function getSpecialColorControlScore(hex) {
-  const profile = hexToHsl(hex);
-  const temperaturePenalty = isHexMatchingTemperature(hex) ? 0 : 100;
-  const targetLightness = getTargetLightnessFromControls();
-  const lightnessPenalty = Math.abs(profile.l - targetLightness);
-  return temperaturePenalty + lightnessPenalty;
-}
-
-function getUniqueSpecialColor(existingColors = new Set()) {
-  if (SPECIAL_COSMIC_HEX_POOL.length === 0) {
-    return null;
-  }
-
-  const candidates = [...SPECIAL_COSMIC_HEX_POOL]
-    .map((hex) => ({
-      hex,
-      score: getSpecialColorControlScore(hex),
-      randomTiebreaker: Math.random(),
-    }))
-    .sort((a, b) => {
-      if (a.score !== b.score) {
-        return a.score - b.score;
-      }
-      return a.randomTiebreaker - b.randomTiebreaker;
-    })
-    .map((entry) => entry.hex);
-
-  // First pass: match controls and keep spacing similar to regular generation.
-  for (const candidate of candidates) {
-    if (existingColors.has(candidate)) {
-      continue;
-    }
-    if (isColorTooCloseToExisting(candidate, existingColors, 0)) {
-      continue;
-    }
-    return candidate;
-  }
-
-  // Second pass: guarantee one special color even if spacing is tight.
-  for (const candidate of candidates) {
-    if (!existingColors.has(candidate)) {
-      return candidate;
-    }
-  }
-
-  return null;
 }
 
 // ===============================
@@ -711,14 +575,11 @@ function createColorCard(color) {
   const colorName = document.createElement("div");
   colorName.className = "color-name";
 
-  const specialBadge = createSpecialColorBadge();
-
   const label = document.createElement("div");
   label.className = "color-label";
 
   attachCardActions(card);
   card.appendChild(colorName);
-  card.appendChild(specialBadge);
   card.appendChild(label);
   setCardColor(card, color);
 
@@ -823,11 +684,6 @@ function refreshColorCardNames() {
     const displayName = displayNames[index] || getNearestColorName(hex);
     colorName.textContent = displayName;
     applyAccessibleColorNameStyle(colorName, hex);
-
-    const specialBadge = card.querySelector(".color-special-badge");
-    if (specialBadge) {
-      specialBadge.classList.toggle("is-visible", shouldShowSpecialColorBadge(displayName));
-    }
   });
 }
 
@@ -951,4 +807,3 @@ if (addColorBtn) {
     saveHistory(currentPalette);
   });
 }
-

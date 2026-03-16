@@ -19,12 +19,10 @@
   const sizeButtons = document.querySelectorAll(".size");
   // Add button label text
   const addColorLabel = addColorBtn?.querySelector("span") ?? null;
-  const brightnessSvgs = document.querySelectorAll(".brightness-labels svg");
-  // Brightness icons and their key paths
-  const darkBrightnessSvg = brightnessSvgs[0] || null;
-  const lightBrightnessSvg = brightnessSvgs[1] || null;
-  const darkBrightnessPath = darkBrightnessSvg?.querySelector("path") ?? null;
-  const lightBrightnessPath = lightBrightnessSvg?.querySelector("path") ?? null;
+  const brightnessValueLabel = document.getElementById("brightnessValue");
+  const brightnessIcons = document.querySelectorAll(".brightness-labels .brightness-icon");
+  const darkBrightnessIcon = brightnessIcons[0] || null;
+  const lightBrightnessIcon = brightnessIcons[1] || null;
   // One shared color input for editing card colors
   const globalEditPicker = document.createElement("input");
   globalEditPicker.type = "color";
@@ -56,10 +54,9 @@
     coolBtn,
     sizeButtons,
     addColorLabel,
-    darkBrightnessSvg,
-    darkBrightnessPath,
-    lightBrightnessSvg,
-    lightBrightnessPath,
+    brightnessValueLabel,
+    darkBrightnessIcon,
+    lightBrightnessIcon,
     globalEditPicker,
   };
 })();

@@ -313,16 +313,6 @@ Because of this it is very difficult to accidentally lose a palette configuratio
 
 ---
 
-## Special Colors
-
-Some colors appear with a small rocket badge matching the application logo.
-
-This badge simply highlights colors whose names reference the cosmic theme of the project.
-
-It does not affect the behavior of the palette generator.
-
----
-
 # Final Notes
 
 This project ended up being longer than we initially expected, both in terms of documentation and code.
