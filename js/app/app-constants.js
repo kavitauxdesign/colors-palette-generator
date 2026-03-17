@@ -1,7 +1,7 @@
 ﻿// Shared constants
 // Keep limits, defaults, and labels in one place
 window.AppConstants = {
-  DISALLOWED_COLORS: new Set(["#000000", "#FFFFFF"]),
+  DISALLOWED_COLORS: new Set(),
   HEX_6_REGEX: /^#[0-9A-F]{6}$/,
   MAX_UNIQUE_COLOR_ATTEMPTS: 500,
   MAX_PALETTE_COLORS: 39,
@@ -15,6 +15,4 @@ window.AppConstants = {
   DEFAULT_SATURATION: 100,
   LOW_SATURATION_FALLBACK_THRESHOLD: 15,
   LOW_SATURATION_TEMPERATURE_UNLOCK_BRIGHTNESS: 30,
-  LOW_BRIGHTNESS_THRESHOLD: 5,
-  MIN_SATURATION_WHEN_LOW_BRIGHTNESS: 50,
 };

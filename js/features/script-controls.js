@@ -13,14 +13,23 @@ if (
 }
 
 let saturationAttentionTimeout = null;
-let brightnessAttentionTimeout = null;
-let saturationDangerTimeout = null;
 let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
 let isPaletteAdjustPanelOpen = false;
 const imagePanelTransitionMs = 320;
 const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml"]);
 const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg"];
+
+function updateUploadedImageAnalysisCache(cachePatch) {
+  if (!uploadedBaseImage) {
+    return;
+  }
+
+  uploadedBaseImage.analysisCache = {
+    ...(uploadedBaseImage.analysisCache || {}),
+    ...cachePatch,
+  };
+}
 
 function updateRangeControl(input, valueLabel, lowIcon, highIcon) {
   if (!input) {
@@ -76,6 +85,105 @@ const updateSaturationProgress = () =>
     lowSaturationIcon,
     highSaturationIcon
   );
+
+function getCurrentPaletteAdjustmentSnapshot() {
+  return {
+    brightness: getCurrentBrightnessValue(),
+    saturation: getCurrentSaturationValue(),
+  };
+}
+
+function capturePaletteAdjustmentBase(colors = currentPalette, settings = getCurrentPaletteAdjustmentSnapshot()) {
+  const validColors = Array.isArray(colors)
+    ? colors
+        .map((color) => controlsNormalizeHexColor(color))
+        .filter((hex) => /^#[0-9A-F]{6}$/.test(hex))
+    : [];
+
+  paletteAdjustmentBase = [...validColors];
+  paletteAdjustmentBaseSettings = {
+    brightness: Number.isFinite(settings?.brightness)
+      ? settings.brightness
+      : DEFAULT_BRIGHTNESS,
+    saturation: Number.isFinite(settings?.saturation)
+      ? settings.saturation
+      : DEFAULT_SATURATION,
+  };
+}
+
+function getPaletteAdjustmentDeltas() {
+  return {
+    brightnessDelta:
+      getCurrentBrightnessValue() - paletteAdjustmentBaseSettings.brightness,
+    saturationDelta:
+      getCurrentSaturationValue() - paletteAdjustmentBaseSettings.saturation,
+  };
+}
+
+function getAdjustedPaletteColor(hex, variantIndex = 0) {
+  const hsl = controlsHexToHsl(hex);
+  const { brightnessDelta, saturationDelta } = getPaletteAdjustmentDeltas();
+  const lightnessVariants = [0, -4, 4, -8, 8, -12, 12, -16, 16];
+  const hueVariants = [0, 2, -2, 4, -4];
+  const lightnessOffset = lightnessVariants[variantIndex % lightnessVariants.length];
+  const hueOffset =
+    hueVariants[Math.floor(variantIndex / lightnessVariants.length) % hueVariants.length];
+
+  return controlsNormalizeHexColor(
+    controlsHslToHex(
+      (hsl.h + hueOffset + 360) % 360,
+      clampControlValue(hsl.s + saturationDelta, 0, 100),
+      clampControlValue(hsl.l + brightnessDelta * 0.45 + lightnessOffset, 0, 100)
+    )
+  );
+}
+
+function buildAdjustedPaletteFromBase(colors = paletteAdjustmentBase) {
+  const adjustedPalette = [];
+  const usedColors = new Set();
+
+  colors.forEach((color, colorIndex) => {
+    for (let variantIndex = 0; variantIndex < 28; variantIndex++) {
+      const candidate = getAdjustedPaletteColor(color, variantIndex + colorIndex * 2);
+      if (usedColors.has(candidate)) {
+        continue;
+      }
+
+      usedColors.add(candidate);
+      adjustedPalette.push(candidate);
+      return;
+    }
+  });
+
+  return adjustedPalette;
+}
+
+function renderAdjustedPalette(colors) {
+  const cards = Array.from(getColorCards());
+
+  if (cards.length !== colors.length) {
+    getColorCards().forEach((card) => card.remove());
+    colors.forEach((color) => {
+      createColorCard(color);
+    });
+  } else {
+    cards.forEach((card, index) => {
+      setCardColor(card, colors[index]);
+    });
+  }
+
+  refreshDeleteButtonsVisibility();
+  updateAddColorButtonState();
+  syncCurrentPaletteFromDom();
+}
+
+function applyCurrentPaletteAdjustments() {
+  if (!Array.isArray(paletteAdjustmentBase) || paletteAdjustmentBase.length === 0) {
+    return;
+  }
+
+  renderAdjustedPalette(buildAdjustedPaletteFromBase());
+}
 
 function setPaletteAdjustPanelOpen(shouldOpen) {
   if (!paletteAdjustPanel || !paletteAdjustBtn) {
@@ -152,91 +260,35 @@ function animateSaturationControlAttention() {
   }, 420);
 }
 
-function animateBrightnessControlAttention() {
-  if (!brightnessControlGroup) {
-    return;
-  }
-
-  ensurePaletteAdjustPanelVisible();
-  brightnessControlGroup.classList.remove("needs-attention");
-  void brightnessControlGroup.offsetWidth;
-  brightnessControlGroup.classList.add("needs-attention");
-
-  if (brightnessAttentionTimeout) {
-    clearTimeout(brightnessAttentionTimeout);
-  }
-
-  brightnessAttentionTimeout = setTimeout(() => {
-    brightnessControlGroup.classList.remove("needs-attention");
-    brightnessAttentionTimeout = null;
-  }, 420);
-}
-
-function showSaturationDangerState() {
-  if (!saturationInput) {
-    return;
-  }
-
-  ensurePaletteAdjustPanelVisible();
-  saturationInput.classList.add("is-danger");
-
-  if (saturationDangerTimeout) {
-    clearTimeout(saturationDangerTimeout);
-  }
-
-  saturationDangerTimeout = setTimeout(() => {
-    saturationInput.classList.remove("is-danger");
-    saturationDangerTimeout = null;
-  }, 1000);
-}
-
-function isLowBrightnessRestrictingSaturation() {
-  return getCurrentBrightnessValue() <= LOW_BRIGHTNESS_THRESHOLD;
-}
-
-function enforceLowBrightnessSaturationConstraint(triggerSource = "system") {
-  if (!saturationInput || !isLowBrightnessRestrictingSaturation()) {
-    return false;
-  }
-
-  const currentSaturation = getCurrentSaturationValue();
-  if (currentSaturation >= MIN_SATURATION_WHEN_LOW_BRIGHTNESS) {
-    return false;
-  }
-
-  saturationInput.value = String(MIN_SATURATION_WHEN_LOW_BRIGHTNESS);
-  updateSaturationProgress();
-  syncTemperatureControlsState();
-
-  if (triggerSource === "user") {
-    animateBrightnessControlAttention();
-    showSaturationDangerState();
-  }
-
-  return true;
-}
-
 if (brightnessInput) {
   brightnessInput.addEventListener("input", () => {
     updateBrightnessProgress();
-    enforceLowBrightnessSaturationConstraint();
     syncTemperatureControlsState();
+    applyCurrentPaletteAdjustments();
+  });
+  brightnessInput.addEventListener("change", () => {
+    if (currentPalette.length > 0) {
+      saveHistory(currentPalette);
+    }
   });
   // Apply the first visual state
   updateBrightnessProgress();
-  enforceLowBrightnessSaturationConstraint();
   syncTemperatureControlsState();
 }
 
 if (saturationInput) {
   saturationInput.addEventListener("input", () => {
-    enforceLowBrightnessSaturationConstraint("user");
     updateSaturationProgress();
     syncTemperatureControlsState();
+    applyCurrentPaletteAdjustments();
+  });
+  saturationInput.addEventListener("change", () => {
+    if (currentPalette.length > 0) {
+      saveHistory(currentPalette);
+    }
   });
   // Apply the first visual state
   updateSaturationProgress();
-  enforceLowBrightnessSaturationConstraint();
   syncTemperatureControlsState();
 }
 
@@ -268,6 +320,18 @@ function setPaletteBaseMode(nextMode) {
   }
 
   updatePaletteStickyState();
+  updatePaletteSizeButtonsAvailability();
+
+  if (typeof updateRegenerateButtonsAvailability === "function") {
+    updateRegenerateButtonsAvailability();
+  }
+  if (typeof updateAddColorButtonState === "function") {
+    updateAddColorButtonState();
+  }
+
+  if (paletteBaseMode === "image" && uploadedBaseImage?.dataUrl) {
+    void refreshImageDerivedControls();
+  }
 }
 
 function isAcceptedPaletteImageFile(file) {
@@ -389,6 +453,7 @@ function handlePaletteImageFile(file) {
     isPaletteImageDropzoneVisible = false;
     setPaletteBaseMode("image");
     renderPaletteImagePreview();
+    void refreshImageDerivedControls();
   });
   reader.readAsDataURL(file);
 }
@@ -539,11 +604,11 @@ async function getUploadedImageSamplePoints() {
   }
 
   const points = Array.from(quantizedColors.values());
-  uploadedBaseImage.analysisCache = {
+  updateUploadedImageAnalysisCache({
     points,
     width,
     height,
-  };
+  });
   return points;
 }
 
@@ -759,59 +824,123 @@ function expandImagePalette(selectedClusters, targetCount) {
   return palette.slice(0, targetCount);
 }
 
-function getImageAdjustmentValues() {
-  return {
-    saturationMultiplier: clampControlValue(getCurrentSaturationValue() / DEFAULT_SATURATION, 0, 1.2),
-    brightnessShift: (getCurrentBrightnessValue() - DEFAULT_BRIGHTNESS) * 0.42,
-  };
+function getCachedImageColorClusters() {
+  return Array.isArray(uploadedBaseImage?.analysisCache?.deduplicatedClusters)
+    ? uploadedBaseImage.analysisCache.deduplicatedClusters
+    : [];
 }
 
-function getAdjustedImageColorVariant(hex, variantIndex = 0) {
-  const hsl = controlsHexToHsl(hex);
-  const { saturationMultiplier, brightnessShift } = getImageAdjustmentValues();
-  const lightnessVariants = [0, -4, 4, -8, 8, -12, 12];
-  const hueVariants = [0, 2, -2, 4, -4, 6, -6];
-  const lightnessOffset = lightnessVariants[variantIndex % lightnessVariants.length];
-  const hueOffset = hueVariants[Math.floor(variantIndex / lightnessVariants.length) % hueVariants.length];
+async function getImageColorClusters() {
+  const cachedClusters = getCachedImageColorClusters();
+  if (cachedClusters.length > 0) {
+    return cachedClusters;
+  }
 
-  return controlsNormalizeHexColor(
-    controlsHslToHex(
-      (hsl.h + hueOffset + 360) % 360,
-      clampControlValue(hsl.s * saturationMultiplier, 0, 100),
-      clampControlValue(hsl.l + brightnessShift + lightnessOffset, 6, 94)
-    )
-  );
+  if (!uploadedBaseImage?.dataUrl) {
+    return [];
+  }
+
+  const points = await getUploadedImageSamplePoints();
+  if (points.length === 0) {
+    return [];
+  }
+
+  const clusterCount = Math.min(Math.max(MAX_PALETTE_COLORS, 12), points.length);
+  const clusters = cleanImageClusterDuplicates(clusterImageColors(points, clusterCount));
+
+  updateUploadedImageAnalysisCache({
+    deduplicatedClusters: clusters,
+  });
+
+  return clusters;
 }
 
-function applyImagePaletteAdjustments(colors, targetCount) {
-  const uniqueColors = [];
-  const usedColors = new Set();
+function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
+  const availableCount = Number.isFinite(availableImageColors)
+    ? availableImageColors
+    : getCachedImageColorClusters().length;
 
-  colors.forEach((color, colorIndex) => {
-    for (let variantIndex = 0; variantIndex < 24; variantIndex++) {
-      const candidate = getAdjustedImageColorVariant(color, variantIndex + colorIndex * 2);
+  sizeButtons.forEach((button) => {
+    const buttonSize = parseInt(button.dataset.size);
+    const shouldDisable =
+      paletteBaseMode === "image" &&
+      !!uploadedBaseImage?.dataUrl &&
+      Number.isFinite(buttonSize) &&
+      buttonSize > availableCount;
 
-      if (isDisallowedColor(candidate) || usedColors.has(candidate)) {
-        continue;
-      }
+    button.classList.toggle("is-disabled", shouldDisable);
+    button.setAttribute("aria-disabled", shouldDisable ? "true" : "false");
+  });
+}
 
-      usedColors.add(candidate);
-      uniqueColors.push(candidate);
-      break;
+async function refreshImageDerivedControls() {
+  if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+    updatePaletteSizeButtonsAvailability();
+
+    if (typeof updateRegenerateButtonsAvailability === "function") {
+      updateRegenerateButtonsAvailability();
+    }
+    if (typeof updateAddColorButtonState === "function") {
+      updateAddColorButtonState();
+    }
+    return;
+  }
+
+  const clusters = await getImageColorClusters();
+  updatePaletteSizeButtonsAvailability(clusters.length);
+
+  if (typeof updateRegenerateButtonsAvailability === "function") {
+    updateRegenerateButtonsAvailability();
+  }
+  if (typeof updateAddColorButtonState === "function") {
+    updateAddColorButtonState();
+  }
+}
+
+function getImageBasedCandidateColor(existingColors = new Set(), adjacentBaseNames = []) {
+  const imageClusters = getCachedImageColorClusters();
+  if (imageClusters.length === 0) {
+    return null;
+  }
+
+  let bestCandidate = null;
+  let bestConflictCount = Infinity;
+
+  imageClusters.forEach((cluster, clusterIndex) => {
+    const candidate = getAdjustedPaletteColor(cluster.hex, clusterIndex);
+
+    if (existingColors.has(candidate)) {
+      return;
+    }
+
+    const candidateBaseName = typeof getNearestColorName === "function"
+      ? getNearestColorName(candidate)
+      : "";
+    const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
+      return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
+    }, 0);
+
+    if (conflictCount === 0) {
+      bestCandidate = candidate;
+      bestConflictCount = 0;
+      return;
+    }
+
+    if (conflictCount < bestConflictCount) {
+      bestCandidate = candidate;
+      bestConflictCount = conflictCount;
     }
   });
 
-  if (uniqueColors.length >= targetCount) {
-    return uniqueColors.slice(0, targetCount);
-  }
+  return bestCandidate;
+}
 
-  return expandImagePalette(
-    uniqueColors.map((hex) => ({
-      hex,
-      hsl: controlsHexToHsl(hex),
-    })),
-    targetCount
-  );
+function getImageRegenerationColorForCard(card, existingColors = new Set()) {
+  const adjacentBaseNames = typeof getAdjacentBaseColorNames === "function"
+    ? getAdjacentBaseColorNames(card)
+    : [];
+
+  return getImageBasedCandidateColor(existingColors, adjacentBaseNames);
 }
 
 async function buildImageBasedPalette(targetCount) {
@@ -820,21 +949,15 @@ async function buildImageBasedPalette(targetCount) {
     return [];
   }
 
-  const points = await getUploadedImageSamplePoints();
-  if (points.length === 0) {
-    alert("No se pudieron extraer colores válidos de esta imagen.");
-    return [];
-  }
-
-  const clusterCount = Math.min(Math.max(targetCount + 4, 8), points.length);
-  const clusters = cleanImageClusterDuplicates(clusterImageColors(points, clusterCount));
+  const clusters = await getImageColorClusters();
   if (clusters.length === 0) {
-    alert("No se pudieron agrupar colores útiles a partir de esta imagen.");
     return [];
   }
 
   const selectedClusters = selectRelevantImageClusters(clusters, targetCount);
-  return applyImagePaletteAdjustments(expandImagePalette(selectedClusters, targetCount), targetCount);
+  return selectedClusters.length > 0
+    ? selectedClusters.map((cluster) => cluster.hex)
+    : [];
 }
 
 // SIZE SELECTOR
@@ -847,6 +970,10 @@ function setPaletteSize(size) {
 }
 
 function handlePaletteSizeButtonClick(button) {
+  if (button?.classList.contains("is-disabled")) {
+    return;
+  }
+
   if (button?.matches(":hover")) {
     button.classList.add("suppress-hover");
   }
@@ -970,7 +1097,6 @@ function setupSurpriseButton() {
 
     if (saturationInput) {
       saturationInput.value = Math.round((Math.random() * 100) / 5) * 5;
-      enforceLowBrightnessSaturationConstraint();
       updateSaturationProgress();
       syncTemperatureControlsState();
     }
@@ -1125,7 +1251,8 @@ async function generatePalette() {
   // Remove only color cards and keep the add card
   getColorCards().forEach((card) => card.remove());
 
-  currentPalette = nextPalette;
+  capturePaletteAdjustmentBase(nextPalette);
+  currentPalette = buildAdjustedPaletteFromBase();
   currentPalette.forEach((color) => {
     createColorCard(color);
   });

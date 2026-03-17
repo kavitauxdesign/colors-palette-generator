@@ -37,7 +37,6 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (saturationInput && Number.isFinite(settings?.saturation)) {
     saturationInput.value = settings.saturation;
-    enforceLowBrightnessSaturationConstraint();
     updateSaturationProgress();
     syncTemperatureControlsState();
   }
@@ -232,6 +231,10 @@ function loadPaletteVersionInGenerator(historyEntry) {
     currentPalette.push(color);
   });
 
+  capturePaletteAdjustmentBase(currentPalette, {
+    brightness: brightnessInput ? Number(brightnessInput.value) : DEFAULT_BRIGHTNESS,
+    saturation: saturationInput ? Number(saturationInput.value) : DEFAULT_SATURATION,
+  });
   syncCurrentPaletteFromDom();
   // Scroll up so user can see the loaded palette
   window.scrollTo({

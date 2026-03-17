@@ -79,6 +79,8 @@ function syncCurrentPaletteFromDom() {
   // Read colors from cards and sync app state
   currentPalette = getCurrentPaletteHexValues();
   refreshColorCardNames();
+  updateRegenerateButtonsAvailability();
+  updateAddColorButtonState();
 }
 
 // Get all current palette colors from the DOM
@@ -90,6 +92,7 @@ function getColorCards() {
 function setCardColor(card, color) {
   const normalizedColor = normalizeHexColor(color);
   card.style.background = normalizedColor;
+  card.dataset.regenerateLocked = "false";
 
   const colorName = card.querySelector(".color-name");
   if (colorName) {
@@ -329,6 +332,30 @@ function createCardActionButton(actionName, tooltipText) {
 
   return button;
 }
+
+function setActionButtonTooltipText(button, tooltipText) {
+  const tooltip = button?.querySelector(".tooltip");
+  if (!tooltip) {
+    return;
+  }
+
+  tooltip.textContent = tooltipText;
+}
+
+function setRegenerateButtonAvailability(button, isAvailable) {
+  if (!button) {
+    return;
+  }
+
+  button.classList.toggle("is-disabled", !isAvailable);
+  button.setAttribute("aria-disabled", isAvailable ? "false" : "true");
+  setActionButtonTooltipText(
+    button,
+    isAvailable
+      ? "Regenerate color"
+      : "No hay suficiente variedad de colores en la imagen de referencia"
+  );
+}
 // Show delete only when more than 3 cards exist
 function refreshDeleteButtonsVisibility() {
   const cards = getColorCards();
@@ -356,6 +383,106 @@ function updateAddColorButtonState() {
   addColorLabel.textContent = isAtMax ? ADD_DISABLED_LABEL : addColorDefaultLabel;
 }
 
+function getAdjacentBaseColorNames(card) {
+  const cards = Array.from(getColorCards());
+  const cardIndex = cards.indexOf(card);
+
+  if (cardIndex === -1) {
+    return [];
+  }
+
+  return [cards[cardIndex - 1], cards[cardIndex + 1]]
+    .filter(Boolean)
+    .map((adjacentCard) => adjacentCard.querySelector(".color-label")?.textContent?.trim() || "")
+    .map((hex) => normalizeHexColor(hex))
+    .filter((hex) => isValidHexColor(hex))
+    .map((hex) => getNearestColorName(hex));
+}
+
+function getRegeneratedColorForCard(card, existingColors) {
+  if (paletteBaseMode === "image" && typeof getImageRegenerationColorForCard === "function") {
+    return getImageRegenerationColorForCard(card, existingColors);
+  }
+
+  const maxCandidateSearches = 18;
+  const seenCandidates = new Set();
+  const adjacentBaseNames = getAdjacentBaseColorNames(card);
+  let bestCandidate = null;
+  let bestConflictCount = Infinity;
+
+  for (let attempt = 0; attempt < maxCandidateSearches; attempt++) {
+    const candidate = getUniqueGeneratedColor(existingColors);
+    if (!candidate || seenCandidates.has(candidate)) {
+      continue;
+    }
+
+    seenCandidates.add(candidate);
+
+    const candidateBaseName = getNearestColorName(candidate);
+    const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
+      return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
+    }, 0);
+
+    if (conflictCount === 0) {
+      return candidate;
+    }
+
+    if (conflictCount < bestConflictCount) {
+      bestCandidate = candidate;
+      bestConflictCount = conflictCount;
+    }
+  }
+
+  return bestCandidate || getUniqueGeneratedColor(existingColors);
+}
+
+function getAddedColorForCurrentMode(existingColors) {
+  if (paletteBaseMode === "image") {
+    const imageCandidate =
+      typeof getImageBasedCandidateColor === "function"
+        ? getImageBasedCandidateColor(existingColors, [])
+        : null;
+
+    return {
+      color: imageCandidate || "#FFFFFF",
+      isFallbackWhite: !imageCandidate,
+    };
+  }
+
+  return {
+    color: getUniqueGeneratedColor(existingColors),
+    isFallbackWhite: false,
+  };
+}
+
+function updateRegenerateButtonsAvailability() {
+  const cards = Array.from(getColorCards());
+
+  cards.forEach((card) => {
+    const regenerateBtn = card.querySelector(".action-regenerate");
+    if (!regenerateBtn) {
+      return;
+    }
+
+    if (paletteBaseMode !== "image") {
+      setRegenerateButtonAvailability(regenerateBtn, true);
+      return;
+    }
+
+    if (card.dataset.regenerateLocked === "true") {
+      setRegenerateButtonAvailability(regenerateBtn, false);
+      return;
+    }
+
+    const existingColors = new Set(getCurrentPaletteHexValues());
+
+    setRegenerateButtonAvailability(
+      regenerateBtn,
+      !!getRegeneratedColorForCard(card, existingColors)
+    );
+  });
+}
+
 function attachCardActions(card) {
   // Create all action buttons for this card
   const actions = document.createElement("div");
@@ -374,14 +501,13 @@ function attachCardActions(card) {
   regenerateBtn.addEventListener("click", (event) => {
     event.stopPropagation();
 
-    const currentHex = normalizeHexColor(
-      card.querySelector(".color-label")?.textContent?.trim() || "#000000",
-    );
-    // Exclude current card color because it will be replaced
-    const existingColors = new Set(getCurrentPaletteHexValues());
-    existingColors.delete(currentHex);
+    if (regenerateBtn.classList.contains("is-disabled")) {
+      return;
+    }
 
-    const newColor = getUniqueGeneratedColor(existingColors);
+    const existingColors = new Set(getCurrentPaletteHexValues());
+
+    const newColor = getRegeneratedColorForCard(card, existingColors);
     if (!newColor) {
       alert("Could not find a unique color. Please try again.");
       return;
@@ -389,6 +515,7 @@ function attachCardActions(card) {
 
     setCardColor(card, newColor);
     syncCurrentPaletteFromDom();
+    capturePaletteAdjustmentBase(currentPalette);
     saveHistory(currentPalette);
   });
 
@@ -466,6 +593,7 @@ function attachCardActions(card) {
     card.remove();
     refreshDeleteButtonsVisibility();
     syncCurrentPaletteFromDom();
+    capturePaletteAdjustmentBase(currentPalette);
     saveHistory(currentPalette);
   });
 
@@ -511,6 +639,7 @@ globalEditPicker.addEventListener("change", () => {
   setCardColor(activeEditCard, candidate);
   activeEditOriginalColor = candidate;
   syncCurrentPaletteFromDom();
+  capturePaletteAdjustmentBase(currentPalette);
 
   if (candidate !== previousColor) {
     saveHistory(currentPalette);
@@ -563,11 +692,17 @@ function createColorCard(color) {
 
   refreshDeleteButtonsVisibility();
   updateAddColorButtonState();
+
+  return card;
 }
 
 // COPY CURRENT PALETTE
 
 function getNearestColorName(hex) {
+  if (normalizeHexColor(hex) === "#FFFFFF") {
+    return "Pure white";
+  }
+
   // Find nearest named color by RGB distance
   const target = hexToRgb(hex);
   let closestName = "Unknown";
@@ -768,14 +903,20 @@ if (addColorBtn) {
     }
     // Keep uniqueness against current palette colors
     const existingColors = new Set(getCurrentPaletteHexValues());
-    const color = getUniqueGeneratedColor(existingColors);
-
+    const { color, isFallbackWhite } = getAddedColorForCurrentMode(existingColors);
     if (!color) {
       alert("Could not find a unique color. Please try again.");
       return;
     }
-    createColorCard(color);
+
+    const card = createColorCard(color);
+
+    if (card) {
+      card.dataset.regenerateLocked = isFallbackWhite ? "true" : "false";
+    }
+
     syncCurrentPaletteFromDom();
+    capturePaletteAdjustmentBase(currentPalette);
     saveHistory(currentPalette);
   });
 }

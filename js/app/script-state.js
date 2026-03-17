@@ -56,8 +56,6 @@ const {
   DEFAULT_SATURATION,
   LOW_SATURATION_FALLBACK_THRESHOLD,
   LOW_SATURATION_TEMPERATURE_UNLOCK_BRIGHTNESS,
-  LOW_BRIGHTNESS_THRESHOLD,
-  MIN_SATURATION_WHEN_LOW_BRIGHTNESS,
 } = window.AppConstants;
 
 const colorUtilsForState = window.AppColorUtils || {};
@@ -100,6 +98,11 @@ const copyHexBtnDefaultTooltip =
 const copyHexBtnDefaultLabel = copyHexBtnLabel?.textContent?.trim() ?? "Copiar HEX";
 const addColorDefaultLabel = addColorLabel?.textContent?.trim() ?? "Añadir color";
 let currentPalette = [];
+let paletteAdjustmentBase = [];
+let paletteAdjustmentBaseSettings = {
+  brightness: DEFAULT_BRIGHTNESS,
+  saturation: DEFAULT_SATURATION,
+};
 let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;
 let activeEditOriginalColor = "#000000";
