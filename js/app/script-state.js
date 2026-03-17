@@ -2,7 +2,18 @@
 
 const {
   paletteContainer,
+  controlsPanel,
+  paletteSection,
   historyContainer,
+  paletteBaseControlGroup,
+  paletteBaseModeSelect,
+  temperatureBasePanel,
+  imageBasePanel,
+  paletteImageInput,
+  paletteImageDropzone,
+  paletteImagePreview,
+  paletteImagePreviewImg,
+  paletteImageName,
   brightnessControlGroup,
   brightnessInput,
   saturationInput,
@@ -40,6 +51,7 @@ const {
   DEFAULT_BRIGHTNESS,
   DEFAULT_SATURATION,
   LOW_SATURATION_FALLBACK_THRESHOLD,
+  LOW_SATURATION_TEMPERATURE_UNLOCK_BRIGHTNESS,
   LOW_BRIGHTNESS_THRESHOLD,
   MIN_SATURATION_WHEN_LOW_BRIGHTNESS,
 } = window.AppConstants;
@@ -72,6 +84,8 @@ const COLOR_NAME_REFERENCES = Array.isArray(window.AppColorNames)
 // Shared runtime state used by all script files
 let paletteSize = DEFAULT_PALETTE_SIZE;
 let paletteHistory = [];
+let paletteBaseMode = "temperature";
+let uploadedBaseImage = null;
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,
   cool: !!DEFAULT_TEMPERATURE.cool,

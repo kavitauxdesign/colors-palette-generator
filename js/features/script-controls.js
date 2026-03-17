@@ -7,6 +7,8 @@ if (typeof hslToHex !== "function") {
 let saturationAttentionTimeout = null;
 let brightnessAttentionTimeout = null;
 let saturationDangerTimeout = null;
+const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml"]);
+const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg"];
 
 function updateRangeControl(input, valueLabel, lowIcon, highIcon) {
   if (!input) {
@@ -63,8 +65,24 @@ const updateSaturationProgress = () =>
     highSaturationIcon
   );
 
+function updatePaletteStickyState() {
+  if (!controlsPanel || !paletteSection) {
+    return;
+  }
+
+  const isDesktopLayout = window.innerWidth > 680;
+  const controlsHeight = controlsPanel.scrollHeight;
+  const paletteHeight = paletteSection.scrollHeight;
+  const shouldStick = isDesktopLayout && paletteHeight > 0 && paletteHeight < controlsHeight;
+
+  paletteSection.classList.toggle("is-sticky", shouldStick);
+}
+
 function isTemperatureLockedBySaturation() {
-  return getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD;
+  return (
+    getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD &&
+    getCurrentBrightnessValue() <= LOW_SATURATION_TEMPERATURE_UNLOCK_BRIGHTNESS
+  );
 }
 
 function renderTemperatureButtonState(button, isActive) {
@@ -168,10 +186,12 @@ if (brightnessInput) {
   brightnessInput.addEventListener("input", () => {
     updateBrightnessProgress();
     enforceLowBrightnessSaturationConstraint();
+    syncTemperatureControlsState();
   });
   // Apply the first visual state
   updateBrightnessProgress();
   enforceLowBrightnessSaturationConstraint();
+  syncTemperatureControlsState();
 }
 
 if (saturationInput) {
@@ -184,6 +204,134 @@ if (saturationInput) {
   updateSaturationProgress();
   enforceLowBrightnessSaturationConstraint();
   syncTemperatureControlsState();
+}
+
+// PALETTE BASE
+
+function setPaletteBaseMode(nextMode) {
+  paletteBaseMode = nextMode === "image" ? "image" : "temperature";
+
+  if (paletteBaseModeSelect) {
+    paletteBaseModeSelect.value = paletteBaseMode;
+  }
+
+  if (temperatureBasePanel) {
+    const showTemperaturePanel = paletteBaseMode === "temperature";
+    temperatureBasePanel.classList.toggle("active", showTemperaturePanel);
+    temperatureBasePanel.hidden = !showTemperaturePanel;
+  }
+
+  if (imageBasePanel) {
+    const showImagePanel = paletteBaseMode === "image";
+    imageBasePanel.classList.toggle("active", showImagePanel);
+    imageBasePanel.hidden = !showImagePanel;
+  }
+}
+
+function isAcceptedPaletteImageFile(file) {
+  if (!(file instanceof File)) {
+    return false;
+  }
+
+  const normalizedName = file.name.trim().toLowerCase();
+  return (
+    allowedPaletteImageTypes.has(file.type) ||
+    allowedPaletteImageExtensions.some((extension) => normalizedName.endsWith(extension))
+  );
+}
+
+function renderPaletteImagePreview() {
+  if (!paletteImagePreview || !paletteImagePreviewImg || !paletteImageName) {
+    return;
+  }
+
+  const hasPreview = !!uploadedBaseImage?.dataUrl;
+  paletteImagePreview.hidden = !hasPreview;
+
+  if (!hasPreview) {
+    paletteImagePreviewImg.removeAttribute("src");
+    paletteImageName.textContent = "";
+    return;
+  }
+
+  paletteImagePreviewImg.src = uploadedBaseImage.dataUrl;
+  paletteImageName.textContent = uploadedBaseImage.name;
+}
+
+function handlePaletteImageFile(file) {
+  if (!isAcceptedPaletteImageFile(file)) {
+    alert("Solo se permiten imágenes JPG, PNG o SVG.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    uploadedBaseImage = {
+      name: file.name,
+      type: file.type,
+      dataUrl: String(reader.result || ""),
+    };
+    setPaletteBaseMode("image");
+    renderPaletteImagePreview();
+  });
+  reader.readAsDataURL(file);
+}
+
+if (paletteBaseModeSelect) {
+  paletteBaseModeSelect.addEventListener("change", () => {
+    setPaletteBaseMode(paletteBaseModeSelect.value);
+  });
+}
+
+if (paletteImageInput) {
+  paletteImageInput.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handlePaletteImageFile(file);
+    }
+  });
+}
+
+if (paletteImageDropzone) {
+  ["dragenter", "dragover"].forEach((eventName) => {
+    paletteImageDropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      paletteImageDropzone.classList.add("is-dragover");
+    });
+  });
+
+  ["dragleave", "dragend", "drop"].forEach((eventName) => {
+    paletteImageDropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      paletteImageDropzone.classList.remove("is-dragover");
+    });
+  });
+
+  paletteImageDropzone.addEventListener("drop", (event) => {
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      handlePaletteImageFile(file);
+    }
+  });
+}
+
+setPaletteBaseMode(paletteBaseMode);
+renderPaletteImagePreview();
+
+if (controlsPanel && paletteSection) {
+  updatePaletteStickyState();
+
+  if (typeof ResizeObserver === "function") {
+    const stickyObserver = new ResizeObserver(() => {
+      updatePaletteStickyState();
+    });
+
+    stickyObserver.observe(controlsPanel);
+    stickyObserver.observe(paletteSection);
+    stickyObserver.observe(paletteContainer);
+  }
+
+  window.addEventListener("resize", updatePaletteStickyState, { passive: true });
 }
 
 // SIZE SELECTOR
@@ -334,6 +482,19 @@ function shouldUseAlternativePalette() {
   return getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD;
 }
 
+function getTemperatureBasedHue() {
+  const useWarmPalette =
+    temperature.warm && (!temperature.cool || Math.random() < 0.5);
+
+  if (useWarmPalette) {
+    return Math.random() < 0.2
+      ? 300 + Math.random() * 60
+      : Math.random() * 60;
+  }
+
+  return 120 + Math.random() * 180;
+}
+
 function buildAlternativeMonochromePalette(targetCount) {
   if (targetCount <= 0) {
     return [];
@@ -347,7 +508,7 @@ function buildAlternativeMonochromePalette(targetCount) {
     0,
     LOW_SATURATION_FALLBACK_THRESHOLD
   );
-  const baseHue = Math.random() * 360;
+  const baseHue = getTemperatureBasedHue();
   const spread = clampControlValue(targetCount * 8, 36, 72);
 
   let minLightness = clampControlValue(centerLightness - spread / 2, 10, 90);
@@ -398,7 +559,7 @@ function generatePalette() {
   // Build a new palette from current settings
   let nextPalette = [];
   const usedColors = new Set();
-  const maxRetriesPerColor = 99;
+  const maxRetriesPerColor = 12;
   let usedAlternativePalette = false;
 
   for (let i = 0; i < paletteSize; i++) {
@@ -443,21 +604,7 @@ function generatePalette() {
 // GENERATE COLOR
 
 function generateColor() {
-  let h;
-
-  // If both temps are on, pick warm or cool randomly
-  const useWarmPalette =
-    temperature.warm && (!temperature.cool || Math.random() < 0.5);
-
-  if (useWarmPalette) {
-    if (Math.random() < 0.2) {
-      h = 300 + Math.random() * 60;
-    } else {
-      h = Math.random() * 60;
-    }
-  } else {
-    h = 120 + Math.random() * 180;
-  }
+  let h = getTemperatureBasedHue();
 
   let s = getCurrentSaturationValue();
 

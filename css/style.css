@@ -31,6 +31,7 @@
   --PX-20: 20px;
   --PX-22: 22px;
   --PX-24: 24px;
+  --PX-30: 30px;
   --PX-40: 40px;
 
   --duration-fast: 0.2s;
@@ -482,6 +483,7 @@ nav button:hover {
 
 .generator-container {
   display: flex;
+  align-items: flex-start;
   gap: 130px;
   margin: var(--PX-20) 0 50px;
 }
@@ -502,6 +504,157 @@ nav button:hover {
   gap: var(--PX-10);
 }
 
+.base-selector {
+  display: flex;
+  width: 100%;
+  position: relative;
+  margin-bottom: var(--PX-30);
+}
+
+.base-selector::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--PX-16);
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid rgba(69, 69, 69, 0.6);
+  border-bottom: 1.5px solid rgba(69, 69, 69, 0.6);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.base-mode-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 42px 0 var(--PX-16);
+  border: 1px solid rgba(89, 77, 77, 0.12);
+  border-radius: var(--PX-12);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--primary);
+  font-size: var(--PX-16);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.base-mode-select:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(145, 111, 83, 0.24);
+}
+
+.base-mode-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 0 0 3px rgba(145, 111, 83, 0.1);
+}
+
+.base-panel {
+  display: none;
+}
+
+.base-panel.active {
+  display: flex;
+}
+
+#temperatureBasePanel {
+  gap: var(--PX-10);
+  flex-wrap: wrap;
+}
+
+#imageBasePanel {
+  flex-direction: column;
+  gap: var(--PX-12);
+}
+
+.palette-image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.image-upload-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--PX-6);
+  min-height: 132px;
+  padding: var(--PX-20);
+  border: 2px dashed rgba(145, 111, 83, 0.32);
+  border-radius: var(--PX-18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(243, 244, 246, 0.94) 100%);
+  color: var(--secondary);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    transform var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.image-upload-dropzone:hover,
+.image-upload-dropzone.is-dragover {
+  border-color: var(--accent);
+  box-shadow: 0 var(--PX-10) 22px rgba(89, 77, 77, 0.12);
+  transform: translateY(-1px);
+}
+
+.image-upload-title {
+  font-size: var(--PX-16);
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.image-upload-copy {
+  font-size: var(--PX-14);
+  color: var(--secondary);
+}
+
+.image-upload-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--PX-14);
+  padding: var(--PX-12);
+  border-radius: var(--PX-16);
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(89, 77, 77, 0.08);
+}
+
+.image-upload-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--PX-14);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(89, 77, 77, 0.08);
+}
+
+.image-upload-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--PX-4);
+  min-width: 0;
+}
+
+.image-upload-name {
+  font-size: var(--PX-14);
+  font-weight: 600;
+  color: var(--primary);
+  word-break: break-word;
+}
+
 .generate-btns-container {
   display: inline-flex;
   gap: var(--PX-10);
@@ -519,6 +672,12 @@ nav button:hover {
   display: flex;
   flex-direction: column;
   gap: 30px;
+}
+
+.palette-section.is-sticky {
+  position: sticky;
+  top: 88px;
+  align-self: flex-start;
 }
 
 .palette {
@@ -1514,6 +1673,11 @@ input[type="range"].is-danger {
 
   .palette-section {
     overflow-x: auto;
+  }
+
+  .palette-section.is-sticky {
+    position: static;
+    top: auto;
   }
 
   .palette {

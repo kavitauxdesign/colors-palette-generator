@@ -2,7 +2,18 @@
 (function () {
   // Save common elements once so we can reuse them later
   const paletteContainer = document.getElementById("palette");
+  const controlsPanel = document.querySelector(".controls");
+  const paletteSection = document.querySelector(".palette-section");
   const historyContainer = document.getElementById("history");
+  const paletteBaseControlGroup = document.getElementById("paletteBaseControlGroup");
+  const paletteBaseModeSelect = document.getElementById("paletteBaseModeSelect");
+  const temperatureBasePanel = document.getElementById("temperatureBasePanel");
+  const imageBasePanel = document.getElementById("imageBasePanel");
+  const paletteImageInput = document.getElementById("paletteImageInput");
+  const paletteImageDropzone = document.getElementById("paletteImageDropzone");
+  const paletteImagePreview = document.getElementById("paletteImagePreview");
+  const paletteImagePreviewImg = document.getElementById("paletteImagePreviewImg");
+  const paletteImageName = document.getElementById("paletteImageName");
   const brightnessControlGroup = document.getElementById("brightnessControlGroup");
   const brightnessInput = document.getElementById("brightness");
   const saturationInput = document.getElementById("saturation");
@@ -46,7 +57,18 @@
   // Export all DOM references
   window.AppDom = {
     paletteContainer,
+    controlsPanel,
+    paletteSection,
     historyContainer,
+    paletteBaseControlGroup,
+    paletteBaseModeSelect,
+    temperatureBasePanel,
+    imageBasePanel,
+    paletteImageInput,
+    paletteImageDropzone,
+    paletteImagePreview,
+    paletteImagePreviewImg,
+    paletteImageName,
     brightnessControlGroup,
     brightnessInput,
     saturationInput,

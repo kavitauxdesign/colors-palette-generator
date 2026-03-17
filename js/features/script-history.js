@@ -27,6 +27,7 @@ function applyGeneratorSettings(settings, fallbackSize) {
   if (brightnessInput && Number.isFinite(settings?.brightness)) {
     brightnessInput.value = settings.brightness;
     updateBrightnessProgress();
+    syncTemperatureControlsState();
   }
 
   if (saturationInput && Number.isFinite(settings?.saturation)) {
