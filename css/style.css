@@ -184,6 +184,13 @@ button {
 .temp {
   width: 100px;
   margin-right: var(--PX-10);
+  transition:
+    transform var(--duration-fast) ease,
+    opacity var(--duration-fast) ease,
+    filter var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
 }
 
 .size.active {
@@ -206,31 +213,50 @@ button {
   box-shadow: 0 var(--PX-10) 13px -7px var(--shadow);
 }
 
-.temp:hover,
+.temp:hover:not(.suppress-hover),
 .temp.active {
   color: var(--primary);
 }
 
-.temp#warmBtn:hover,
+.temp#warmBtn:hover:not(.suppress-hover),
 .temp.active#warmBtn {
   border: var(--PX-2) solid var(--warm);
 }
 
-.temp#warmBtn:hover svg,
+.temp#warmBtn:hover:not(.suppress-hover) svg,
 .temp.active#warmBtn svg {
   color: var(--warm);
   stroke: var(--warm);
 }
 
-.temp#coolBtn:hover,
+.temp#coolBtn:hover:not(.suppress-hover),
 .temp.active#coolBtn {
   border: var(--PX-2) solid var(--cool);
 }
 
-.temp#coolBtn:hover svg,
+.temp#coolBtn:hover:not(.suppress-hover) svg,
 .temp.active#coolBtn svg {
   color: var(--cool);
   stroke: var(--cool);
+}
+
+.temp.is-saturation-locked {
+  opacity: 0.48;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+  box-shadow: none;
+  color: var(--accent-pale);
+  border-color: rgba(91, 102, 117, 0.3);
+}
+
+.temp.is-saturation-locked svg {
+  color: var(--accent-pale) !important;
+  stroke: var(--accent-pale) !important;
+}
+
+.temp.is-saturation-locked:hover {
+  filter: grayscale(0.35);
+  box-shadow: none;
 }
 
 
@@ -890,7 +916,9 @@ nav button:hover {
 /* =============================== */
 /* Brightness                      */
 /* =============================== */
-.brightness-labels {
+.range-labels,
+.brightness-labels,
+.saturation-labels {
   display: flex;
   gap: 15px;
   align-items: center;
@@ -909,12 +937,24 @@ nav button:hover {
   font-weight: 600;
 }
 
-.brightness-icon {
+.range-icon,
+.brightness-icon,
+.saturation-icon {
   width: var(--PX-24);
   height: var(--PX-24);
   flex-shrink: 0;
   transform-origin: center;
   transition: transform var(--duration-fast) ease;
+}
+
+#brightnessControlGroup,
+#saturationControlGroup {
+  transform-origin: center;
+}
+
+#brightnessControlGroup.needs-attention,
+#saturationControlGroup.needs-attention {
+  animation: saturation-attention 0.38s ease;
 }
 
 input[type="range"] {
@@ -923,6 +963,8 @@ input[type="range"] {
   width: 100%;
   height: var(--PX-8);
   border-radius: 200px;
+  --range-active-color: var(--accent);
+  --range-thumb-color: var(--accent-pale);
 }
 
 
@@ -933,8 +975,8 @@ input[type="range"]::-webkit-slider-runnable-track {
   height: var(--PX-8);
   border-radius: 200px;
   background: linear-gradient(to right,
-      var(--accent) 0%,
-      var(--accent) var(--value, 50%),
+      var(--range-active-color) 0%,
+      var(--range-active-color) var(--value, 50%),
       var(--shadow) var(--value, 50%),
       var(--shadow) 100%);
 }
@@ -948,7 +990,7 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 26px;
   height: 26px;
-  background: var(--accent-pale);
+  background: var(--range-thumb-color);
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   cursor: pointer;
@@ -958,11 +1000,16 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: var(--accent);
+  background: var(--range-active-color);
   border: 2px solid var(--on-accent);
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   cursor: pointer;
+}
+
+input[type="range"].is-danger {
+  --range-active-color: var(--danger);
+  --range-thumb-color: #f3b2b2;
 }
 
 
@@ -1362,6 +1409,32 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+@keyframes saturation-attention {
+  0% {
+    transform: scale(1) translateX(0);
+  }
+
+  18% {
+    transform: scale(1.02) translateX(-4px);
+  }
+
+  38% {
+    transform: scale(1.02) translateX(4px);
+  }
+
+  58% {
+    transform: scale(1.01) translateX(-3px);
+  }
+
+  78% {
+    transform: scale(1.01) translateX(3px);
+  }
+
+  100% {
+    transform: scale(1) translateX(0);
+  }
+}
+
 
 /* =============================== */
 /* Media Queries                   */
@@ -1463,7 +1536,9 @@ input[type="range"]::-moz-range-thumb {
     padding-bottom: var(--PX-24);
   }
 
-  .brightness-labels {
+  .range-labels,
+  .brightness-labels,
+  .saturation-labels {
     padding: 0 20px;
   }
 

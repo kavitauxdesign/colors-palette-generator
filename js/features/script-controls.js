@@ -1,50 +1,189 @@
-﻿// Update brightness UI
+﻿// Update range controls UI
 const hslToHex = window.AppColorUtils?.hslToHex;
 if (typeof hslToHex !== "function") {
   throw new Error("AppColorUtils.hslToHex is required before script-controls.js loads.");
 }
 
-const updateProgress = () => {
-  if (!brightnessInput) {
+let saturationAttentionTimeout = null;
+let brightnessAttentionTimeout = null;
+let saturationDangerTimeout = null;
+
+function updateRangeControl(input, valueLabel, lowIcon, highIcon) {
+  if (!input) {
     return;
   }
 
-  const min = parseFloat(brightnessInput.min) || 0;
-  const max = parseFloat(brightnessInput.max) || 100;
-  const value = parseFloat(brightnessInput.value);
+  const min = parseFloat(input.min) || 0;
+  const max = parseFloat(input.max) || 100;
+  const value = parseFloat(input.value);
 
   // Update slider fill based on current value
   const percent = ((value - min) / (max - min)) * 100;
 
-  brightnessInput.style.setProperty("--value", percent + "%");
-  if (brightnessValueLabel) {
-    brightnessValueLabel.textContent = `${Math.round(percent)}%`;
+  input.style.setProperty("--value", percent + "%");
+  if (valueLabel) {
+    valueLabel.textContent = `${Math.round(percent)}%`;
   }
 
-  // Grow dark icon when slider goes left
-  let darkScale = 0;
-  if (darkBrightnessIcon && percent < 50) {
-    darkScale = ((50 - percent) / 40) * 55;
+  // Grow left icon when slider goes left
+  let lowScale = 0;
+  if (lowIcon && percent < 50) {
+    lowScale = ((50 - percent) / 40) * 30;
   }
 
-  // Grow light icon when slider goes right
-  let lightScale = 0;
+  // Grow right icon when slider goes right
+  let highScale = 0;
   if (percent > 50) {
-    lightScale = ((percent - 50) / 40) * 60;
+    highScale = ((percent - 50) / 40) * 30;
   }
 
-  if (darkBrightnessIcon) {
-    darkBrightnessIcon.style.transform = `scale(${1 + darkScale / 100})`;
+  if (lowIcon) {
+    lowIcon.style.transform = `scale(${1 + lowScale / 100})`;
+    lowIcon.style.opacity = `${Math.max(0.5, 1 - (percent / 100) * 0.4)}`;
   }
-  if (lightBrightnessIcon) {
-    lightBrightnessIcon.style.transform = `scale(${1 + lightScale / 100})`;
+  if (highIcon) {
+    highIcon.style.transform = `scale(${1 + highScale / 100})`;
+    highIcon.style.opacity = `${Math.max(0.5, 0.5 + (percent / 100) * 0.4)}`;
   }
-};
+}
+
+const updateBrightnessProgress = () =>
+  updateRangeControl(
+    brightnessInput,
+    brightnessValueLabel,
+    darkBrightnessIcon,
+    lightBrightnessIcon
+  );
+
+const updateSaturationProgress = () =>
+  updateRangeControl(
+    saturationInput,
+    saturationValueLabel,
+    lowSaturationIcon,
+    highSaturationIcon
+  );
+
+function isTemperatureLockedBySaturation() {
+  return getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD;
+}
+
+function renderTemperatureButtonState(button, isActive) {
+  if (!button) {
+    return;
+  }
+
+  const isLocked = isTemperatureLockedBySaturation();
+  button.classList.toggle("active", !isLocked && isActive);
+  button.classList.toggle("is-saturation-locked", isLocked);
+  button.setAttribute("aria-disabled", isLocked ? "true" : "false");
+}
+
+function syncTemperatureControlsState() {
+  renderTemperatureButtonState(warmBtn, temperature.warm);
+  renderTemperatureButtonState(coolBtn, temperature.cool);
+}
+
+function animateSaturationControlAttention() {
+  if (!saturationControlGroup) {
+    return;
+  }
+
+  saturationControlGroup.classList.remove("needs-attention");
+  void saturationControlGroup.offsetWidth;
+  saturationControlGroup.classList.add("needs-attention");
+
+  if (saturationAttentionTimeout) {
+    clearTimeout(saturationAttentionTimeout);
+  }
+
+  saturationAttentionTimeout = setTimeout(() => {
+    saturationControlGroup.classList.remove("needs-attention");
+    saturationAttentionTimeout = null;
+  }, 420);
+}
+
+function animateBrightnessControlAttention() {
+  if (!brightnessControlGroup) {
+    return;
+  }
+
+  brightnessControlGroup.classList.remove("needs-attention");
+  void brightnessControlGroup.offsetWidth;
+  brightnessControlGroup.classList.add("needs-attention");
+
+  if (brightnessAttentionTimeout) {
+    clearTimeout(brightnessAttentionTimeout);
+  }
+
+  brightnessAttentionTimeout = setTimeout(() => {
+    brightnessControlGroup.classList.remove("needs-attention");
+    brightnessAttentionTimeout = null;
+  }, 420);
+}
+
+function showSaturationDangerState() {
+  if (!saturationInput) {
+    return;
+  }
+
+  saturationInput.classList.add("is-danger");
+
+  if (saturationDangerTimeout) {
+    clearTimeout(saturationDangerTimeout);
+  }
+
+  saturationDangerTimeout = setTimeout(() => {
+    saturationInput.classList.remove("is-danger");
+    saturationDangerTimeout = null;
+  }, 1000);
+}
+
+function isLowBrightnessRestrictingSaturation() {
+  return getCurrentBrightnessValue() <= LOW_BRIGHTNESS_THRESHOLD;
+}
+
+function enforceLowBrightnessSaturationConstraint(triggerSource = "system") {
+  if (!saturationInput || !isLowBrightnessRestrictingSaturation()) {
+    return false;
+  }
+
+  const currentSaturation = getCurrentSaturationValue();
+  if (currentSaturation >= MIN_SATURATION_WHEN_LOW_BRIGHTNESS) {
+    return false;
+  }
+
+  saturationInput.value = String(MIN_SATURATION_WHEN_LOW_BRIGHTNESS);
+  updateSaturationProgress();
+  syncTemperatureControlsState();
+
+  if (triggerSource === "user") {
+    animateBrightnessControlAttention();
+    showSaturationDangerState();
+  }
+
+  return true;
+}
 
 if (brightnessInput) {
-  brightnessInput.addEventListener("input", updateProgress);
+  brightnessInput.addEventListener("input", () => {
+    updateBrightnessProgress();
+    enforceLowBrightnessSaturationConstraint();
+  });
   // Apply the first visual state
-  updateProgress();
+  updateBrightnessProgress();
+  enforceLowBrightnessSaturationConstraint();
+}
+
+if (saturationInput) {
+  saturationInput.addEventListener("input", () => {
+    enforceLowBrightnessSaturationConstraint("user");
+    updateSaturationProgress();
+    syncTemperatureControlsState();
+  });
+  // Apply the first visual state
+  updateSaturationProgress();
+  enforceLowBrightnessSaturationConstraint();
+  syncTemperatureControlsState();
 }
 
 // SIZE SELECTOR
@@ -75,15 +214,15 @@ function setTemperatureSelection(nextSelection) {
     temperature = { warm: warmSelected, cool: coolSelected };
   }
 
-  if (warmBtn) {
-    warmBtn.classList.toggle("active", temperature.warm);
-  }
-  if (coolBtn) {
-    coolBtn.classList.toggle("active", temperature.cool);
-  }
+  syncTemperatureControlsState();
 }
 
 function toggleTemperature(type) {
+  if (isTemperatureLockedBySaturation()) {
+    animateSaturationControlAttention();
+    return;
+  }
+
   const nextSelection = {
     warm: temperature.warm,
     cool: temperature.cool,
@@ -99,12 +238,26 @@ function toggleTemperature(type) {
   setTemperatureSelection(nextSelection);
 }
 
+function handleTemperatureButtonClick(type, button) {
+  if (button?.matches(":hover")) {
+    button.classList.add("suppress-hover");
+  }
+
+  toggleTemperature(type);
+}
+
 if (warmBtn) {
-  warmBtn.onclick = () => toggleTemperature("warm");
+  warmBtn.onclick = () => handleTemperatureButtonClick("warm", warmBtn);
+  warmBtn.addEventListener("mouseleave", () => {
+    warmBtn.classList.remove("suppress-hover");
+  });
 }
 
 if (coolBtn) {
-  coolBtn.onclick = () => toggleTemperature("cool");
+  coolBtn.onclick = () => handleTemperatureButtonClick("cool", coolBtn);
+  coolBtn.addEventListener("mouseleave", () => {
+    coolBtn.classList.remove("suppress-hover");
+  });
 }
 
 // RESET
@@ -143,11 +296,99 @@ function setupSurpriseButton() {
       // Keep the slider visual range at 0-100, but map the real lightness to 10-90.
       const randomBrightness = 10 + Math.random() * 80;
       brightnessInput.value = ((randomBrightness - 10) / 80) * 100;
-      updateProgress();
+      updateBrightnessProgress();
+    }
+
+    if (saturationInput) {
+      saturationInput.value = Math.round((Math.random() * 100) / 5) * 5;
+      enforceLowBrightnessSaturationConstraint();
+      updateSaturationProgress();
+      syncTemperatureControlsState();
     }
 
     generatePalette();
   };
+}
+
+function clampControlValue(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getCurrentBrightnessValue() {
+  const sliderValue = brightnessInput
+    ? parseFloat(brightnessInput.value)
+    : DEFAULT_BRIGHTNESS;
+
+  return Number.isFinite(sliderValue) ? sliderValue : DEFAULT_BRIGHTNESS;
+}
+
+function getCurrentSaturationValue() {
+  const saturationValue = saturationInput
+    ? parseFloat(saturationInput.value)
+    : DEFAULT_SATURATION;
+
+  return Number.isFinite(saturationValue) ? saturationValue : DEFAULT_SATURATION;
+}
+
+function shouldUseAlternativePalette() {
+  return getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD;
+}
+
+function buildAlternativeMonochromePalette(targetCount) {
+  if (targetCount <= 0) {
+    return [];
+  }
+
+  const palette = [];
+  const usedColors = new Set();
+  const centerLightness = 10 + (getCurrentBrightnessValue() / 100) * 80;
+  const monochromeSaturation = clampControlValue(
+    getCurrentSaturationValue(),
+    0,
+    LOW_SATURATION_FALLBACK_THRESHOLD
+  );
+  const baseHue = Math.random() * 360;
+  const spread = clampControlValue(targetCount * 8, 36, 72);
+
+  let minLightness = clampControlValue(centerLightness - spread / 2, 10, 90);
+  let maxLightness = clampControlValue(centerLightness + spread / 2, 10, 90);
+
+  if (maxLightness - minLightness < 24) {
+    minLightness = 10;
+    maxLightness = 90;
+  }
+
+  const lightnessStops = Array.from({ length: targetCount }, (_, index) => {
+    if (targetCount === 1) {
+      return centerLightness;
+    }
+
+    return minLightness + ((maxLightness - minLightness) * index) / (targetCount - 1);
+  });
+
+  const adjustments = [0, -6, 6, -12, 12, -18, 18];
+
+  lightnessStops.forEach((baseLightness) => {
+    for (const adjustment of adjustments) {
+      const candidate = normalizeHexColor(
+        hslToHex(
+          baseHue,
+          monochromeSaturation,
+          clampControlValue(baseLightness + adjustment, 10, 90)
+        )
+      );
+
+      if (isDisallowedColor(candidate) || usedColors.has(candidate)) {
+        continue;
+      }
+
+      usedColors.add(candidate);
+      palette.push(candidate);
+      break;
+    }
+  });
+
+  return palette;
 }
 
 function generatePalette() {
@@ -155,9 +396,10 @@ function generatePalette() {
   getColorCards().forEach((card) => card.remove());
 
   // Build a new palette from current settings
-  currentPalette = [];
+  let nextPalette = [];
   const usedColors = new Set();
   const maxRetriesPerColor = 99;
+  let usedAlternativePalette = false;
 
   for (let i = 0; i < paletteSize; i++) {
     let color = null;
@@ -175,15 +417,27 @@ function generatePalette() {
     }
 
     usedColors.add(color);
-    currentPalette.push(color);
-
-    createColorCard(color);
+    nextPalette.push(color);
   }
+
+  if (nextPalette.length < paletteSize && shouldUseAlternativePalette()) {
+    const alternativePalette = buildAlternativeMonochromePalette(paletteSize);
+
+    if (alternativePalette.length === paletteSize) {
+      nextPalette = alternativePalette;
+      usedAlternativePalette = true;
+    }
+  }
+
+  currentPalette = nextPalette;
+  currentPalette.forEach((color) => {
+    createColorCard(color);
+  });
 
   refreshDeleteButtonsVisibility();
   syncCurrentPaletteFromDom();
 
-  saveHistory(currentPalette);
+  saveHistory(currentPalette, { isAlternative: usedAlternativePalette });
 }
 
 // GENERATE COLOR
@@ -205,10 +459,10 @@ function generateColor() {
     h = 120 + Math.random() * 180;
   }
 
-  // Saturation stays fixed
-  let s = 70;
+  let s = getCurrentSaturationValue();
+
   // Keep the slider at 0-100, but avoid real lightness extremes with a 10-90 range.
-  let sliderValue = parseFloat(brightnessInput.value);
+  let sliderValue = getCurrentBrightnessValue();
   let l = 10 + (sliderValue / 100) * 80;
 
   return hslToHex(h, s, l);

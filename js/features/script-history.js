@@ -8,7 +8,8 @@ function captureCurrentGeneratorSettings() {
       warm: !!temperature.warm,
       cool: !!temperature.cool,
     },
-    brightness: brightnessInput ? Number(brightnessInput.value) : 50,
+    brightness: brightnessInput ? Number(brightnessInput.value) : DEFAULT_BRIGHTNESS,
+    saturation: saturationInput ? Number(saturationInput.value) : DEFAULT_SATURATION,
   };
 }
 
@@ -25,15 +26,23 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (brightnessInput && Number.isFinite(settings?.brightness)) {
     brightnessInput.value = settings.brightness;
-    updateProgress();
+    updateBrightnessProgress();
+  }
+
+  if (saturationInput && Number.isFinite(settings?.saturation)) {
+    saturationInput.value = settings.saturation;
+    enforceLowBrightnessSaturationConstraint();
+    updateSaturationProgress();
+    syncTemperatureControlsState();
   }
 }
 
-function saveHistory(colors) {
+function saveHistory(colors, metadata = {}) {
   // Save a copy so later edits do not change history
   paletteHistory.push({
     colors: [...colors],
     createdAt: new Date(),
+    isAlternative: !!metadata.isAlternative,
     settings: captureCurrentGeneratorSettings(),
   });
 
@@ -57,6 +66,7 @@ function renderHistory() {
     // Support both old and new history formats
     const palette = Array.isArray(entry) ? entry : entry.colors;
     const createdAt = Array.isArray(entry) ? null : entry.createdAt;
+    const isAlternative = Array.isArray(entry) ? false : !!entry.isAlternative;
 
     const historyItem = document.createElement("div");
     historyItem.className = "history-palette";
@@ -69,7 +79,9 @@ function renderHistory() {
 
     const title = document.createElement("h3");
     title.className = "history-title";
-    title.textContent = `Paleta ${index + 1}`;
+    title.textContent = isAlternative
+      ? `Paleta Alternativa ${index + 1}`
+      : `Paleta ${index + 1}`;
 
     const time = document.createElement("span");
     time.className = "history-time";
@@ -221,4 +233,3 @@ function loadPaletteVersionInGenerator(historyEntry) {
     behavior: "smooth",
   });
 }
-

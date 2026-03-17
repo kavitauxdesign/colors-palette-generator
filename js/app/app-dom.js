@@ -3,7 +3,10 @@
   // Save common elements once so we can reuse them later
   const paletteContainer = document.getElementById("palette");
   const historyContainer = document.getElementById("history");
+  const brightnessControlGroup = document.getElementById("brightnessControlGroup");
   const brightnessInput = document.getElementById("brightness");
+  const saturationInput = document.getElementById("saturation");
+  const saturationControlGroup = document.getElementById("saturationControlGroup");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker");
   const addColorElement = document.querySelector(".add-color");
@@ -23,6 +26,10 @@
   const brightnessIcons = document.querySelectorAll(".brightness-labels .brightness-icon");
   const darkBrightnessIcon = brightnessIcons[0] || null;
   const lightBrightnessIcon = brightnessIcons[1] || null;
+  const saturationValueLabel = document.getElementById("saturationValue");
+  const saturationIcons = document.querySelectorAll(".saturation-labels .saturation-icon");
+  const lowSaturationIcon = saturationIcons[0] || null;
+  const highSaturationIcon = saturationIcons[1] || null;
   // One shared color input for editing card colors
   const globalEditPicker = document.createElement("input");
   globalEditPicker.type = "color";
@@ -40,7 +47,10 @@
   window.AppDom = {
     paletteContainer,
     historyContainer,
+    brightnessControlGroup,
     brightnessInput,
+    saturationInput,
+    saturationControlGroup,
     addColorBtn,
     colorPicker,
     addColorElement,
@@ -57,6 +67,9 @@
     brightnessValueLabel,
     darkBrightnessIcon,
     lightBrightnessIcon,
+    saturationValueLabel,
+    lowSaturationIcon,
+    highSaturationIcon,
     globalEditPicker,
   };
 })();

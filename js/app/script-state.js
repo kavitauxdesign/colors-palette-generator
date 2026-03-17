@@ -3,7 +3,10 @@
 const {
   paletteContainer,
   historyContainer,
+  brightnessControlGroup,
   brightnessInput,
+  saturationInput,
+  saturationControlGroup,
   addColorBtn,
   addColorElement,
   copyHexBtn,
@@ -19,6 +22,9 @@ const {
   brightnessValueLabel,
   darkBrightnessIcon,
   lightBrightnessIcon,
+  saturationValueLabel,
+  lowSaturationIcon,
+  highSaturationIcon,
   globalEditPicker,
 } = window.AppDom;
 
@@ -31,6 +37,11 @@ const {
   ADD_DISABLED_LABEL,
   DEFAULT_PALETTE_SIZE,
   DEFAULT_TEMPERATURE,
+  DEFAULT_BRIGHTNESS,
+  DEFAULT_SATURATION,
+  LOW_SATURATION_FALLBACK_THRESHOLD,
+  LOW_BRIGHTNESS_THRESHOLD,
+  MIN_SATURATION_WHEN_LOW_BRIGHTNESS,
 } = window.AppConstants;
 
 const colorUtilsForState = window.AppColorUtils || {};

@@ -529,8 +529,8 @@ globalEditPicker.addEventListener("change", () => {
   }
 
   if (isColorAlreadyInPalette(candidate, activeEditCard)) {
-    alert("Hmm... already in the palette, this color is.\uD83C\uDFA8" + 
-      "A duplicate, we cannot have. Harmony in colors, we must keep.\u2728");
+    alert("El color ya está en la paleta.\uD83C\uDFA8" + 
+      "No se añaden duplicados para mantener el conjunto limpio y consistente.\u2728");
     setCardColor(activeEditCard, activeEditOriginalColor);
     syncCurrentPaletteFromDom();
     return;

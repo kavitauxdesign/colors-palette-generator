@@ -88,7 +88,7 @@
             </button>
 
             <!-- Cool button -->
-            <button id="coolBtn" class="temp">
+            <button id="coolBtn" class="temp active">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 class="lucide lucide-snowflake size-7 text-blue-500"
@@ -111,20 +111,38 @@
           </div>
 
           <!-- Brightness -->
-          <div class="control-group">
+          <div id="brightnessControlGroup" class="control-group">
             <h4 class="control-group-title">
               <span>(3) Brillo:</span>
-              <span id="brightnessValue" class="control-value">50%</span>
+              <span id="brightnessValue" class="control-value">65%</span>
             </h4>
 
-            <div class="brightness-labels">
-              <img class="brightness-icon" src="assets/night.svg" alt="Night icon" />
+            <div class="range-labels brightness-labels">
+              <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
 
               <!-- Slider -->
-              <input type="range" id="brightness" min="0" max="100" step="5" value="50" />
+              <input type="range" id="brightness" min="0" max="100" step="5" value="65" style="--value: 65%;" />
 
               <!-- Light -->
-              <img class="brightness-icon" src="assets/day.svg" alt="Day icon" />
+              <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
+            </div>
+          </div>
+
+          <!-- Saturation -->
+          <div id="saturationControlGroup" class="control-group">
+            <h4 class="control-group-title">
+              <span>(4) Saturación:</span>
+              <span id="saturationValue" class="control-value">100%</span>
+            </h4>
+
+            <div class="range-labels saturation-labels">
+              <img class="range-icon saturation-icon" src="assets/saturation-low.svg" alt="Icono de saturación mínima" />
+
+              <!-- Slider -->
+              <input type="range" id="saturation" min="0" max="100" step="5" value="100" style="--value: 100%;" />
+
+              <!-- Full saturation -->
+              <img class="range-icon saturation-icon" src="assets/saturation-high.svg" alt="Icono de saturación máxima" />
             </div>
           </div>
 
