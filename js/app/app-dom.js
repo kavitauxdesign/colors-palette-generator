@@ -19,12 +19,10 @@
   const sizeButtons = document.querySelectorAll(".size");
   // Add button label text
   const addColorLabel = addColorBtn?.querySelector("span") ?? null;
-  const brightnessSvgs = document.querySelectorAll(".brightness-labels svg");
-  // Brightness icons and their key paths
-  const darkBrightnessSvg = brightnessSvgs[0] || null;
-  const lightBrightnessSvg = brightnessSvgs[1] || null;
-  const darkBrightnessPath = darkBrightnessSvg?.querySelector("path") ?? null;
-  const lightBrightnessPath = lightBrightnessSvg?.querySelector("path") ?? null;
+  const brightnessValueLabel = document.getElementById("brightnessValue");
+  const brightnessIcons = document.querySelectorAll(".brightness-labels .brightness-icon");
+  const darkBrightnessIcon = brightnessIcons[0] || null;
+  const lightBrightnessIcon = brightnessIcons[1] || null;
   // One shared color input for editing card colors
   const globalEditPicker = document.createElement("input");
   globalEditPicker.type = "color";
@@ -56,10 +54,74 @@
     coolBtn,
     sizeButtons,
     addColorLabel,
-    darkBrightnessSvg,
-    darkBrightnessPath,
-    lightBrightnessSvg,
-    lightBrightnessPath,
+    brightnessValueLabel,
+    darkBrightnessIcon,
+    lightBrightnessIcon,
     globalEditPicker,
   };
 })();
+
+// MENU TAB FUNCTIONALITY
+const views = document.querySelectorAll(".view-tab");
+const navButtons = document.querySelectorAll("nav button");
+
+// Main function to show the correct view based on the current target name.
+function showView(name) {
+
+  views.forEach(v => v.classList.remove("active"));
+
+  const target = document.getElementById(name);
+  if (target) {
+    target.classList.add("active");
+  }
+  updateActiveMenuButton(name);
+}
+
+// Click on menu: update URL without triggering the browser's anchor jump.
+navButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.view;
+    if (!target) {
+      return;
+    }
+
+    showView(target);
+    history.replaceState(null, "", `#${target}`);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  });
+});
+
+// HASH CHANGE VIEW HANDLER
+window.addEventListener("hashchange", () => {
+  const view = location.hash.replace("#", "");
+  showView(view);
+});
+
+// INITIAL LOAD
+window.addEventListener("DOMContentLoaded", () => {
+
+  const view = location.hash.replace("#", "") || "palette_generator";
+  showView(view);
+  updateActiveMenuButton(view);
+
+});
+
+// ACTIVE MENU BUTTON
+function updateActiveMenuButton(view) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  const activeBtn = document.querySelector(`nav button[data-view="${view}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+  }
+}
+
+
+// HEADER LOGO SCROLL ROTATION
+const logoImage = document.querySelector(".logo img");
+if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const rotateLogoOnScroll = () => {
+    logoImage.style.setProperty("--scroll-rotate", `${window.scrollY * 0.2}deg`);
+  };
+  window.addEventListener("scroll", rotateLogoOnScroll, { passive: true });
+  rotateLogoOnScroll();
+}

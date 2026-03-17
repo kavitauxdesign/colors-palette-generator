@@ -69,7 +69,7 @@ function renderHistory() {
 
     const title = document.createElement("h3");
     title.className = "history-title";
-    title.textContent = `Palette ${index + 1}`;
+    title.textContent = `Paleta ${index + 1}`;
 
     const time = document.createElement("span");
     time.className = "history-time";
@@ -83,11 +83,11 @@ function renderHistory() {
     const actions = document.createElement("div");
     actions.className = "history-actions";
 
-    const editHistoryBtn = createCardActionButton("edit", "Open in generator");
+    const editHistoryBtn = createCardActionButton("edit", "Abrir en el generador");
     const editHistoryIcon = editHistoryBtn.querySelector(".action-icon");
     if (editHistoryIcon) {
       editHistoryIcon.src = "assets/magic-wand.svg";
-      editHistoryIcon.alt = "open in generator icon";
+      editHistoryIcon.alt = "icono de abrir en el generador";
     }
     const copyHistoryBtn = createCardActionButton("copy", HISTORY_COPY_TOOLTIP_DEFAULT);
     let historyCopyFeedbackTimeout = null;
@@ -109,7 +109,7 @@ function renderHistory() {
 
         const tooltip = copyHistoryBtn.querySelector(".tooltip");
         if (tooltip) {
-          tooltip.textContent = "Copied!";
+          tooltip.textContent = "¡Copiado!";
           copyHistoryBtn.classList.add("show-feedback");
 
           if (historyCopyFeedbackTimeout) {
@@ -148,14 +148,14 @@ function renderHistory() {
 
       const tooltip = document.createElement("div");
       tooltip.className = "tooltip";
-      tooltip.textContent = "Copy HEX";
+      tooltip.textContent = "Copiar HEX";
       box.appendChild(tooltip);
 
       box.addEventListener("click", async () => {
         try {
           await copyTextToClipboard(hex);
 
-          tooltip.textContent = "Copied!";
+          tooltip.textContent = "¡Copiado!";
           box.classList.add("show-feedback");
 
           if (historyColorCopyFeedbackTimeout) {
@@ -163,12 +163,12 @@ function renderHistory() {
           }
 
           historyColorCopyFeedbackTimeout = setTimeout(() => {
-            tooltip.textContent = "Copy HEX";
+            tooltip.textContent = "Copiar HEX";
             box.classList.remove("show-feedback");
             historyColorCopyFeedbackTimeout = null;
           }, 2000);
         } catch (error) {
-          alert("Could not copy this HEX value.");
+          alert("No se pudo copiar este valor HEX.");
         }
       });
 

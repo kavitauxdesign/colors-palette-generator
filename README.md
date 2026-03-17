@@ -123,7 +123,6 @@ index.html
 styles.css
 
 css/
-  satoshi.css
   style.css
 
 assets/
@@ -180,9 +179,9 @@ It is slightly funny that in a web application that generates color palettes, th
 
 ## Typography and Assets
 
-The project uses the Satoshi typeface.
+The project uses the Figtree typeface.
 
-The font is stored locally inside the fonts folder. Although the folder name is plural, we only actually use one font. Originally we considered loading it from the internet, but we decided to keep it locally for reliability.
+The font is loaded from Google Fonts.
 
 The assets folder mainly contains icons.
 
@@ -311,16 +310,6 @@ This includes:
 - generating a completely new palette  
 
 Because of this it is very difficult to accidentally lose a palette configuration.
-
----
-
-## Special Colors
-
-Some colors appear with a small rocket badge matching the application logo.
-
-This badge simply highlights colors whose names reference the cosmic theme of the project.
-
-It does not affect the behavior of the palette generator.
 
 ---
 

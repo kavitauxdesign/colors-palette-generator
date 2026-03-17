@@ -4,44 +4,6 @@ if (typeof hslToHex !== "function") {
   throw new Error("AppColorUtils.hslToHex is required before script-controls.js loads.");
 }
 
-const ROOT_STYLES = getComputedStyle(document.documentElement);
-const DARK_BRIGHTNESS_DEFAULT_FILL =
-  ROOT_STYLES.getPropertyValue("--secondary").trim() || LIGHT_BRIGHTNESS_DEFAULT_FILL;
-const DARK_BRIGHTNESS_ACTIVE_FILL =
-  ROOT_STYLES.getPropertyValue("--danger").trim() || "#ce1c1c";
-
-function hexToRgbForControls(hex) {
-  const normalized = String(hex || "").trim().toUpperCase().replace("#", "");
-  const value =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((char) => char + char)
-          .join("")
-      : normalized;
-
-  return {
-    r: parseInt(value.slice(0, 2), 16),
-    g: parseInt(value.slice(2, 4), 16),
-    b: parseInt(value.slice(4, 6), 16),
-  };
-}
-
-function blendHexForControls(fromHex, toHex, amount) {
-  const from = hexToRgbForControls(fromHex);
-  const to = hexToRgbForControls(toHex);
-  const ratio = Math.max(0, Math.min(1, amount));
-
-  const r = Math.round(from.r + (to.r - from.r) * ratio);
-  const g = Math.round(from.g + (to.g - from.g) * ratio);
-  const b = Math.round(from.b + (to.b - from.b) * ratio);
-
-  return `#${[r, g, b]
-    .map((channel) => channel.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase()}`;
-}
-
 const updateProgress = () => {
   if (!brightnessInput) {
     return;
@@ -55,42 +17,27 @@ const updateProgress = () => {
   const percent = ((value - min) / (max - min)) * 100;
 
   brightnessInput.style.setProperty("--value", percent + "%");
+  if (brightnessValueLabel) {
+    brightnessValueLabel.textContent = `${Math.round(percent)}%`;
+  }
 
   // Grow dark icon when slider goes left
   let darkScale = 0;
-  if (darkBrightnessSvg && percent < 50) {
-    darkScale = ((50 - percent) / 40) * 100;
-    const darkActiveRatio = (50 - percent) / 50;
-
-    if (darkBrightnessPath) {
-      darkBrightnessPath.style.fill = blendHexForControls(
-        DARK_BRIGHTNESS_DEFAULT_FILL,
-        DARK_BRIGHTNESS_ACTIVE_FILL,
-        darkActiveRatio,
-      );
-    }
-  } else if (darkBrightnessSvg) {
-    if (darkBrightnessPath) {
-      darkBrightnessPath.style.fill = DARK_BRIGHTNESS_DEFAULT_FILL;
-    }
+  if (darkBrightnessIcon && percent < 50) {
+    darkScale = ((50 - percent) / 40) * 55;
   }
 
   // Grow light icon when slider goes right
   let lightScale = 0;
   if (percent > 50) {
-    lightScale = ((percent - 50) / 40) * 180;
-    if (lightBrightnessPath) {
-      lightBrightnessPath.style.fill = LIGHT_BRIGHTNESS_ACTIVE_FILL;
-    }
-  } else if (lightBrightnessPath) {
-    lightBrightnessPath.style.fill = LIGHT_BRIGHTNESS_DEFAULT_FILL;
+    lightScale = ((percent - 50) / 40) * 60;
   }
 
-  if (darkBrightnessSvg) {
-    darkBrightnessSvg.style.transform = `scale(${1 + darkScale / 100})`;
+  if (darkBrightnessIcon) {
+    darkBrightnessIcon.style.transform = `scale(${1 + darkScale / 100})`;
   }
-  if (lightBrightnessSvg) {
-    lightBrightnessSvg.style.transform = `scale(${1 + lightScale / 100})`;
+  if (lightBrightnessIcon) {
+    lightBrightnessIcon.style.transform = `scale(${1 + lightScale / 100})`;
   }
 };
 
@@ -98,16 +45,6 @@ if (brightnessInput) {
   brightnessInput.addEventListener("input", updateProgress);
   // Apply the first visual state
   updateProgress();
-}
-
-// HEADER LOGO SCROLL ROTATION
-const logoImage = document.querySelector(".logo img");
-if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-  const rotateLogoOnScroll = () => {
-    logoImage.style.setProperty("--scroll-rotate", `${window.scrollY * 0.2}deg`);
-  };
-  window.addEventListener("scroll", rotateLogoOnScroll, { passive: true });
-  rotateLogoOnScroll();
 }
 
 // SIZE SELECTOR
@@ -203,9 +140,9 @@ function setupSurpriseButton() {
     setTemperatureSelection(randomTemperatureSelection);
 
     if (brightnessInput) {
-      // Pick random brightness and map it to slider value
-      const randomBrightness = 20 + Math.random() * 60;
-      brightnessInput.value = ((randomBrightness - 20) / 60) * 100;
+      // Keep the slider visual range at 0-100, but map the real lightness to 10-90.
+      const randomBrightness = 10 + Math.random() * 80;
+      brightnessInput.value = ((randomBrightness - 10) / 80) * 100;
       updateProgress();
     }
 
@@ -221,25 +158,10 @@ function generatePalette() {
   currentPalette = [];
   const usedColors = new Set();
   const maxRetriesPerColor = 99;
-  const requiresSpecialColor = paletteSize >= 6;
-  let hasSpecialColor = false;
-  const specialTargetIndex = requiresSpecialColor
-    ? Math.floor(Math.random() * paletteSize)
-    : -1;
 
   for (let i = 0; i < paletteSize; i++) {
     let color = null;
     let retries = 0;
-
-    const remainingSlots = paletteSize - i;
-    const mustPickSpecialNow =
-      requiresSpecialColor &&
-      !hasSpecialColor &&
-      (i === specialTargetIndex || remainingSlots === 1);
-
-    if (mustPickSpecialNow) {
-      color = getUniqueSpecialColor(usedColors);
-    }
 
     // Retry silently before giving up on this slot
     while (!color && retries < maxRetriesPerColor) {
@@ -253,10 +175,6 @@ function generatePalette() {
     }
 
     usedColors.add(color);
-    if (isSpecialCosmicColorHex(color)) {
-      hasSpecialColor = true;
-    }
-
     currentPalette.push(color);
 
     createColorCard(color);
@@ -289,11 +207,9 @@ function generateColor() {
 
   // Saturation stays fixed
   let s = 70;
-  // Map slider range 0-100 to lightness 20-80
+  // Keep the slider at 0-100, but avoid real lightness extremes with a 10-90 range.
   let sliderValue = parseFloat(brightnessInput.value);
-  let l = 20 + (sliderValue / 100) * 60;
+  let l = 10 + (sliderValue / 100) * 80;
 
   return hslToHex(h, s, l);
 }
-
-

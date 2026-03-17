@@ -16,10 +16,9 @@ const {
   coolBtn,
   sizeButtons,
   addColorLabel,
-  darkBrightnessSvg,
-  darkBrightnessPath,
-  lightBrightnessSvg,
-  lightBrightnessPath,
+  brightnessValueLabel,
+  darkBrightnessIcon,
+  lightBrightnessIcon,
   globalEditPicker,
 } = window.AppDom;
 
@@ -27,8 +26,6 @@ const {
   DISALLOWED_COLORS,
   MAX_UNIQUE_COLOR_ATTEMPTS,
   MAX_PALETTE_COLORS,
-  LIGHT_BRIGHTNESS_ACTIVE_FILL,
-  LIGHT_BRIGHTNESS_DEFAULT_FILL,
   CARD_COPY_TOOLTIP_DEFAULT,
   HISTORY_COPY_TOOLTIP_DEFAULT,
   ADD_DISABLED_LABEL,
@@ -71,8 +68,8 @@ let temperature = {
 
 const copyHexBtnDefaultTooltip =
   copyHexBtnTooltip?.textContent ?? HISTORY_COPY_TOOLTIP_DEFAULT;
-const copyHexBtnDefaultLabel = copyHexBtnLabel?.textContent?.trim() ?? "Copy HEX values";
-const addColorDefaultLabel = addColorLabel?.textContent?.trim() ?? "Add color";
+const copyHexBtnDefaultLabel = copyHexBtnLabel?.textContent?.trim() ?? "Copiar HEX";
+const addColorDefaultLabel = addColorLabel?.textContent?.trim() ?? "Añadir color";
 let currentPalette = [];
 let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;
@@ -83,4 +80,3 @@ const COLOR_NAME_REFERENCES_RGB = COLOR_NAME_REFERENCES.map((entry) => ({
   ...entry,
   rgb: stateHexToRgb(entry.hex),
 }));
-
