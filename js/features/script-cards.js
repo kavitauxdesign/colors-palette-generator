@@ -204,27 +204,6 @@ function getReadableTooltipTextColor(backgroundHex) {
   return yiq >= 140 ? "#000000" : "#FFFFFF";
 }
 
-// Messages for blocked colors
-function getDisallowedColorAlertMessage(color) {
-  const normalized = normalizeHexColor(color);
-
-  if (normalized === "#000000") {
-    return (
-      "Black, technically the absence of color it is. \uD83C\uDF0C\n" +
-      "Too dark, this darkness is. Peace, Yoda prefers. \u2696\uFE0F\n" +
-      "Please choose another color."
-    );
-  }
-
-  if (normalized === "#FFFFFF") {
-    return (
-      "White, all colors together it is. \uD83C\uDF08 Too bright, this brightness is.\n" +
-      "Another color, choose you must. For balance in the palette, trust."
-    );
-  }
-
-  return "Not allowed in the palette, this color is.";
-}
 // Block pure black and pure white
 function isDisallowedColor(color) {
   return DISALLOWED_COLORS.has(normalizeHexColor(color));
@@ -504,7 +483,7 @@ globalEditPicker.addEventListener("input", () => {
   }
 
   const candidate = normalizeHexColor(globalEditPicker.value);
-  if (isDisallowedColor(candidate) || isColorAlreadyInPalette(candidate, activeEditCard)) {
+  if (isColorAlreadyInPalette(candidate, activeEditCard)) {
     return;
   }
 
@@ -520,13 +499,6 @@ globalEditPicker.addEventListener("change", () => {
   // Save final color and history only if color changed
   const candidate = normalizeHexColor(globalEditPicker.value);
   const previousColor = activeEditOriginalColor;
-
-  if (isDisallowedColor(candidate)) {
-    alert(getDisallowedColorAlertMessage(candidate));
-    setCardColor(activeEditCard, activeEditOriginalColor);
-    syncCurrentPaletteFromDom();
-    return;
-  }
 
   if (isColorAlreadyInPalette(candidate, activeEditCard)) {
     alert("El color ya está en la paleta.\uD83C\uDFA8" + 
