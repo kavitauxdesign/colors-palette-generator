@@ -85,7 +85,7 @@
               </button>
 
               <!-- Cool button -->
-              <button id="coolBtn" class="temp active">
+              <button id="coolBtn" class="temp">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                   class="lucide lucide-snowflake size-7 text-blue-500"
@@ -111,15 +111,33 @@
               <input id="paletteImageInput" class="palette-image-input" type="file"
                 accept=".jpg,.jpeg,.png,.svg,image/jpeg,image/png,image/svg+xml" />
 
-              <label id="paletteImageDropzone" class="image-upload-dropzone" for="paletteImageInput">
-                <span class="image-upload-title">Arrastra una imagen aquí</span>
-                <span class="image-upload-copy">o pulsa para subir un JPG, PNG o SVG</span>
-              </label>
+              <div id="paletteImageDropzonePanel" class="image-upload-dropzone-panel">
+                <label id="paletteImageDropzone" class="image-upload-dropzone" for="paletteImageInput">
+                  <span class="image-upload-title">Arrastra una imagen aquí</span>
+                  <span class="image-upload-copy">o pulsa para subir un JPG, PNG o SVG</span>
+                </label>
+              </div>
 
               <div id="paletteImagePreview" class="image-upload-preview" hidden>
-                <img id="paletteImagePreviewImg" class="image-upload-thumb" alt="Vista previa de imagen base" />
-                <div class="image-upload-meta">
-                  <span id="paletteImageName" class="image-upload-name"></span>
+                <div class="image-upload-preview-header">
+                  <span class="image-upload-preview-title">Image preview</span>
+
+                  <button type="button" id="paletteImageReplaceBtn" class="image-upload-action"
+                    aria-label="Subir otra imagen">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 16V6"></path>
+                      <path d="m8 10 4-4 4 4"></path>
+                      <path d="M20 17v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1"></path>
+                    </svg>
+                    <div class="tooltip">Subir otra imagen</div>
+                  </button>
+                </div>
+
+                <div class="image-upload-preview-body">
+                  <img id="paletteImagePreviewImg" class="image-upload-thumb" alt="Vista previa de imagen base" />
+                  <div class="image-upload-meta">
+                    <span id="paletteImageName" class="image-upload-name"></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -133,42 +151,7 @@
               <button class="size active" data-size="3">3</button>
               <button class="size" data-size="6">6</button>
               <button class="size" data-size="9">9</button>
-            </div>
-          </div>
-
-          <!-- Brightness -->
-          <div id="brightnessControlGroup" class="control-group">
-            <h4 class="control-group-title">
-              <span>(3) Brillo:</span>
-              <span id="brightnessValue" class="control-value">65%</span>
-            </h4>
-
-            <div class="range-labels brightness-labels">
-              <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
-
-              <!-- Slider -->
-              <input type="range" id="brightness" min="0" max="100" step="5" value="65" style="--value: 65%;" />
-
-              <!-- Light -->
-              <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
-            </div>
-          </div>
-
-          <!-- Saturation -->
-          <div id="saturationControlGroup" class="control-group">
-            <h4 class="control-group-title">
-              <span>(4) Saturación:</span>
-              <span id="saturationValue" class="control-value">100%</span>
-            </h4>
-
-            <div class="range-labels saturation-labels">
-              <img class="range-icon saturation-icon" src="assets/saturation-low.svg" alt="Icono de saturación mínima" />
-
-              <!-- Slider -->
-              <input type="range" id="saturation" min="0" max="100" step="5" value="90" style="--value: 90%;" />
-
-              <!-- Full saturation -->
-              <img class="range-icon saturation-icon" src="assets/saturation-high.svg" alt="Icono de saturación máxima" />
+              <button class="size" data-size="12">12</button>
             </div>
           </div>
 
@@ -190,8 +173,25 @@
 
         <!-- Palette preview and actions -->
         <section class="palette-section">
-          <!-- Copy HEX button -->
+          <!-- Palette actions -->
           <div class="copy-btn-container">
+            <button id="paletteAdjustBtn" class="secondary-btn secondary-btn-icon" aria-label="Ajustar colores"
+              aria-expanded="false" aria-controls="paletteAdjustPanel">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h6"></path>
+                <path d="M15 6h6"></path>
+                <path d="M9 6a2 2 0 1 0 4 0a2 2 0 1 0-4 0"></path>
+                <path d="M3 12h12"></path>
+                <path d="M19 12h2"></path>
+                <path d="M15 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0"></path>
+                <path d="M3 18h2"></path>
+                <path d="M9 18h12"></path>
+                <path d="M5 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0"></path>
+              </svg>
+              <div class="tooltip">Ajustar colores</div>
+            </button>
+
             <button id="copyHexBtn" class="secondary-btn">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -204,6 +204,36 @@
                 Los nombres de los colores y los códigos HEX aparecerán en tu portapapeles
               </div>
             </button>
+          </div>
+
+          <div id="paletteAdjustPanel" class="palette-adjust-panel" aria-hidden="true">
+            <!-- Brightness -->
+            <div id="brightnessControlGroup" class="control-group palette-adjust-control">
+              <h4 class="control-group-title">
+                <span>Brillo</span>
+                <span id="brightnessValue" class="control-value">75%</span>
+              </h4>
+
+              <div class="range-labels brightness-labels">
+                <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
+                <input type="range" id="brightness" min="0" max="100" step="5" value="75" style="--value: 75%;" />
+                <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
+              </div>
+            </div>
+
+            <!-- Saturation -->
+            <div id="saturationControlGroup" class="control-group palette-adjust-control">
+              <h4 class="control-group-title">
+                <span>Saturación</span>
+                <span id="saturationValue" class="control-value">100%</span>
+              </h4>
+
+              <div class="range-labels saturation-labels">
+                <img class="range-icon saturation-icon" src="assets/saturation-low.svg" alt="Icono de saturación mínima" />
+                <input type="range" id="saturation" min="0" max="100" step="5" value="100" style="--value: 100%;" />
+                <img class="range-icon saturation-icon" src="assets/saturation-high.svg" alt="Icono de saturación máxima" />
+              </div>
+            </div>
           </div>
 
           <!-- GENERATED PALETTE -->

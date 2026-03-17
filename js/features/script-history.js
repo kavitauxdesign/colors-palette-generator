@@ -4,6 +4,7 @@ function captureCurrentGeneratorSettings() {
   // Save current controls with colors
   return {
     paletteSize,
+    baseMode: paletteBaseMode,
     temperature: {
       warm: !!temperature.warm,
       cool: !!temperature.cool,
@@ -19,6 +20,10 @@ function applyGeneratorSettings(settings, fallbackSize) {
     ? settings.paletteSize
     : fallbackSize;
   setPaletteSize(nextSize);
+
+  if (typeof setPaletteBaseMode === "function" && settings?.baseMode) {
+    setPaletteBaseMode(settings.baseMode);
+  }
 
   if (settings?.temperature) {
     setTemperatureSelection(settings.temperature);

@@ -128,11 +128,29 @@ button {
   color: var(--secondary);
 }
 
+.secondary-btn-icon {
+  width: 36px;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.secondary-btn-icon svg {
+  margin-left: 0;
+}
+
 .secondary-btn#copyHexBtn {
   transition:
     background-color 220ms ease,
     color 220ms ease,
     box-shadow 220ms ease;
+}
+
+.secondary-btn#paletteAdjustBtn {
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
 }
 
 .secondary-btn#copyHexBtn span,
@@ -151,6 +169,17 @@ button {
 .secondary-btn#copyHexBtn.is-copied svg {
   color: var(--accent);
   stroke: var(--accent);
+}
+
+.secondary-btn#paletteAdjustBtn.is-active {
+  background: rgba(145, 111, 83, 0.12);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(145, 111, 83, 0.1);
+}
+
+.secondary-btn#paletteAdjustBtn.is-active svg {
+  color: var(--primary);
+  stroke: var(--primary);
 }
 
 .secondary-btn svg,
@@ -194,9 +223,27 @@ button {
     color var(--duration-fast) ease;
 }
 
+.size {
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid rgba(89, 77, 77, 0.12);
+  background: rgba(255, 255, 255, 0.5);
+  color: rgba(69, 69, 69, 0.78);
+  font-size: 15px;
+  font-weight: 500;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
 .size.active {
-  background: var(--accent);
-  color: var(--on-accent);
+  border-color: rgba(145, 111, 83, 0.32);
+  background: rgba(145, 111, 83, 0.12);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(145, 111, 83, 0.08);
 }
 
 
@@ -212,6 +259,14 @@ button {
 .temp:hover {
   filter: brightness(0.95);
   box-shadow: 0 var(--PX-10) 13px -7px var(--shadow);
+}
+
+.size:hover:not(.suppress-hover) {
+  filter: none;
+  transform: translateY(-1px);
+  border-color: rgba(145, 111, 83, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 16px rgba(89, 77, 77, 0.08);
 }
 
 .temp:hover:not(.suppress-hover),
@@ -583,6 +638,37 @@ nav button:hover {
   border: 0;
 }
 
+.image-upload-dropzone-panel,
+.image-upload-preview {
+  overflow: visible;
+  transform-origin: top;
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s ease,
+    max-height 0.32s ease;
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 240px;
+}
+
+.image-upload-dropzone-panel[hidden],
+.image-upload-preview[hidden] {
+  display: none;
+}
+
+.image-upload-dropzone-panel.is-collapsed,
+.image-upload-preview.is-collapsed {
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+  pointer-events: none;
+}
+
+.image-upload-dropzone-panel.is-sliding-in {
+  animation: reveal-upload-dropzone 0.28s ease;
+}
+
 .image-upload-dropzone {
   display: flex;
   flex-direction: column;
@@ -624,12 +710,86 @@ nav button:hover {
 
 .image-upload-preview {
   display: flex;
-  align-items: center;
-  gap: var(--PX-14);
+  flex-direction: column;
+  gap: var(--PX-12);
   padding: var(--PX-12);
   border-radius: var(--PX-16);
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(89, 77, 77, 0.08);
+}
+
+.image-upload-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--PX-12);
+}
+
+.image-upload-preview-title {
+  font-size: var(--PX-14);
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.image-upload-action {
+  position: relative;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(145, 111, 83, 0.08);
+  color: var(--accent);
+  transition:
+    transform var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease;
+}
+
+.image-upload-action:hover {
+  transform: translateY(-1px);
+  background: rgba(145, 111, 83, 0.14);
+  box-shadow: 0 8px 18px rgba(89, 77, 77, 0.12);
+}
+
+.image-upload-action:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none;
+  background: rgba(145, 111, 83, 0.08);
+  box-shadow: none;
+}
+
+.image-upload-action svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.image-upload-action:hover .tooltip,
+.image-upload-action:focus-visible .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.image-upload-action:disabled:hover .tooltip {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.image-upload-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(145, 111, 83, 0.16);
+}
+
+.image-upload-preview-body {
+  display: flex;
+  align-items: center;
+  gap: var(--PX-14);
 }
 
 .image-upload-thumb {
@@ -664,6 +824,8 @@ nav button:hover {
 .copy-btn-container {
   display: inline-flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: var(--PX-10);
   width: 100%;
   margin-top: 28px;
 }
@@ -671,13 +833,44 @@ nav button:hover {
 .palette-section {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 22px;
 }
 
 .palette-section.is-sticky {
   position: sticky;
   top: 88px;
   align-self: flex-start;
+}
+
+.palette-adjust-panel {
+  display: grid;
+  gap: var(--PX-18);
+  width: 100%;
+  max-height: 0;
+  padding: 0 var(--PX-18);
+  border-radius: var(--PX-20);
+  opacity: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(247, 246, 243, 0.96) 100%);
+  box-shadow: 0 8px 20px rgba(89, 77, 77, 0.08);
+  transform: translateY(-8px);
+  transition:
+    max-height 320ms ease,
+    opacity 240ms ease,
+    transform 280ms ease,
+    padding 280ms ease,
+    margin 280ms ease;
+}
+
+.palette-adjust-panel.is-open {
+  max-height: 240px;
+  padding: var(--PX-18);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.palette-adjust-control {
+  margin: 0;
 }
 
 .palette {
@@ -1025,24 +1218,28 @@ nav button:hover {
 }
 
 #resetPaletteBtn .tooltip::after,
-#copyHexBtn .tooltip::after {
+#copyHexBtn .tooltip::after,
+#paletteAdjustBtn .tooltip::after {
   left: 80%;
 }
 
 .primary-btn#surpriseBtn,
 .secondary-btn#resetPaletteBtn,
-.secondary-btn#copyHexBtn {
+.secondary-btn#copyHexBtn,
+.secondary-btn#paletteAdjustBtn {
   position: relative;
 }
 
 .primary-btn#surpriseBtn:hover .tooltip,
 .secondary-btn#resetPaletteBtn:hover .tooltip,
-.secondary-btn#copyHexBtn:hover .tooltip {
+.secondary-btn#copyHexBtn:hover .tooltip,
+.secondary-btn#paletteAdjustBtn:hover .tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
 }
 
+.secondary-btn#paletteAdjustBtn .tooltip,
 .secondary-btn#copyHexBtn .tooltip {
   left: -18px;
   bottom: calc(100% + var(--PX-12));
@@ -1120,7 +1317,7 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: var(--PX-8);
+  height: var(--PX-4);
   border-radius: 200px;
   --range-active-color: var(--accent);
   --range-thumb-color: var(--accent-pale);
@@ -1131,7 +1328,7 @@ input[type="range"] {
 /* Range Track (WebKit Browsers)   */
 /* =============================== */
 input[type="range"]::-webkit-slider-runnable-track {
-  height: var(--PX-8);
+  height: var(--PX-4);
   border-radius: 200px;
   background: linear-gradient(to right,
       var(--range-active-color) 0%,
@@ -1147,13 +1344,13 @@ input[type="range"]::-webkit-slider-runnable-track {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   background: var(--range-thumb-color);
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   cursor: pointer;
-  margin-top: -9px;
+  margin-top: -6px;
 }
 
 input[type="range"]::-moz-range-thumb {
@@ -1594,6 +1791,18 @@ input[type="range"].is-danger {
   }
 }
 
+@keyframes reveal-upload-dropzone {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* =============================== */
 /* Media Queries                   */
@@ -1669,6 +1878,10 @@ input[type="range"].is-danger {
   .copy-btn-container {
     justify-content: flex-start;
     margin-top: 0;
+  }
+
+  .palette-adjust-panel.is-open {
+    max-height: 280px;
   }
 
   .palette-section {

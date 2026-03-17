@@ -10,14 +10,18 @@
   const temperatureBasePanel = document.getElementById("temperatureBasePanel");
   const imageBasePanel = document.getElementById("imageBasePanel");
   const paletteImageInput = document.getElementById("paletteImageInput");
+  const paletteImageDropzonePanel = document.getElementById("paletteImageDropzonePanel");
   const paletteImageDropzone = document.getElementById("paletteImageDropzone");
   const paletteImagePreview = document.getElementById("paletteImagePreview");
   const paletteImagePreviewImg = document.getElementById("paletteImagePreviewImg");
   const paletteImageName = document.getElementById("paletteImageName");
+  const paletteImageReplaceBtn = document.getElementById("paletteImageReplaceBtn");
   const brightnessControlGroup = document.getElementById("brightnessControlGroup");
   const brightnessInput = document.getElementById("brightness");
   const saturationInput = document.getElementById("saturation");
   const saturationControlGroup = document.getElementById("saturationControlGroup");
+  const paletteAdjustBtn = document.getElementById("paletteAdjustBtn");
+  const paletteAdjustPanel = document.getElementById("paletteAdjustPanel");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker");
   const addColorElement = document.querySelector(".add-color");
@@ -65,14 +69,18 @@
     temperatureBasePanel,
     imageBasePanel,
     paletteImageInput,
+    paletteImageDropzonePanel,
     paletteImageDropzone,
     paletteImagePreview,
     paletteImagePreviewImg,
     paletteImageName,
+    paletteImageReplaceBtn,
     brightnessControlGroup,
     brightnessInput,
     saturationInput,
     saturationControlGroup,
+    paletteAdjustBtn,
+    paletteAdjustPanel,
     addColorBtn,
     colorPicker,
     addColorElement,
