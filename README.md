@@ -1,4 +1,4 @@
-# SHIFTA·HEX — Version 2.1.0
+# Classic·HEX — Version 2.1.0
 
 A color palette generator built with Vanilla JavaScript, with support for temperature-based generation, image-based palettes, inspiration mode, and palette history tools.
 
