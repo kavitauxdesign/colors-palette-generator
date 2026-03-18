@@ -34,10 +34,10 @@
     <!-- =============================== -->
     <section id="palette_generator" class="view-tab active">
       <!-- Intro -->
-      <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="section-heading-row">
         <h1>Generador de Paletas de Colores</h1>
         <!-- Restart button -->
-        <button id="resetPaletteBtn" class="secondary-btn" style="padding: 0 26px 0 30px;">
+        <button id="resetPaletteBtn" class="secondary-btn reset-btn-offset">
           <!-- Inline SVG to style icon color via CSS variables -->
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -164,8 +164,7 @@
             <h4>(3) Intensidad:</h4>
 
             <!-- Brightness -->
-            <div id="brightnessControlGroup" class="control-group palette-adjust-control"
-              style="margin-bottom: 16px;">
+            <div id="brightnessControlGroup" class="control-group palette-adjust-control control-group-spaced">
               <h4 class="control-group-title">
                 <span>Brillo</span>
                 <span id="brightnessValue" class="control-value">75%</span>
@@ -220,8 +219,8 @@
               </button>
             </div>
 
-            <div>
-            <button id="copyHexBtn" class="secondary-btn secondary-btn-icon" style="padding-left: 10px;" aria-label="Copiar paleta">
+            <div class="palette-primary-actions">
+            <button id="copyHexBtn" class="secondary-btn secondary-btn-icon copy-btn-icon" aria-label="Copiar paleta">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 data-fg-d3bl78="0.8:6.35049:/src/app/App.tsx:500:17:18373:41:e:Copy::::::CsY9">
@@ -234,8 +233,8 @@
               </div>
             </button>
 
-            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon" aria-label="Regenerar paleta"
-              hidden style="padding-right: 3px; padding-bottom: 1px;">
+            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon palette-regenerate-icon-btn" aria-label="Regenerar paleta"
+              hidden>
               <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
               <div class="tooltip">Regenerar paleta</div>
             </button>
@@ -303,7 +302,7 @@
     <!-- ==============================  -->
     <!--       HEX TO CSS FILTER         -->
     <!-- =============================== -->
-    <section id="hex_to_filter" class="view-tab" style="margin-top: 20px;">
+    <section id="hex_to_filter" class="view-tab view-tab-offset">
       <h1>HEX to CSS Filter</h1>
       <p class="description">
         Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
@@ -378,7 +377,7 @@
 
           <div class="filter-tool-details">
             <div class="lossDetail-wrap">
-              <p class="lossDetail" style="font-style: italic;"></p>
+              <p class="lossDetail lossDetail-emphasis"></p>
               <div class="tooltip">Cuanto más bajo es este número, más cerca está el resultado del color objetivo.</div>
             </div>
             <div class="footer-loss-help">
