@@ -1494,6 +1494,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .color-label {
+  position: relative;
   background: var(--on-accent);
   width: 100%;
   height: var(--PX-20);
@@ -1614,6 +1615,62 @@ input[type="range"]::-moz-range-thumb {
 
 .color-action-btn.is-hidden {
   display: none;
+}
+
+.color-pin-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 2px;
+  z-index: 3;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #DBDBDB;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.color-card:hover .color-pin-btn,
+.color-pin-btn:focus-visible,
+.color-pin-btn.is-pinned {
+  opacity: 1;
+}
+
+.color-pin-btn:hover,
+.color-pin-btn:focus-visible {
+  color: #DBDBDB;
+  transform: translateY(-1px);
+}
+
+.color-pin-btn.is-pinned {
+  color: #DBDBDB;
+}
+
+.color-pin-btn .pin-icon-wrap,
+.color-pin-btn .pin-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.color-pin-btn .tooltip {
+  bottom: calc(100% + 10px);
+  font-size: var(--PX-12);
+}
+
+.color-pin-btn:hover .tooltip,
+.color-pin-btn:focus-visible .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 .card-edit-input {

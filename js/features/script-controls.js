@@ -2884,18 +2884,85 @@ function setPaletteAdjustmentControls(settings) {
   syncTemperatureControlsState();
 }
 
+function getPinnedPaletteEntriesSnapshot() {
+  if (typeof getCurrentPaletteCardEntries !== "function") {
+    return [];
+  }
+
+  return getCurrentPaletteCardEntries()
+    .filter((entry) => entry.pinned)
+    .map((entry) => ({
+      index: entry.index,
+      hex: controlsNormalizeHexColor(entry.hex),
+    }))
+    .filter((entry) => /^#[0-9A-F]{6}$/.test(entry.hex));
+}
+
+function mergePaletteWithPinnedColors(nextPalette, pinnedEntries = []) {
+  const normalizedPalette = normalizePaletteHexCollection(nextPalette);
+  if (normalizedPalette.length === 0 || !Array.isArray(pinnedEntries) || pinnedEntries.length === 0) {
+    return normalizedPalette;
+  }
+
+  const mergedPalette = new Array(normalizedPalette.length).fill(null);
+  const usedColors = new Set();
+
+  pinnedEntries.forEach((entry) => {
+    if (!Number.isFinite(entry?.index) || entry.index < 0 || entry.index >= mergedPalette.length) {
+      return;
+    }
+
+    const normalizedHex = controlsNormalizeHexColor(entry.hex);
+    if (!/^#[0-9A-F]{6}$/.test(normalizedHex) || usedColors.has(normalizedHex)) {
+      return;
+    }
+
+    mergedPalette[entry.index] = normalizedHex;
+    usedColors.add(normalizedHex);
+  });
+
+  const availableColors = normalizedPalette.filter((color) => !usedColors.has(color));
+  let colorCursor = 0;
+
+  for (let index = 0; index < mergedPalette.length; index += 1) {
+    if (mergedPalette[index]) {
+      continue;
+    }
+
+    const nextColor = availableColors[colorCursor];
+    if (!nextColor) {
+      break;
+    }
+
+    mergedPalette[index] = nextColor;
+    usedColors.add(nextColor);
+    colorCursor += 1;
+  }
+
+  return mergedPalette.filter((color) => /^#[0-9A-F]{6}$/.test(color));
+}
+
 function commitGeneratedPalette(nextPalette, options = {}) {
   const previousPalette = normalizePaletteHexCollection(
     options.previousPalette ?? currentPalette
   );
+  const pinnedEntries = Array.isArray(options.pinnedEntries)
+    ? options.pinnedEntries
+    : getPinnedPaletteEntriesSnapshot();
+  const mergedPalette = mergePaletteWithPinnedColors(nextPalette, pinnedEntries);
+  const pinnedIndexes = pinnedEntries
+    .filter((entry) => Number.isFinite(entry?.index) && entry.index >= 0 && entry.index < mergedPalette.length)
+    .map((entry) => entry.index);
 
   setPaletteImageExtractionFeedback(false);
   getColorCards().forEach((card) => card.remove());
 
-  capturePaletteAdjustmentBase(nextPalette);
+  capturePaletteAdjustmentBase(mergedPalette);
   currentPalette = buildAdjustedPaletteFromBase();
-  currentPalette.forEach((color) => {
-    createColorCard(color);
+  currentPalette.forEach((color, index) => {
+    createColorCard(color, {
+      pinned: pinnedIndexes.includes(index),
+    });
   });
 
   refreshDeleteButtonsVisibility();
@@ -2907,7 +2974,10 @@ function commitGeneratedPalette(nextPalette, options = {}) {
     previousPalette.some((color, index) => color !== generatedPalette[index]);
 
   if (hasExactPaletteChanged || paletteHistory.length === 0) {
-    saveHistory(currentPalette, { isAlternative: !!options.usedAlternativePalette });
+    saveHistory(currentPalette, {
+      isAlternative: !!options.usedAlternativePalette,
+      pinnedIndexes,
+    });
   }
 }
 

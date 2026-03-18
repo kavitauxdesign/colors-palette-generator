@@ -71,11 +71,20 @@ function saveHistory(colors, metadata = {}) {
     paletteHistory = paletteHistory.slice(0, paletteHistoryIndex + 1);
   }
 
+  const pinnedIndexes = Array.isArray(metadata.pinnedIndexes)
+    ? metadata.pinnedIndexes
+    : (
+      typeof getPinnedPaletteIndexes === "function"
+        ? getPinnedPaletteIndexes()
+        : []
+    );
+
   // Save a copy so later edits do not change history
   paletteHistory.push({
     colors: [...colors],
     createdAt: new Date(),
     isAlternative: !!metadata.isAlternative,
+    pinnedIndexes: [...pinnedIndexes],
     settings: captureCurrentGeneratorSettings(),
   });
   paletteHistoryIndex = paletteHistory.length - 1;
@@ -252,14 +261,19 @@ function loadPaletteVersionInGenerator(historyEntry, options = {}) {
   const settings = Array.isArray(historyEntry)
     ? null
     : historyEntry?.settings;
+  const pinnedIndexes = Array.isArray(historyEntry?.pinnedIndexes)
+    ? historyEntry.pinnedIndexes
+    : [];
   applyGeneratorSettings(settings, fallbackSize);
 
   getColorCards().forEach((card) => card.remove());
 
   currentPalette = [];
 
-  validColors.forEach((color) => {
-    createColorCard(color);
+  validColors.forEach((color, index) => {
+    createColorCard(color, {
+      pinned: pinnedIndexes.includes(index),
+    });
     currentPalette.push(color);
   });
 
