@@ -1627,7 +1627,7 @@ input[type="range"]::-moz-range-thumb {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #DBDBDB;
+  color: #ADADAD;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1646,7 +1646,7 @@ input[type="range"]::-moz-range-thumb {
 
 .color-pin-btn:hover,
 .color-pin-btn:focus-visible {
-  color: #DBDBDB;
+  color: #ADADAD;
   transform: translateY(-1px);
 }
 

@@ -203,16 +203,24 @@ function buildRenderedPaletteFromBaseColors(colors, settings) {
 }
 
 function renderAdjustedPalette(colors) {
+  const pinnedEntries = getPinnedPaletteEntriesSnapshot();
+  const mergedColors = mergePaletteWithPinnedColors(colors, pinnedEntries);
+  const pinnedIndexes = pinnedEntries
+    .filter((entry) => Number.isFinite(entry?.index) && entry.index >= 0 && entry.index < mergedColors.length)
+    .map((entry) => entry.index);
   const cards = Array.from(getColorCards());
 
-  if (cards.length !== colors.length) {
+  if (cards.length !== mergedColors.length) {
     getColorCards().forEach((card) => card.remove());
-    colors.forEach((color) => {
-      createColorCard(color);
+    mergedColors.forEach((color, index) => {
+      createColorCard(color, {
+        pinned: pinnedIndexes.includes(index),
+      });
     });
   } else {
     cards.forEach((card, index) => {
-      setCardColor(card, colors[index]);
+      setCardColor(card, mergedColors[index]);
+      setCardPinnedState(card, pinnedIndexes.includes(index));
     });
   }
 
@@ -2958,7 +2966,10 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   getColorCards().forEach((card) => card.remove());
 
   capturePaletteAdjustmentBase(mergedPalette);
-  currentPalette = buildAdjustedPaletteFromBase();
+  currentPalette = mergePaletteWithPinnedColors(
+    buildAdjustedPaletteFromBase(),
+    pinnedEntries
+  );
   currentPalette.forEach((color, index) => {
     createColorCard(color, {
       pinned: pinnedIndexes.includes(index),
