@@ -50,116 +50,225 @@
         </button>
       </div>
       <p class="description">
-        <br />El botón <b>Generar</b>&#x2728; puede usarse tantas veces como se quiera para explorar distintas
-        variaciones e inspirarse; cada resultado se guarda automáticamente en el historial de paletas que aparece más
-        abajo en la página.
+        <b>Generación de paletas</b> en distintos modos (<i>Temperatura e Imagen</i>), con opciones para regenerar, explorar variaciones o inspirarse a partir de una imagen.&#x2728;
+        <br />
+        También permite ir fijando colores para construir una paleta propia poco a poco, mientras cada resultado se guarda automáticamente en el historial que aparece más abajo.
       </p>
 
       <!-- Generator area -->
       <div class="generator-container">
         <!-- Control panel -->
         <section class="controls">
+          <!-- Palette Base -->
+          <div id="paletteBaseControlGroup" class="control-group">
+            <h4>(1) Base de la paleta:</h4>
+
+            <div class="base-selector">
+              <select id="paletteBaseModeSelect" class="base-mode-select">
+                <option value="temperature" selected>Temperatura</option>
+                <option value="image">Imagen</option>
+              </select>
+            </div>
+
+            <div id="temperatureBasePanel" class="base-panel active">
+              <!-- Warm button -->
+              <button id="warmBtn" class="temp active">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-flame size-7 text-gray-400"
+                  data-fg-d3bl45="0.8:6.35049:/src/app/App.tsx:426:19:14807:78:e:Flame::::::DE75">
+                  <path
+                    d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
+                  </path>
+                </svg>
+                <span> Cálidos</span>
+              </button>
+
+              <!-- Cool button -->
+              <button id="coolBtn" class="temp">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  class="lucide lucide-snowflake size-7 text-blue-500"
+                  data-fg-d3bl49="0.8:6.35049:/src/app/App.tsx:437:19:15552:80:e:Snowflake::::::EFSK">
+                  <path d="m10 20-1.25-2.5L6 18"></path>
+                  <path d="M10 4 8.75 6.5 6 6"></path>
+                  <path d="m14 20 1.25-2.5L18 18"></path>
+                  <path d="m14 4 1.25 2.5L18 6"></path>
+                  <path d="m17 21-3-6h-4"></path>
+                  <path d="m17 3-3 6 1.5 3"></path>
+                  <path d="M2 12h6.5L10 9"></path>
+                  <path d="m20 10-1.5 2 1.5 2"></path>
+                  <path d="M22 12h-6.5L14 15"></path>
+                  <path d="m4 10 1.5 2L4 14"></path>
+                  <path d="m7 21 3-6-1.5-3"></path>
+                  <path d="m7 3 3 6h4"></path>
+                </svg>
+                <span>Fríos</span>
+              </button>
+            </div>
+
+            <div id="imageBasePanel" class="base-panel" hidden>
+              <input id="paletteImageInput" class="palette-image-input" type="file"
+                accept=".jpg,.jpeg,.png,.svg,image/jpeg,image/png,image/svg+xml" />
+
+              <div id="paletteImageDropzonePanel" class="image-upload-dropzone-panel">
+                <label id="paletteImageDropzone" class="image-upload-dropzone" for="paletteImageInput">
+                  <span class="image-upload-title">Arrastra una imagen aquí</span>
+                  <span class="image-upload-copy">o pulsa para subir un JPG, PNG o SVG</span>
+                </label>
+              </div>
+
+              <div id="paletteImagePreview" class="image-upload-preview" hidden>
+                <div class="image-upload-preview-header">
+                  <span class="image-upload-preview-title">Miniatura de la imagen subida</span>
+
+                  <button type="button" id="paletteImageReplaceBtn" class="image-upload-action"
+                    aria-label="Subir otra imagen">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 16V6"></path>
+                      <path d="m8 10 4-4 4 4"></path>
+                      <path d="M20 17v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1"></path>
+                    </svg>
+                    <div class="tooltip">Subir otra imagen</div>
+                  </button>
+                </div>
+
+                <div class="image-upload-preview-body">
+                  <img id="paletteImagePreviewImg" class="image-upload-thumb" alt="Vista previa de imagen base" />
+                  <div class="image-upload-meta">
+                    <span id="paletteImageName" class="image-upload-name"></span>
+                  </div>
+                </div>
+
+                <label class="image-priority-toggle" for="paletteImageDominantToggle">
+                  <input id="paletteImageDominantToggle" class="image-priority-toggle-input" type="checkbox" checked />
+                  <span class="image-priority-toggle-label">Priorizar colores dominantes vs acentos</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <!-- Palette size: 3, 6, 9 -->
           <div class="control-group">
-            <h4>(1) Cantidad de colores:</h4>
+            <h4>(2) Cantidad de colores:</h4>
 
             <div class="palette-size">
               <button class="size active" data-size="3">3</button>
               <button class="size" data-size="6">6</button>
               <button class="size" data-size="9">9</button>
+              <button class="size" data-size="12">12</button>
             </div>
           </div>
 
-          <!-- Temperature -->
           <div class="control-group">
-            <h4>(2) Temperatura:</h4>
+            <h4>(3) Intensidad:</h4>
 
-            <!-- Warm button -->
-            <button id="warmBtn" class="temp active">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                class="lucide lucide-flame size-7 text-gray-400"
-                data-fg-d3bl45="0.8:6.35049:/src/app/App.tsx:426:19:14807:78:e:Flame::::::DE75">
-                <path
-                  d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
-                </path>
-              </svg>
-              <span> Cálido</span>
-            </button>
+            <!-- Brightness -->
+            <div id="brightnessControlGroup" class="control-group palette-adjust-control"
+              style="margin-bottom: 16px;">
+              <h4 class="control-group-title">
+                <span>Brillo</span>
+                <span id="brightnessValue" class="control-value">75%</span>
+              </h4>
 
-            <!-- Cool button -->
-            <button id="coolBtn" class="temp">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                class="lucide lucide-snowflake size-7 text-blue-500"
-                data-fg-d3bl49="0.8:6.35049:/src/app/App.tsx:437:19:15552:80:e:Snowflake::::::EFSK">
-                <path d="m10 20-1.25-2.5L6 18"></path>
-                <path d="M10 4 8.75 6.5 6 6"></path>
-                <path d="m14 20 1.25-2.5L18 18"></path>
-                <path d="m14 4 1.25 2.5L18 6"></path>
-                <path d="m17 21-3-6h-4"></path>
-                <path d="m17 3-3 6 1.5 3"></path>
-                <path d="M2 12h6.5L10 9"></path>
-                <path d="m20 10-1.5 2 1.5 2"></path>
-                <path d="M22 12h-6.5L14 15"></path>
-                <path d="m4 10 1.5 2L4 14"></path>
-                <path d="m7 21 3-6-1.5-3"></path>
-                <path d="m7 3 3 6h4"></path>
-              </svg>
-              <span>Frío</span>
-            </button>
-          </div>
+              <div class="range-labels brightness-labels">
+                <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
+                <input type="range" id="brightness" min="0" max="100" step="5" value="75" style="--value: 75%;" />
+                <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
+              </div>
+            </div>
 
-          <!-- Brightness -->
-          <div class="control-group">
-            <h4 class="control-group-title">
-              <span>(3) Brillo:</span>
-              <span id="brightnessValue" class="control-value">50%</span>
-            </h4>
+            <!-- Saturation -->
+            <div id="saturationControlGroup" class="control-group palette-adjust-control">
+              <h4 class="control-group-title">
+                <span>Saturación</span>
+                <span id="saturationValue" class="control-value">100%</span>
+              </h4>
 
-            <div class="brightness-labels">
-              <img class="brightness-icon" src="assets/night.svg" alt="Night icon" />
-
-              <!-- Slider -->
-              <input type="range" id="brightness" min="0" max="100" step="5" value="50" />
-
-              <!-- Light -->
-              <img class="brightness-icon" src="assets/day.svg" alt="Day icon" />
+              <div class="range-labels saturation-labels">
+                <img class="range-icon saturation-icon" src="assets/saturation-low.svg" alt="Icono de saturación mínima" />
+                <input type="range" id="saturation" min="0" max="100" step="5" value="100" style="--value: 100%;" />
+                <img class="range-icon saturation-icon" src="assets/saturation-high.svg" alt="Icono de saturación máxima" />
+              </div>
             </div>
           </div>
 
           <p class="description">Una nueva paleta espera ser revelada.</p>
-
-          <!-- Generation buttons -->
-          <div class="generate-btns-container">
-            <button id="generateBtn" class="primary-btn">
-              <img src="assets/magic-wand.svg" width="18px" height="18px" alt="Magic wand icon" />
-              <span>Generar paleta</span>
-            </button>
-
-            <button id="surpriseBtn" class="primary-btn">
-              <img src="assets/sparkles.svg" width="18px" height="18px" alt="Surprise icon" />
-              <div class="tooltip">¡Sorpréndeme!</div>
-            </button>
-          </div>
         </section>
 
         <!-- Palette preview and actions -->
         <section class="palette-section">
-          <!-- Copy HEX button -->
+          <!-- Palette actions -->
           <div class="copy-btn-container">
-            <button id="copyHexBtn" class="secondary-btn">
+            <div class="palette-history-actions">
+              <button id="paletteUndoBtn" class="secondary-btn secondary-btn-history" aria-label="Undo" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 14-4-4 4-4"></path>
+                <path d="M5 10h10a4 4 0 1 1 0 8h-1"></path>
+              </svg>
+              <div class="tooltip">Deshacer</div>
+              </button>
+
+              <button id="paletteRedoBtn" class="secondary-btn secondary-btn-history" aria-label="Redo" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 14 4-4-4-4"></path>
+                <path d="M19 10H9a4 4 0 1 0 0 8h1"></path>
+              </svg>
+              <div class="tooltip">Rehacer</div>
+              </button>
+            </div>
+
+            <div>
+            <button id="copyHexBtn" class="secondary-btn secondary-btn-icon" style="padding-left: 10px;" aria-label="Copiar paleta">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 data-fg-d3bl78="0.8:6.35049:/src/app/App.tsx:500:17:18373:41:e:Copy::::::CsY9">
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
               </svg>
-              <span>Copiar paleta</span>
+              <span></span>
               <div class="tooltip">
-                Los nombres de los colores y los códigos HEX aparecerán en tu portapapeles
+                Copiar los nombres de los colores y los códigos HEX de toda la paleta
               </div>
             </button>
+
+            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon" aria-label="Regenerar paleta"
+              hidden style="padding-right: 3px; padding-bottom: 1px;">
+              <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
+              <div class="tooltip">Regenerar paleta</div>
+            </button>
+
+            <button id="surpriseBtn" class="secondary-btn secondary-btn-icon" aria-label="Sorpréndeme" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
+                <path d="m14 7 3 3"></path>
+                <path d="M5 6v4"></path>
+                <path d="M19 14v4"></path>
+                <path d="M10 2v2"></path>
+                <path d="M7 8H3"></path>
+                <path d="M21 16h-4"></path>
+                <path d="M11 3H9"></path>
+              </svg>
+              <div class="tooltip">Generar una variante más libre sin cambiar la cantidad de colores</div>
+            </button>
+
+            <button id="paletteInspirationBtn" class="secondary-btn secondary-btn-icon" aria-label="Modo inspiración" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                <path d="M20 3v4"></path>
+                <path d="M22 5h-4"></path>
+                <path d="M4 17v2"></path>
+                <path d="M5 18H3"></path>
+              </svg>
+              <div class="tooltip">Generar una paleta inspirada en la imagen</div>
+            </button>
+
+            
+            </div>
           </div>
 
           <!-- GENERATED PALETTE -->
@@ -178,7 +287,11 @@
               </div>
             </div>
           </div>
-      </div>
+
+          <div id="paletteImageExtractionAlert" class="palette-alert palette-alert-warning" role="alert" hidden>
+            No se ha podido extraer colores. Has de intentar subir otra imagen.
+          </div>
+        </section>
       </div>
 
       <!-- Palette history -->
@@ -293,8 +406,11 @@
   </main>
 
   <div class="bottom-toolbar">
-    © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a>&#x1F87D; · <span
-      id="footerYear"></span>
+    <div class="bottom-toolbar-main">
+      © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
+        id="footerYear"></span> · <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">Reportar un bug o comentario en DM</a>
+    </div>
+    <span class="bottom-toolbar-version">Version 2.1.0.</span>
   </div>
 
   <!-- Scripts -->

@@ -1,6 +1,6 @@
-# SHIFTA·HEX — The Palette Awakens🚀
+# SHIFTA·HEX — Version 2.1.0
 
-A small cosmic color palette generator built with Vanilla JavaScript.
+A color palette generator built with Vanilla JavaScript, with support for temperature-based generation, image-based palettes, inspiration mode, and palette history tools.
 
 ---
 
@@ -12,34 +12,17 @@ A small cosmic color palette generator built with Vanilla JavaScript.
 - [Visual Design](#visual-design)
 - [Implementation](#implementation)
 - [Application Logic](#application-logic)
+- [License](#license)
 - [Final Notes](#final-notes)
----
-
-# Introduction
-
-After an intense year of projects during the UX Master, our ship was not exactly in perfect condition.
-The journeys we had taken during the year had been long and demanding, and the ship had suffered a bit from all those previous missions.
-
-But when this new mission appeared (building a color palette generator) we launched immediately.
-
-As the project progressed, the ship picked up speed and the process became unstoppable.
-
-SHIFTA·HEX is a small web application designed to generate color palettes and allow users to copy HEX values from those palettes.
-
-The goal of the project was to explore a simple idea and turn it into a small but usable tool.
-
-Even though the application is technically simple, we approached it as if we were building a small real design tool rather than just completing a coding exercise.
 
 ---
 
 # Live Version
 
-The application is also published on the school server.
-
 Live version:
 
 ```
-https://a487.masterux.net/javascript/04-colors-generator/index.html
+https://kavita.es/classic-hex
 ```
 
 ---
@@ -48,15 +31,20 @@ https://a487.masterux.net/javascript/04-colors-generator/index.html
 
 The application allows users to:
 
-- generate palettes of 3, 6 or 9 colors  
-- control color temperature (warm / cool / both)  
-- adjust brightness  
-- add additional colors to the palette  
-- regenerate individual colors  
-- edit colors manually  
-- copy HEX values  
-- store palette history during the session  
-- copy HEX values for a full palette or for individual colors  
+- generate palettes from `Temperature mode` or `Image mode`
+- choose warm, cool, or mixed temperature behavior
+- adjust brightness and saturation
+- define the number of colors in the palette
+- upload an image and extract a palette from it
+- prioritize dominant colors or accent colors in image mode
+- use `Inspiration mode` to build a refined palette inspired by the uploaded image
+- regenerate the full palette or a single color
+- use `Surprise me` to explore more adventurous palette variations
+- pin individual colors so regeneration keeps them fixed
+- edit colors manually
+- copy individual HEX values or the full palette
+- use `Undo / Redo`
+- store palette history during the session
 
 ---
 
@@ -72,7 +60,7 @@ So the first thing we focused on was simply defining the layout.
 
 We spent quite a lot of time making the interface visually pleasant before the application was even functional.
 
-The interface was primarily designed for desktop computers with a mouse.
+The interface was primarily designed for desktop computers with a mouse, but the current version also includes responsive adjustments for smaller screens.
 
 We imagine this tool being used mostly by designers or developers during their work, so the most likely context of use would be a desktop environment.
 
@@ -217,17 +205,11 @@ The palettes are not generated completely randomly.
 
 The generator follows a series of internal rules that control the color space used for palette creation.
 
-The generator uses three main parameters.
+The generator uses a small set of main parameters.
 
 ### Number of Colors
 
-Users can generate palettes of:
-
-- 3 colors  
-- 6 colors  
-- 9 colors  
-
-Additional colors can also be added manually to the palette.
+Users can select the palette size from the available UI presets, and additional colors can also be added manually to the palette until the configured maximum is reached.
 
 ---
 
@@ -245,15 +227,37 @@ The option "both" simply means that the generator is free to choose colors from 
 
 ---
 
-### Brightness
+### Intensity
 
-Brightness is controlled with a range slider.
+Brightness and saturation are controlled with range sliders.
 
-Although the slider visually allows the full range, internally the generator limits the values.
+These controls are shared across the palette workflow and can influence temperature-based palettes, image-derived palettes, and inspired image palettes.
 
-The effective range is approximately between 20% and 80%.
+The goal is to keep the output flexible while still biasing the generated colors toward usable design ranges.
 
-This prevents generating colors that are either too dark or too bright to be useful.
+---
+
+## Image Mode
+
+Image mode allows users to upload a reference image and generate palettes from it.
+
+The image workflow supports:
+
+- direct extraction of colors found in the image
+- ordering colors by harmony
+- regenerating alternative palettes from the same source image
+- prioritizing dominant colors versus accents
+- showing an alert when the image does not contain enough usable color information
+
+---
+
+## Inspiration Mode
+
+Inspiration mode is different from direct image extraction.
+
+Instead of simply returning colors that are literally present in the uploaded image, it analyzes the image palette and atmosphere and then proposes a more refined palette derived from that reference.
+
+This makes the result feel closer to a design interpretation of the image rather than a strict copy.
 
 ---
 
@@ -273,6 +277,7 @@ Each card allows the user to:
 - regenerate the color
 - edit the color manually
 - delete the color
+- pin the color so global regenerations keep it fixed
 
 The color names are included partly as a small homage to Pantone-style color cards.
 
@@ -308,8 +313,15 @@ This includes:
 - editing a color  
 - deleting a color  
 - generating a completely new palette  
+- pinning or unpinning a color  
 
 Because of this it is very difficult to accidentally lose a palette configuration.
+
+---
+
+# License
+
+This project is released under the MIT License.
 
 ---
 
@@ -317,8 +329,4 @@ Because of this it is very difficult to accidentally lose a palette configuratio
 
 This project ended up being longer than we initially expected, both in terms of documentation and code.
 
-Regardless of the final result, the development process was genuinely fun and enriching.
-
-Group 4 🚀
-Master in UX Design and Digital Product
-SHIFTA by Elisava — 2026
+Regardless of the final result, the development process was genuinely fun and enriching. 🚀

@@ -4,12 +4,31 @@ function captureCurrentGeneratorSettings() {
   // Save current controls with colors
   return {
     paletteSize,
+    baseMode: paletteBaseMode,
+    prioritizeImageDominantColors,
     temperature: {
       warm: !!temperature.warm,
       cool: !!temperature.cool,
     },
-    brightness: brightnessInput ? Number(brightnessInput.value) : 50,
+    brightness: brightnessInput ? Number(brightnessInput.value) : DEFAULT_BRIGHTNESS,
+    saturation: saturationInput ? Number(saturationInput.value) : DEFAULT_SATURATION,
   };
+}
+
+function updateHistoryNavigationButtons() {
+  const canUndo = paletteHistoryIndex > 0;
+  const canRedo =
+    paletteHistoryIndex >= 0 && paletteHistoryIndex < paletteHistory.length - 1;
+
+  if (paletteUndoBtn) {
+    paletteUndoBtn.disabled = !canUndo;
+    paletteUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
+  }
+
+  if (paletteRedoBtn) {
+    paletteRedoBtn.disabled = !canRedo;
+    paletteRedoBtn.setAttribute("aria-disabled", canRedo ? "false" : "true");
+  }
 }
 
 function applyGeneratorSettings(settings, fallbackSize) {
@@ -19,25 +38,59 @@ function applyGeneratorSettings(settings, fallbackSize) {
     : fallbackSize;
   setPaletteSize(nextSize);
 
+  if (typeof setPaletteBaseMode === "function" && settings?.baseMode) {
+    setPaletteBaseMode(settings.baseMode);
+  }
+
+  if (typeof settings?.prioritizeImageDominantColors === "boolean") {
+    prioritizeImageDominantColors = settings.prioritizeImageDominantColors;
+    if (paletteImageDominantToggle) {
+      paletteImageDominantToggle.checked = prioritizeImageDominantColors;
+    }
+  }
+
   if (settings?.temperature) {
     setTemperatureSelection(settings.temperature);
   }
 
   if (brightnessInput && Number.isFinite(settings?.brightness)) {
     brightnessInput.value = settings.brightness;
-    updateProgress();
+    updateBrightnessProgress();
+    syncTemperatureControlsState();
+  }
+
+  if (saturationInput && Number.isFinite(settings?.saturation)) {
+    saturationInput.value = settings.saturation;
+    updateSaturationProgress();
+    syncTemperatureControlsState();
   }
 }
 
-function saveHistory(colors) {
+function saveHistory(colors, metadata = {}) {
+  if (paletteHistoryIndex < paletteHistory.length - 1) {
+    paletteHistory = paletteHistory.slice(0, paletteHistoryIndex + 1);
+  }
+
+  const pinnedIndexes = Array.isArray(metadata.pinnedIndexes)
+    ? metadata.pinnedIndexes
+    : (
+      typeof getPinnedPaletteIndexes === "function"
+        ? getPinnedPaletteIndexes()
+        : []
+    );
+
   // Save a copy so later edits do not change history
   paletteHistory.push({
     colors: [...colors],
     createdAt: new Date(),
+    isAlternative: !!metadata.isAlternative,
+    pinnedIndexes: [...pinnedIndexes],
     settings: captureCurrentGeneratorSettings(),
   });
+  paletteHistoryIndex = paletteHistory.length - 1;
 
   renderHistory();
+  updateHistoryNavigationButtons();
 }
 
 function formatHistoryTime(dateValue) {
@@ -57,6 +110,7 @@ function renderHistory() {
     // Support both old and new history formats
     const palette = Array.isArray(entry) ? entry : entry.colors;
     const createdAt = Array.isArray(entry) ? null : entry.createdAt;
+    const isAlternative = Array.isArray(entry) ? false : !!entry.isAlternative;
 
     const historyItem = document.createElement("div");
     historyItem.className = "history-palette";
@@ -69,7 +123,9 @@ function renderHistory() {
 
     const title = document.createElement("h3");
     title.className = "history-title";
-    title.textContent = `Paleta ${index + 1}`;
+    title.textContent = isAlternative
+      ? `Paleta Alternativa ${index + 1}`
+      : `Paleta ${index + 1}`;
 
     const time = document.createElement("span");
     time.className = "history-time";
@@ -94,7 +150,7 @@ function renderHistory() {
 
     editHistoryBtn.addEventListener("click", (event) => {
       event.stopPropagation();
-      loadPaletteVersionInGenerator(entry);
+      loadPaletteVersionInGenerator(entry, { historyIndex: index });
     });
 
     copyHistoryBtn.addEventListener("click", async (event) => {
@@ -179,9 +235,11 @@ function renderHistory() {
     historyItem.appendChild(row);
     historyContainer.appendChild(historyItem);
   });
+
+  updateHistoryNavigationButtons();
 }
 
-function loadPaletteVersionInGenerator(historyEntry) {
+function loadPaletteVersionInGenerator(historyEntry, options = {}) {
   const colors = Array.isArray(historyEntry)
     ? historyEntry
     : historyEntry?.colors;
@@ -203,22 +261,68 @@ function loadPaletteVersionInGenerator(historyEntry) {
   const settings = Array.isArray(historyEntry)
     ? null
     : historyEntry?.settings;
+  const pinnedIndexes = Array.isArray(historyEntry?.pinnedIndexes)
+    ? historyEntry.pinnedIndexes
+    : [];
   applyGeneratorSettings(settings, fallbackSize);
 
   getColorCards().forEach((card) => card.remove());
 
   currentPalette = [];
 
-  validColors.forEach((color) => {
-    createColorCard(color);
+  validColors.forEach((color, index) => {
+    createColorCard(color, {
+      pinned: pinnedIndexes.includes(index),
+    });
     currentPalette.push(color);
   });
 
+  capturePaletteAdjustmentBase(currentPalette, {
+    brightness: brightnessInput ? Number(brightnessInput.value) : DEFAULT_BRIGHTNESS,
+    saturation: saturationInput ? Number(saturationInput.value) : DEFAULT_SATURATION,
+  });
   syncCurrentPaletteFromDom();
+  if (Number.isFinite(options.historyIndex)) {
+    paletteHistoryIndex = options.historyIndex;
+  }
+  updateHistoryNavigationButtons();
   // Scroll up so user can see the loaded palette
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
+  if (options.shouldScroll !== false) {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+}
+
+function navigatePaletteHistory(direction) {
+  if (!Array.isArray(paletteHistory) || paletteHistory.length === 0) {
+    updateHistoryNavigationButtons();
+    return;
+  }
+
+  const targetIndex = paletteHistoryIndex + direction;
+  if (targetIndex < 0 || targetIndex >= paletteHistory.length) {
+    updateHistoryNavigationButtons();
+    return;
+  }
+
+  loadPaletteVersionInGenerator(paletteHistory[targetIndex], {
+    historyIndex: targetIndex,
+    shouldScroll: false,
   });
 }
 
+if (paletteUndoBtn) {
+  paletteUndoBtn.addEventListener("click", () => {
+    navigatePaletteHistory(-1);
+  });
+}
+
+if (paletteRedoBtn) {
+  paletteRedoBtn.addEventListener("click", () => {
+    navigatePaletteHistory(1);
+  });
+}
+
+updateHistoryNavigationButtons();

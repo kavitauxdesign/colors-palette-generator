@@ -18,7 +18,7 @@ function initializeApp() {
 	setPaletteSize(paletteSize);
 	setTemperatureSelection(temperature);
 
-	generatePalette();
+	void generatePalette();
 	updateAddColorButtonState();
 }
 
