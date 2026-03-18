@@ -1886,7 +1886,7 @@ input[type="range"]::-moz-range-thumb {
 .bottom-toolbar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   width: 100%;
   min-height: var(--PX-40);
   padding: 0 var(--PX-16);
@@ -1897,8 +1897,26 @@ input[type="range"]::-moz-range-thumb {
   gap: 4px;
 }
 
+.bottom-toolbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .bottom-toolbar * {
   font-size: 14px;
+}
+
+.bottom-toolbar-version {
+  flex: 0 0 auto;
+  margin-left: var(--PX-12);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.46;
+  white-space: nowrap;
 }
 
 .bottom-toolbar a {
