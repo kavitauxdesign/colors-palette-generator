@@ -1910,6 +1910,12 @@ input[type="range"]::-moz-range-thumb {
   text-decoration: underline;
 }
 
+.bottom-toolbar .footer-report-link {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 3px;
+}
+
 /* =============================== */
 /* Animations                      */
 /* =============================== */
