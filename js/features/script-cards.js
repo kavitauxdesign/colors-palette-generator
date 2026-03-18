@@ -852,22 +852,20 @@ if (copyHexBtn) {
     try {
       await copyTextToClipboard(plainText);
 
-      if (copyHexBtnLabel) {
-        copyHexBtnLabel.textContent = "¡Copiado!";
+      if (copyHexBtnTooltip) {
+        copyHexBtnTooltip.textContent = "¡Copiado!";
+        copyHexBtnTooltip.classList.add("is-copied-feedback");
       }
-
-      copyHexBtn.classList.add("is-copied");
 
       if (copyBtnFeedbackTimeout) {
         clearTimeout(copyBtnFeedbackTimeout);
       }
 
       copyBtnFeedbackTimeout = setTimeout(() => {
-        if (copyHexBtnLabel) {
-          copyHexBtnLabel.textContent = copyHexBtnDefaultLabel;
+        if (copyHexBtnTooltip) {
+          copyHexBtnTooltip.textContent = copyHexBtnDefaultTooltip;
+          copyHexBtnTooltip.classList.remove("is-copied-feedback");
         }
-
-        copyHexBtn.classList.remove("is-copied");
         copyBtnFeedbackTimeout = null;
       }, 2000);
     } catch (error) {

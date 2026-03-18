@@ -31,6 +31,7 @@ const {
   paletteGenerationButtons,
   copyHexBtn,
   paletteRegenerateBtn,
+  paletteInspirationBtn,
   generateBtn,
   surpriseBtn,
   copyHexBtnTooltip,
@@ -97,6 +98,8 @@ let paletteBaseMode = "temperature";
 let uploadedBaseImage = null;
 let prioritizeImageDominantColors = paletteImageDominantToggle?.checked ?? true;
 let imagePaletteVariantIndex = 0;
+let imageInspirationVariantIndex = 0;
+let recentInspiredPalettes = [];
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,
   cool: !!DEFAULT_TEMPERATURE.cool,

@@ -5,6 +5,7 @@ function captureCurrentGeneratorSettings() {
   return {
     paletteSize,
     baseMode: paletteBaseMode,
+    prioritizeImageDominantColors,
     temperature: {
       warm: !!temperature.warm,
       cool: !!temperature.cool,
@@ -39,6 +40,13 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (typeof setPaletteBaseMode === "function" && settings?.baseMode) {
     setPaletteBaseMode(settings.baseMode);
+  }
+
+  if (typeof settings?.prioritizeImageDominantColors === "boolean") {
+    prioritizeImageDominantColors = settings.prioritizeImageDominantColors;
+    if (paletteImageDominantToggle) {
+      paletteImageDominantToggle.checked = prioritizeImageDominantColors;
+    }
   }
 
   if (settings?.temperature) {

@@ -32,6 +32,7 @@
   const paletteGenerationButtons = document.getElementById("paletteGenerationButtons");
   const copyHexBtn = document.getElementById("copyHexBtn");
   const paletteRegenerateBtn = document.getElementById("paletteRegenerateBtn");
+  const paletteInspirationBtn = document.getElementById("paletteInspirationBtn");
   const generateBtn = document.getElementById("generateBtn");
   const surpriseBtn = document.getElementById("surpriseBtn");
   // Tooltip and label used by the main copy button
@@ -97,6 +98,7 @@
     paletteGenerationButtons,
     copyHexBtn,
     paletteRegenerateBtn,
+    paletteInspirationBtn,
     generateBtn,
     surpriseBtn,
     copyHexBtnTooltip,

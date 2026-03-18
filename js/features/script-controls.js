@@ -29,6 +29,29 @@ const IMAGE_PALETTE_VARIANT_PROFILES = [
   { hueShift: -12, saturationShift: 6, lightnessShift: 10, stagger: [0, -10, 8, -6] },
   { hueShift: 16, saturationShift: -4, lightnessShift: -10, stagger: [0, 12, -10, 6] },
 ];
+const IMAGE_INSPIRATION_VARIANT_PROFILES = [
+  { hueShift: 4, saturationShift: 4, lightnessShift: 4, accentHueShift: 8, accentBoost: 10, neutralLift: 5 },
+  { hueShift: -6, saturationShift: 2, lightnessShift: -3, accentHueShift: -8, accentBoost: 12, neutralLift: 2 },
+  { hueShift: 8, saturationShift: -4, lightnessShift: 7, accentHueShift: 10, accentBoost: 8, neutralLift: 7 },
+  { hueShift: -9, saturationShift: 6, lightnessShift: 2, accentHueShift: -10, accentBoost: 13, neutralLift: 3 },
+  { hueShift: 3, saturationShift: -2, lightnessShift: -6, accentHueShift: 7, accentBoost: 7, neutralLift: -1 },
+];
+const MAX_RECENT_INSPIRED_PALETTES = 8;
+
+function blendControlValue(fromValue, toValue, ratio) {
+  return fromValue + (toValue - fromValue) * ratio;
+}
+
+function resolvePaletteAdjustmentSettings(settings = {}) {
+  return {
+    brightness: Number.isFinite(settings?.brightness)
+      ? settings.brightness
+      : getCurrentBrightnessValue(),
+    saturation: Number.isFinite(settings?.saturation)
+      ? settings.saturation
+      : getCurrentSaturationValue(),
+  };
+}
 
 function updateUploadedImageAnalysisCache(cachePatch) {
   if (!uploadedBaseImage) {
@@ -58,24 +81,12 @@ function updateRangeControl(input, valueLabel, lowIcon, highIcon) {
     valueLabel.textContent = `${Math.round(percent)}%`;
   }
 
-  // Grow left icon when slider goes left
-  let lowScale = 0;
-  if (lowIcon && percent < 50) {
-    lowScale = ((50 - percent) / 40) * 30;
-  }
-
-  // Grow right icon when slider goes right
-  let highScale = 0;
-  if (percent > 50) {
-    highScale = ((percent - 50) / 40) * 30;
-  }
-
   if (lowIcon) {
-    lowIcon.style.transform = `scale(${1 + lowScale / 100})`;
+    lowIcon.style.transform = "none";
     lowIcon.style.opacity = `${Math.max(0.5, 1 - (percent / 100) * 0.4)}`;
   }
   if (highIcon) {
-    highIcon.style.transform = `scale(${1 + highScale / 100})`;
+    highIcon.style.transform = "none";
     highIcon.style.opacity = `${Math.max(0.5, 0.5 + (percent / 100) * 0.4)}`;
   }
 }
@@ -97,10 +108,7 @@ const updateSaturationProgress = () =>
   );
 
 function getCurrentPaletteAdjustmentSnapshot() {
-  return {
-    brightness: getCurrentBrightnessValue(),
-    saturation: getCurrentSaturationValue(),
-  };
+  return resolvePaletteAdjustmentSettings();
 }
 
 function capturePaletteAdjustmentBase(colors = currentPalette, settings = getCurrentPaletteAdjustmentSnapshot()) {
@@ -111,28 +119,40 @@ function capturePaletteAdjustmentBase(colors = currentPalette, settings = getCur
     : [];
 
   paletteAdjustmentBase = [...validColors];
-  paletteAdjustmentBaseSettings = {
+  paletteAdjustmentBaseSettings = resolvePaletteAdjustmentSettings({
     brightness: Number.isFinite(settings?.brightness)
       ? settings.brightness
       : DEFAULT_BRIGHTNESS,
     saturation: Number.isFinite(settings?.saturation)
       ? settings.saturation
       : DEFAULT_SATURATION,
-  };
+  });
 }
 
-function getPaletteAdjustmentDeltas() {
+function getPaletteAdjustmentDeltas(
+  settings = getCurrentPaletteAdjustmentSnapshot(),
+  baseSettings = paletteAdjustmentBaseSettings
+) {
+  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
+  const resolvedBaseSettings = resolvePaletteAdjustmentSettings(baseSettings);
+
   return {
-    brightnessDelta:
-      getCurrentBrightnessValue() - paletteAdjustmentBaseSettings.brightness,
-    saturationDelta:
-      getCurrentSaturationValue() - paletteAdjustmentBaseSettings.saturation,
+    brightnessDelta: resolvedSettings.brightness - resolvedBaseSettings.brightness,
+    saturationDelta: resolvedSettings.saturation - resolvedBaseSettings.saturation,
   };
 }
 
-function getAdjustedPaletteColor(hex, variantIndex = 0) {
+function getAdjustedPaletteColor(
+  hex,
+  variantIndex = 0,
+  settings = getCurrentPaletteAdjustmentSnapshot(),
+  baseSettings = paletteAdjustmentBaseSettings
+) {
   const hsl = controlsHexToHsl(hex);
-  const { brightnessDelta, saturationDelta } = getPaletteAdjustmentDeltas();
+  const { brightnessDelta, saturationDelta } = getPaletteAdjustmentDeltas(
+    settings,
+    baseSettings
+  );
   const lightnessVariants = [0, -4, 4, -8, 8, -12, 12, -16, 16];
   const hueVariants = [0, 2, -2, 4, -4];
   const lightnessOffset = lightnessVariants[variantIndex % lightnessVariants.length];
@@ -148,13 +168,22 @@ function getAdjustedPaletteColor(hex, variantIndex = 0) {
   );
 }
 
-function buildAdjustedPaletteFromBase(colors = paletteAdjustmentBase) {
+function buildAdjustedPaletteFromBase(
+  colors = paletteAdjustmentBase,
+  settings = getCurrentPaletteAdjustmentSnapshot(),
+  baseSettings = paletteAdjustmentBaseSettings
+) {
   const adjustedPalette = [];
   const usedColors = new Set();
 
   colors.forEach((color, colorIndex) => {
     for (let variantIndex = 0; variantIndex < 28; variantIndex++) {
-      const candidate = getAdjustedPaletteColor(color, variantIndex + colorIndex * 2);
+      const candidate = getAdjustedPaletteColor(
+        color,
+        variantIndex + colorIndex * 2,
+        settings,
+        baseSettings
+      );
       if (usedColors.has(candidate)) {
         continue;
       }
@@ -166,6 +195,11 @@ function buildAdjustedPaletteFromBase(colors = paletteAdjustmentBase) {
   });
 
   return adjustedPalette;
+}
+
+function buildRenderedPaletteFromBaseColors(colors, settings) {
+  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
+  return buildAdjustedPaletteFromBase(colors, resolvedSettings, resolvedSettings);
 }
 
 function renderAdjustedPalette(colors) {
@@ -362,20 +396,41 @@ function updatePaletteModeActionVisibility() {
     const shouldShowRegenerate = !isImageMode || hasImageSource;
     paletteRegenerateBtn.hidden = !shouldShowRegenerate;
   }
+
+  if (surpriseBtn) {
+    const shouldShowSurprise = !isImageMode || hasImageSource;
+    surpriseBtn.hidden = !shouldShowSurprise;
+  }
+
+  if (paletteInspirationBtn) {
+    paletteInspirationBtn.hidden = !(isImageMode && hasImageSource);
+  }
 }
 
-function setPaletteRegenerateButtonTooltip(tooltipText) {
+function setPaletteActionButtonTooltip(button, tooltipText) {
   if (typeof setActionButtonTooltipText === "function") {
-    setActionButtonTooltipText(paletteRegenerateBtn, tooltipText);
+    setActionButtonTooltipText(button, tooltipText);
     return;
   }
 
-  const tooltip = paletteRegenerateBtn?.querySelector(".tooltip");
+  const tooltip = button?.querySelector(".tooltip");
   if (!tooltip) {
     return;
   }
 
   tooltip.textContent = tooltipText;
+}
+
+function setPaletteRegenerateButtonTooltip(tooltipText) {
+  setPaletteActionButtonTooltip(paletteRegenerateBtn, tooltipText);
+}
+
+function setPaletteSurpriseButtonTooltip(tooltipText) {
+  setPaletteActionButtonTooltip(surpriseBtn, tooltipText);
+}
+
+function setPaletteInspirationButtonTooltip(tooltipText) {
+  setPaletteActionButtonTooltip(paletteInspirationBtn, tooltipText);
 }
 
 function updatePaletteRegenerateButtonAvailability(availableImageColors = null) {
@@ -418,6 +473,66 @@ function updatePaletteRegenerateButtonAvailability(availableImageColors = null) 
   );
 }
 
+function updatePaletteSurpriseButtonAvailability(availableImageColors = null) {
+  if (!surpriseBtn) {
+    return;
+  }
+
+  if (paletteBaseMode !== "image") {
+    surpriseBtn.disabled = false;
+    surpriseBtn.setAttribute("aria-disabled", "false");
+    setPaletteSurpriseButtonTooltip(
+      "Generar una variante más libre sin cambiar la cantidad de colores"
+    );
+    return;
+  }
+
+  const hasImageSource = !!uploadedBaseImage?.dataUrl;
+  const availableCount = Number.isFinite(availableImageColors)
+    ? availableImageColors
+    : getCachedImageColorClusters().length;
+  const hasExtractedColors = hasImageSource && availableCount > 0;
+
+  surpriseBtn.disabled = !hasExtractedColors;
+  surpriseBtn.setAttribute("aria-disabled", hasExtractedColors ? "false" : "true");
+  setPaletteSurpriseButtonTooltip(
+    hasExtractedColors
+      ? "Generar una variante libre basada en la imagen original"
+      : "Sube una imagen válida para sorprender la paleta"
+  );
+}
+
+function updatePaletteInspirationButtonAvailability(availableImageColors = null) {
+  if (!paletteInspirationBtn) {
+    return;
+  }
+
+  if (paletteBaseMode !== "image") {
+    paletteInspirationBtn.hidden = true;
+    paletteInspirationBtn.disabled = true;
+    paletteInspirationBtn.classList.add("is-disabled");
+    paletteInspirationBtn.setAttribute("aria-disabled", "true");
+    setPaletteInspirationButtonTooltip("Modo inspiración disponible solo en Imagen");
+    return;
+  }
+
+  const hasImageSource = !!uploadedBaseImage?.dataUrl;
+  const availableCount = Number.isFinite(availableImageColors)
+    ? availableImageColors
+    : getCachedImageColorClusters().length;
+  const hasExtractedColors = hasImageSource && availableCount > 0;
+
+  paletteInspirationBtn.hidden = !hasImageSource;
+  paletteInspirationBtn.disabled = !hasExtractedColors;
+  paletteInspirationBtn.classList.toggle("is-disabled", !hasExtractedColors);
+  paletteInspirationBtn.setAttribute("aria-disabled", hasExtractedColors ? "false" : "true");
+  setPaletteInspirationButtonTooltip(
+    hasExtractedColors
+      ? "Generar una paleta inspirada en la imagen"
+      : "Sube una imagen válida para activar el modo inspiración"
+  );
+}
+
 async function syncImagePaletteFromSource(options = {}) {
   if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
     return;
@@ -425,6 +540,8 @@ async function syncImagePaletteFromSource(options = {}) {
 
   if (options.resetVariant) {
     imagePaletteVariantIndex = 0;
+    imageInspirationVariantIndex = 0;
+    clearRecentInspiredPalettes();
   } else if (options.advanceVariant) {
     imagePaletteVariantIndex += 1;
   }
@@ -458,27 +575,68 @@ function normalizePaletteHexCollection(colors) {
     : [];
 }
 
-function areImagePalettesTooSimilar(nextPalette, referencePalette) {
+function getPaletteSimilarityMetrics(nextPalette, referencePalette) {
   const nextColors = normalizePaletteHexCollection(nextPalette);
   const referenceColors = normalizePaletteHexCollection(referencePalette);
 
   if (nextColors.length === 0 || referenceColors.length === 0) {
-    return false;
+    return {
+      exactMatch: false,
+      sharedColorCount: 0,
+      nextCount: nextColors.length,
+      referenceCount: referenceColors.length,
+    };
   }
 
   const exactMatch =
     nextColors.length === referenceColors.length &&
     nextColors.every((color, index) => color === referenceColors[index]);
-  if (exactMatch) {
-    return true;
-  }
 
   const referenceSet = new Set(referenceColors);
   const sharedColorCount = nextColors.reduce((count, color) => {
     return count + (referenceSet.has(color) ? 1 : 0);
   }, 0);
 
-  return sharedColorCount >= Math.max(nextColors.length - 1, 3);
+  return {
+    exactMatch,
+    sharedColorCount,
+    nextCount: nextColors.length,
+    referenceCount: referenceColors.length,
+  };
+}
+
+function arePalettesTooSimilar(nextPalette, referencePalette) {
+  const similarityMetrics = getPaletteSimilarityMetrics(nextPalette, referencePalette);
+  return (
+    similarityMetrics.exactMatch ||
+    similarityMetrics.sharedColorCount >= Math.max(similarityMetrics.nextCount - 1, 3)
+  );
+}
+
+function clearRecentInspiredPalettes() {
+  recentInspiredPalettes = [];
+}
+
+function rememberInspiredPalette(colors) {
+  const normalizedPalette = normalizePaletteHexCollection(colors);
+  if (normalizedPalette.length === 0) {
+    return;
+  }
+
+  const signature = normalizedPalette.join("|");
+  recentInspiredPalettes = recentInspiredPalettes
+    .filter((palette) => normalizePaletteHexCollection(palette).join("|") !== signature)
+    .concat([normalizedPalette])
+    .slice(-MAX_RECENT_INSPIRED_PALETTES);
+}
+
+function isPaletteTooSimilarToRecentInspiredPalettes(nextPalette, recentPalettes = recentInspiredPalettes) {
+  const normalizedPalette = normalizePaletteHexCollection(nextPalette);
+  if (normalizedPalette.length === 0 || !Array.isArray(recentPalettes) || recentPalettes.length === 0) {
+    return false;
+  }
+
+  return recentPalettes.some((palette) => arePalettesTooSimilar(normalizedPalette, palette));
 }
 
 // PALETTE BASE
@@ -508,6 +666,8 @@ function setPaletteBaseMode(nextMode) {
 
   updatePaletteModeActionVisibility();
   updatePaletteRegenerateButtonAvailability();
+  updatePaletteSurpriseButtonAvailability();
+  updatePaletteInspirationButtonAvailability();
   updatePaletteStickyState();
   updatePaletteSizeButtonsAvailability();
 
@@ -567,6 +727,8 @@ function renderPaletteImagePreview() {
     paletteImageName.textContent = "";
     updatePaletteModeActionVisibility();
     updatePaletteRegenerateButtonAvailability();
+    updatePaletteSurpriseButtonAvailability();
+    updatePaletteInspirationButtonAvailability();
     return;
   }
 
@@ -574,6 +736,8 @@ function renderPaletteImagePreview() {
   paletteImageName.textContent = uploadedBaseImage.name;
   updatePaletteModeActionVisibility();
   updatePaletteRegenerateButtonAvailability();
+  updatePaletteSurpriseButtonAvailability();
+  updatePaletteInspirationButtonAvailability();
 }
 
 function setAnimatedImagePanelVisibility(element, shouldShow) {
@@ -698,7 +862,17 @@ if (paletteRegenerateBtn) {
       return;
     }
 
-    void regenerateTemperaturePaletteWithControlVariation();
+    void regenerateTemperaturePaletteKeepingPreferences();
+  });
+}
+
+if (paletteInspirationBtn) {
+  paletteInspirationBtn.addEventListener("click", () => {
+    if (paletteInspirationBtn.disabled || paletteInspirationBtn.classList.contains("is-disabled")) {
+      return;
+    }
+
+    void applyInspiredImagePalette();
   });
 }
 
@@ -729,6 +903,8 @@ setPaletteBaseMode(paletteBaseMode);
 renderPaletteImagePreview();
 updatePaletteModeActionVisibility();
 updatePaletteRegenerateButtonAvailability();
+updatePaletteSurpriseButtonAvailability();
+updatePaletteInspirationButtonAvailability();
 
 if (controlsPanel && paletteSection) {
   updatePaletteStickyState();
@@ -1298,6 +1474,8 @@ async function refreshImageDerivedControls() {
     setPaletteImageExtractionFeedback(false);
     updatePaletteSizeButtonsAvailability();
     updatePaletteRegenerateButtonAvailability();
+    updatePaletteSurpriseButtonAvailability();
+    updatePaletteInspirationButtonAvailability();
 
     if (typeof updateRegenerateButtonsAvailability === "function") {
       updateRegenerateButtonsAvailability();
@@ -1318,6 +1496,8 @@ async function refreshImageDerivedControls() {
 
   updatePaletteSizeButtonsAvailability(clusters.length);
   updatePaletteRegenerateButtonAvailability(clusters.length);
+  updatePaletteSurpriseButtonAvailability(clusters.length);
+  updatePaletteInspirationButtonAvailability(clusters.length);
 
   if (typeof updateRegenerateButtonsAvailability === "function") {
     updateRegenerateButtonsAvailability();
@@ -1406,24 +1586,43 @@ function buildImagePaletteCandidate(selectedClusters, targetCount, variantIndex)
 }
 
 async function buildImageBasedPalette(targetCount) {
+  const result = await buildImageBasedPaletteCandidate(targetCount);
+  imagePaletteVariantIndex = result.variantIndex;
+  return result.palette;
+}
+
+async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
   if (!uploadedBaseImage?.dataUrl) {
     alert("Sube una imagen primero para generar una paleta desde ella.");
-    return [];
+    return {
+      palette: [],
+      variantIndex: imagePaletteVariantIndex,
+    };
   }
 
   const clusters = await getImageColorClusters();
   if (clusters.length === 0) {
-    return [];
+    return {
+      palette: [],
+      variantIndex: imagePaletteVariantIndex,
+    };
   }
 
   const referencePalette = normalizePaletteHexCollection(
-    paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette
+    options.referencePalette ??
+    (paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette)
   );
-  const maxVariantAttempts = Math.max(4, IMAGE_PALETTE_VARIANT_PROFILES.length);
+  const variantStartIndex = Number.isFinite(options.startVariantIndex)
+    ? Math.max(0, options.startVariantIndex)
+    : imagePaletteVariantIndex;
+  const maxVariantAttempts = Number.isFinite(options.maxVariantAttempts)
+    ? Math.max(1, options.maxVariantAttempts)
+    : Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
   let fallbackPalette = [];
+  let fallbackVariantIndex = variantStartIndex;
 
   for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
-    const variantIndex = imagePaletteVariantIndex + attempt;
+    const variantIndex = variantStartIndex + attempt;
     const selectedClusters = selectRelevantImageClusters(clusters, targetCount, variantIndex);
     const candidatePalette = buildImagePaletteCandidate(
       selectedClusters,
@@ -1436,14 +1635,458 @@ async function buildImageBasedPalette(targetCount) {
     }
 
     fallbackPalette = candidatePalette;
+    fallbackVariantIndex = variantIndex;
 
-    if (!areImagePalettesTooSimilar(candidatePalette, referencePalette)) {
-      imagePaletteVariantIndex = variantIndex;
-      return candidatePalette;
+    if (!arePalettesTooSimilar(candidatePalette, referencePalette)) {
+      return {
+        palette: candidatePalette,
+        variantIndex,
+      };
     }
   }
 
-  return fallbackPalette;
+  return {
+    palette: fallbackPalette,
+    variantIndex: fallbackVariantIndex,
+  };
+}
+
+function getImageInspirationAtmosphere(clusters) {
+  if (!Array.isArray(clusters) || clusters.length === 0) {
+    return {
+      averageSaturation: 56,
+      averageLightness: 54,
+      maxWeight: 1,
+      maxSaturation: 72,
+      lightnessSpread: 0.3,
+      warmthBias: 0,
+    };
+  }
+
+  const totalWeight = clusters.reduce((sum, cluster) => sum + Math.max(cluster.weight || 0, 1), 0);
+  const maxWeight = Math.max(
+    ...clusters.map((cluster) => Math.max(cluster.weight || 0, 1)),
+    1
+  );
+  const maxSaturation = Math.max(
+    ...clusters.map((cluster) => clampControlValue(cluster.hsl?.s ?? 0, 0, 100)),
+    0
+  );
+  const lightnessValues = clusters.map((cluster) => clampControlValue(cluster.hsl?.l ?? 50, 0, 100));
+  const averageSaturation = clusters.reduce((sum, cluster) => {
+    const weight = Math.max(cluster.weight || 0, 1);
+    return sum + (cluster.hsl?.s ?? 0) * weight;
+  }, 0) / totalWeight;
+  const averageLightness = clusters.reduce((sum, cluster) => {
+    const weight = Math.max(cluster.weight || 0, 1);
+    return sum + (cluster.hsl?.l ?? 50) * weight;
+  }, 0) / totalWeight;
+  const warmthBias = clusters.reduce((sum, cluster) => {
+    const weight = Math.max(cluster.weight || 0, 1);
+    const hue = cluster.hsl?.h ?? 0;
+    const hueRadians = (hue / 180) * Math.PI;
+    return sum + Math.cos(hueRadians) * weight;
+  }, 0) / totalWeight;
+
+  return {
+    averageSaturation,
+    averageLightness,
+    maxWeight,
+    maxSaturation,
+    lightnessSpread:
+      (Math.max(...lightnessValues, averageLightness) - Math.min(...lightnessValues, averageLightness)) /
+      100,
+    warmthBias,
+  };
+}
+
+function orderPaletteHexColorsByHarmony(colors) {
+  const nodes = normalizePaletteHexCollection(colors).map((hex) => ({
+    hex,
+    hsl: controlsHexToHsl(hex),
+    weight: 1,
+  }));
+
+  return orderImageClustersByHarmony(nodes).map((node) => node.hex);
+}
+
+function isPaletteColorTooClose(candidateColor, palette, minimumDistance = 24) {
+  const candidateRgb = controlsHexToRgb(candidateColor);
+  return palette.some((existingColor) => {
+    const existingRgb = controlsHexToRgb(existingColor);
+    return getRgbDistanceBetween(candidateRgb, existingRgb) < minimumDistance;
+  });
+}
+
+function getInspiredClusterRole(seedIndex, targetCount) {
+  if (seedIndex === 0) {
+    return "dominant";
+  }
+
+  if (targetCount >= 6 && seedIndex === 1) {
+    return "dominant";
+  }
+
+  if (seedIndex === targetCount - 1) {
+    return "accent";
+  }
+
+  if (targetCount >= 5 && seedIndex === targetCount - 2) {
+    return "accent";
+  }
+
+  return "support";
+}
+
+function getInspiredImageVariantHex(cluster, role, clusterIndex, variantIndex, atmosphere) {
+  const profile =
+    IMAGE_INSPIRATION_VARIANT_PROFILES[
+      Math.abs(variantIndex) % IMAGE_INSPIRATION_VARIANT_PROFILES.length
+    ];
+  const direction = (clusterIndex + variantIndex) % 2 === 0 ? 1 : -1;
+  const hsl = cluster.hsl;
+  const weightRatio = clampControlValue(
+    Math.max(cluster.weight || 0, 1) / Math.max(atmosphere.maxWeight || 1, 1),
+    0,
+    1
+  );
+  const warmthAdjustment = atmosphere.warmthBias * 4.5;
+  let hue = hsl.h;
+  let saturation = hsl.s;
+  let lightness = hsl.l;
+
+  if (role === "dominant") {
+    hue += profile.hueShift * 0.45 * direction + warmthAdjustment * 0.35;
+    saturation = blendControlValue(
+      hsl.s,
+      clampControlValue(atmosphere.averageSaturation + 6 + profile.saturationShift, 22, 64),
+      0.3
+    ) - weightRatio * 3;
+    lightness = blendControlValue(
+      hsl.l,
+      clampControlValue(atmosphere.averageLightness + profile.neutralLift, 30, 70),
+      0.34
+    );
+  } else if (role === "accent") {
+    hue += profile.accentHueShift * 0.8 * direction + warmthAdjustment * 0.18;
+    saturation = blendControlValue(
+      hsl.s,
+      clampControlValue(
+        Math.max(
+          atmosphere.averageSaturation + profile.accentBoost,
+          atmosphere.maxSaturation * 0.58
+        ),
+        38,
+        72
+      ),
+      0.44
+    );
+    lightness = blendControlValue(
+      hsl.l,
+      clampControlValue(
+        atmosphere.averageLightness + direction * 8 * (0.4 + atmosphere.lightnessSpread),
+        28,
+        76
+      ),
+      0.26
+    );
+  } else {
+    hue += profile.hueShift * direction + direction * 3 + warmthAdjustment * 0.22;
+    saturation = blendControlValue(
+      hsl.s,
+      clampControlValue(atmosphere.averageSaturation + 8 + profile.saturationShift, 26, 72),
+      0.38
+    );
+    lightness = blendControlValue(
+      hsl.l,
+      clampControlValue(
+        atmosphere.averageLightness + profile.lightnessShift + direction * 4 * (0.45 + atmosphere.lightnessSpread),
+        28,
+        76
+      ),
+      0.32
+    );
+  }
+
+  hue = (hue + 360) % 360;
+  saturation = clampControlValue(saturation, role === "accent" ? 36 : 22, role === "dominant" ? 64 : 76);
+  lightness = clampControlValue(lightness, 24, role === "accent" ? 78 : 74);
+
+  let candidate = controlsNormalizeHexColor(
+    controlsHslToHex(hue, saturation, lightness)
+  );
+
+  if (candidate === cluster.hex) {
+    candidate = controlsNormalizeHexColor(
+      controlsHslToHex(
+        (hue + direction * 4 + 360) % 360,
+        clampControlValue(saturation + (role === "accent" ? 8 : 4), 0, 100),
+        clampControlValue(lightness + direction * 5, 12, 88)
+      )
+    );
+  }
+
+  return candidate;
+}
+
+function expandInspiredPalette(selectedClusters, targetCount, variantIndex, atmosphere, seedPalette = []) {
+  const palette = [...seedPalette];
+  const candidateRoles = ["support", "accent", "dominant", "support"];
+
+  for (let cycleIndex = 0; palette.length < targetCount && cycleIndex < targetCount * 6; cycleIndex += 1) {
+    const cluster = selectedClusters[cycleIndex % selectedClusters.length];
+    const role = candidateRoles[cycleIndex % candidateRoles.length];
+    const candidate = getInspiredImageVariantHex(
+      cluster,
+      role,
+      cycleIndex,
+      variantIndex + cycleIndex + 1,
+      atmosphere
+    );
+
+    if (
+      isDisallowedColor(candidate) ||
+      palette.includes(candidate) ||
+      isPaletteColorTooClose(candidate, palette, 22)
+    ) {
+      continue;
+    }
+
+    palette.push(candidate);
+  }
+
+  return palette.slice(0, targetCount);
+}
+
+function buildInspiredPaletteFromClusters(selectedClusters, targetCount, variantIndex, atmosphere) {
+  const harmonyOrderedClusters = orderImageClustersByHarmony(selectedClusters);
+  const seedPalette = [];
+
+  harmonyOrderedClusters.forEach((cluster, clusterIndex) => {
+    if (seedPalette.length >= targetCount) {
+      return;
+    }
+
+    const role = getInspiredClusterRole(seedPalette.length, targetCount);
+    const candidate = getInspiredImageVariantHex(
+      cluster,
+      role,
+      clusterIndex,
+      variantIndex,
+      atmosphere
+    );
+
+    if (
+      isDisallowedColor(candidate) ||
+      seedPalette.includes(candidate) ||
+      isPaletteColorTooClose(candidate, seedPalette, 22)
+    ) {
+      return;
+    }
+
+    seedPalette.push(candidate);
+  });
+
+  return expandInspiredPalette(
+    harmonyOrderedClusters,
+    targetCount,
+    variantIndex,
+    atmosphere,
+    seedPalette
+  );
+}
+
+function validateInspiredPaletteCandidate(candidatePalette, extractedPalette, clusters) {
+  const normalizedCandidate = normalizePaletteHexCollection(candidatePalette);
+  const uniqueCount = new Set(normalizedCandidate).size;
+  const similarityToExtraction = getPaletteSimilarityMetrics(
+    normalizedCandidate,
+    extractedPalette
+  );
+
+  const nearestClusterDistances = normalizedCandidate.map((color) => {
+    const colorRgb = controlsHexToRgb(color);
+    return Math.min(
+      ...clusters.map((cluster) =>
+        getRgbDistanceBetween(colorRgb, {
+          r: cluster.r,
+          g: cluster.g,
+          b: cluster.b,
+        })
+      )
+    );
+  });
+
+  const averageNearestClusterDistance =
+    nearestClusterDistances.length > 0
+      ? nearestClusterDistances.reduce((sum, distance) => sum + distance, 0) /
+        nearestClusterDistances.length
+      : 0;
+  const inspirationDistanceScore = clampControlValue(
+    1 - Math.abs(averageNearestClusterDistance - 28) / 42,
+    0,
+    1
+  );
+
+  return {
+    hasRepeatedColors: uniqueCount !== normalizedCandidate.length,
+    isExactExtractionCopy: similarityToExtraction.exactMatch,
+    similarityToExtraction,
+    averageNearestClusterDistance,
+    inspirationDistanceScore,
+    isCoherentWithImage: inspirationDistanceScore >= 0.24,
+  };
+}
+
+function derivePaletteAdjustmentSettingsFromColors(colors) {
+  const normalizedColors = normalizePaletteHexCollection(colors);
+  if (normalizedColors.length === 0) {
+    return resolvePaletteAdjustmentSettings();
+  }
+
+  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  const averageSaturation =
+    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+  const averageLightness =
+    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+
+  return resolvePaletteAdjustmentSettings({
+    saturation: clampControlValue(Math.round(averageSaturation / 5) * 5, 0, 100),
+    brightness: clampControlValue(
+      Math.round((((averageLightness - 10) / 80) * 100) / 5) * 5,
+      0,
+      100
+    ),
+  });
+}
+
+async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
+  if (!uploadedBaseImage?.dataUrl) {
+    alert("Sube una imagen primero para activar el modo inspiración.");
+    return {
+      palette: [],
+      variantIndex: imageInspirationVariantIndex,
+      validation: null,
+      settings: resolvePaletteAdjustmentSettings(),
+    };
+  }
+
+  const clusters = await getImageColorClusters();
+  if (clusters.length === 0) {
+    return {
+      palette: [],
+      variantIndex: imageInspirationVariantIndex,
+      validation: null,
+      settings: resolvePaletteAdjustmentSettings(),
+    };
+  }
+
+  const safeTargetCount = Number.isFinite(targetCount) && targetCount > 0 ? targetCount : 5;
+  const atmosphere = getImageInspirationAtmosphere(clusters);
+  const referencePalette = normalizePaletteHexCollection(
+    options.referencePalette ?? currentPalette
+  );
+  const recentInspiredReferences = Array.isArray(options.recentPalettes)
+    ? options.recentPalettes
+    : recentInspiredPalettes;
+  const startVariantIndex = Number.isFinite(options.startVariantIndex)
+    ? Math.max(0, options.startVariantIndex)
+    : imageInspirationVariantIndex + 1;
+  const maxVariantAttempts = Number.isFinite(options.maxVariantAttempts)
+    ? Math.max(1, options.maxVariantAttempts)
+    : Math.max(
+        18,
+        IMAGE_INSPIRATION_VARIANT_PROFILES.length * 8,
+        recentInspiredReferences.length * 4 + 12
+      );
+  let fallbackCandidate = null;
+  let bestCandidate = null;
+
+  for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
+    const variantIndex = startVariantIndex + attempt;
+    const selectedClusters = selectRelevantImageClusters(
+      clusters,
+      Math.min(clusters.length, Math.max(safeTargetCount + 3, 6)),
+      variantIndex
+    );
+    const extractedReferencePalette = orderImageClustersByHarmony(selectedClusters)
+      .map((cluster) => cluster.hex)
+      .slice(0, safeTargetCount);
+    const candidatePalette = buildInspiredPaletteFromClusters(
+      selectedClusters,
+      safeTargetCount,
+      variantIndex,
+      atmosphere
+    );
+    const orderedPalette = orderPaletteHexColorsByHarmony(candidatePalette);
+
+    if (orderedPalette.length === 0) {
+      continue;
+    }
+
+    const validation = validateInspiredPaletteCandidate(
+      orderedPalette,
+      extractedReferencePalette,
+      clusters
+    );
+    const isTooSimilarToRecentInspired = isPaletteTooSimilarToRecentInspiredPalettes(
+      orderedPalette,
+      recentInspiredReferences
+    );
+    const similarityToCurrent =
+      getPaletteSimilarityMetrics(orderedPalette, referencePalette).sharedColorCount /
+      Math.max(orderedPalette.length, 1);
+    const eleganceScore = scorePaletteElegance(orderedPalette);
+    const score =
+      scorePaletteHarmony(orderedPalette) +
+      eleganceScore * 1.35 +
+      validation.inspirationDistanceScore * 1.15 +
+      (validation.isCoherentWithImage ? 0.35 : 0) -
+      similarityToCurrent * 0.7 -
+      (isTooSimilarToRecentInspired ? 1.1 : 0) -
+      (validation.isExactExtractionCopy ? 1.4 : 0) -
+      (validation.hasRepeatedColors ? 3 : 0);
+    const candidate = {
+      palette: orderedPalette,
+      variantIndex,
+      validation,
+      isTooSimilarToRecentInspired,
+      settings: derivePaletteAdjustmentSettingsFromColors(orderedPalette),
+      score,
+    };
+
+    if (
+      !fallbackCandidate ||
+      (fallbackCandidate.isTooSimilarToRecentInspired && !candidate.isTooSimilarToRecentInspired) ||
+      (
+        fallbackCandidate.isTooSimilarToRecentInspired === candidate.isTooSimilarToRecentInspired &&
+        candidate.score > fallbackCandidate.score
+      )
+    ) {
+      fallbackCandidate = candidate;
+    }
+
+    if (
+      !validation.hasRepeatedColors &&
+      !validation.isExactExtractionCopy &&
+      !isTooSimilarToRecentInspired &&
+      !arePalettesTooSimilar(orderedPalette, referencePalette) &&
+      (!bestCandidate || candidate.score > bestCandidate.score)
+    ) {
+      bestCandidate = candidate;
+    }
+  }
+
+  const resolvedCandidate = bestCandidate || fallbackCandidate || {
+    palette: [],
+    variantIndex: startVariantIndex,
+    validation: null,
+    settings: resolvePaletteAdjustmentSettings(),
+  };
+  updateUploadedImageAnalysisCache({
+    lastInspiredPaletteValidation: resolvedCandidate.validation,
+  });
+  return resolvedCandidate;
 }
 
 // SIZE SELECTOR
@@ -1644,42 +2287,280 @@ if (generateBtn) {
   };
 }
 
+function getRandomSteppedValue(min = 0, max = 100, step = 5) {
+  const steps = Math.round((max - min) / step);
+  return min + Math.floor(Math.random() * (steps + 1)) * step;
+}
+
+function getRandomTemperatureSelection() {
+  return [
+    { warm: true, cool: false },
+    { warm: false, cool: true },
+    { warm: true, cool: true },
+  ][Math.floor(Math.random() * 3)];
+}
+
+function getCurrentTemperatureSelectionKey() {
+  return `${temperature.warm ? 1 : 0}:${temperature.cool ? 1 : 0}`;
+}
+
+function withTemporaryTemperatureSelection(nextSelection, callback) {
+  const previousSelection = {
+    warm: temperature.warm,
+    cool: temperature.cool,
+  };
+
+  temperature = {
+    warm: !!nextSelection?.warm,
+    cool: !!nextSelection?.cool,
+  };
+
+  try {
+    return callback();
+  } finally {
+    temperature = previousSelection;
+  }
+}
+
+function createTemperatureCandidate(settings, options = {}) {
+  const attemptCount = Number.isFinite(options.attemptCount)
+    ? Math.max(1, options.attemptCount)
+    : Math.max(24, paletteSize * 8);
+  const referencePalette = normalizePaletteHexCollection(
+    options.referencePalette ?? currentPalette
+  );
+  let bestDistinctCandidate = null;
+  let bestFallbackCandidate = null;
+
+  for (let attempt = 0; attempt < attemptCount; attempt += 1) {
+    const candidateResult = buildTemperaturePaletteForSettings(paletteSize, settings);
+    if (candidateResult.palette.length === 0) {
+      continue;
+    }
+
+    const renderedPalette = buildRenderedPaletteFromBaseColors(
+      candidateResult.palette,
+      settings
+    );
+    const similarityMetrics = getPaletteSimilarityMetrics(renderedPalette, referencePalette);
+    const similarityPenalty =
+      similarityMetrics.sharedColorCount / Math.max(renderedPalette.length, 1);
+    const candidate = {
+      palette: candidateResult.palette,
+      renderedPalette,
+      usedAlternativePalette: candidateResult.usedAlternativePalette,
+      score: scorePaletteHarmony(renderedPalette) - similarityPenalty * 0.85,
+      isTooSimilar: arePalettesTooSimilar(renderedPalette, referencePalette),
+    };
+
+    if (!bestFallbackCandidate || candidate.score > bestFallbackCandidate.score) {
+      bestFallbackCandidate = candidate;
+    }
+
+    if (
+      !candidate.isTooSimilar &&
+      (!bestDistinctCandidate || candidate.score > bestDistinctCandidate.score)
+    ) {
+      bestDistinctCandidate = candidate;
+    }
+  }
+
+  return bestDistinctCandidate || bestFallbackCandidate;
+}
+
+async function regenerateTemperaturePaletteKeepingPreferences() {
+  const lockedSettings = {
+    brightness: getCurrentBrightnessValue(),
+    saturation: getCurrentSaturationValue(),
+  };
+  const candidate = createTemperatureCandidate(lockedSettings, {
+    referencePalette: currentPalette,
+  });
+
+  if (!candidate) {
+    await generatePalette();
+    return;
+  }
+
+  commitGeneratedPalette(candidate.palette, {
+    usedAlternativePalette: candidate.usedAlternativePalette,
+    previousPalette: currentPalette,
+  });
+}
+
+async function surpriseTemperaturePalette() {
+  const currentTemperatureKey = getCurrentTemperatureSelectionKey();
+  const currentSettings = getCurrentPaletteAdjustmentSnapshot();
+  const referencePalette = normalizePaletteHexCollection(currentPalette);
+  let bestCandidate = null;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const nextTemperatureSelection = getRandomTemperatureSelection();
+    const nextSettings = {
+      brightness: getRandomSteppedValue(0, 100, 5),
+      saturation: getRandomSteppedValue(0, 100, 5),
+    };
+    const temperatureSelectionKey =
+      `${nextTemperatureSelection.warm ? 1 : 0}:${nextTemperatureSelection.cool ? 1 : 0}`;
+    const candidate = withTemporaryTemperatureSelection(
+      nextTemperatureSelection,
+      () =>
+        createTemperatureCandidate(nextSettings, {
+          referencePalette,
+          attemptCount: 10,
+        })
+    );
+
+    if (!candidate) {
+      continue;
+    }
+
+    const controlDistance =
+      Math.abs(nextSettings.brightness - currentSettings.brightness) +
+      Math.abs(nextSettings.saturation - currentSettings.saturation);
+    const temperatureBonus = temperatureSelectionKey !== currentTemperatureKey ? 0.28 : 0;
+    const noveltyBonus = Math.min(controlDistance / 120, 0.75);
+    const score = candidate.score + noveltyBonus + temperatureBonus;
+
+    if (!bestCandidate || score > bestCandidate.score) {
+      bestCandidate = {
+        temperatureSelection: nextTemperatureSelection,
+        settings: nextSettings,
+        palette: candidate.palette,
+        usedAlternativePalette: candidate.usedAlternativePalette,
+        score,
+      };
+    }
+  }
+
+  if (!bestCandidate) {
+    await regenerateTemperaturePaletteKeepingPreferences();
+    return;
+  }
+
+  setTemperatureSelection(bestCandidate.temperatureSelection);
+  setPaletteAdjustmentControls(bestCandidate.settings);
+  commitGeneratedPalette(bestCandidate.palette, {
+    usedAlternativePalette: bestCandidate.usedAlternativePalette,
+    previousPalette: currentPalette,
+  });
+}
+
+async function surpriseImagePalette() {
+  if (!uploadedBaseImage?.dataUrl) {
+    return;
+  }
+
+  const originalPriorityPreference = prioritizeImageDominantColors;
+  const referencePalette = normalizePaletteHexCollection(currentPalette);
+  const currentSettings = getCurrentPaletteAdjustmentSnapshot();
+  let bestCandidate = null;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const candidatePriorityPreference = Math.random() < 0.5;
+    const candidateSettings = {
+      brightness: getRandomSteppedValue(0, 100, 5),
+      saturation: getRandomSteppedValue(0, 100, 5),
+    };
+    const candidateVariantIndex =
+      imagePaletteVariantIndex +
+      1 +
+      Math.floor(Math.random() * IMAGE_PALETTE_VARIANT_PROFILES.length * 2);
+
+    prioritizeImageDominantColors = candidatePriorityPreference;
+    const candidateResult = await buildImageBasedPaletteCandidate(paletteSize, {
+      startVariantIndex: candidateVariantIndex,
+      referencePalette,
+      maxVariantAttempts: IMAGE_PALETTE_VARIANT_PROFILES.length * 3,
+    });
+
+    if (candidateResult.palette.length === 0) {
+      continue;
+    }
+
+    const renderedPalette = buildRenderedPaletteFromBaseColors(
+      candidateResult.palette,
+      candidateSettings
+    );
+    const similarityMetrics = getPaletteSimilarityMetrics(renderedPalette, referencePalette);
+    const similarityPenalty =
+      similarityMetrics.sharedColorCount / Math.max(renderedPalette.length, 1);
+    const controlDistance =
+      Math.abs(candidateSettings.brightness - currentSettings.brightness) +
+      Math.abs(candidateSettings.saturation - currentSettings.saturation);
+    const priorityBonus =
+      candidatePriorityPreference !== originalPriorityPreference ? 0.16 : 0;
+    const score =
+      scorePaletteHarmony(renderedPalette) -
+      similarityPenalty * 0.7 +
+      Math.min(controlDistance / 120, 0.8) +
+      priorityBonus;
+
+    if (!bestCandidate || score > bestCandidate.score) {
+      bestCandidate = {
+        prioritizeDominant: candidatePriorityPreference,
+        settings: candidateSettings,
+        palette: candidateResult.palette,
+        variantIndex: candidateResult.variantIndex,
+        score,
+      };
+    }
+  }
+
+  prioritizeImageDominantColors = originalPriorityPreference;
+
+  if (!bestCandidate) {
+    await syncImagePaletteFromSource({ advanceVariant: true });
+    return;
+  }
+
+  prioritizeImageDominantColors = bestCandidate.prioritizeDominant;
+  if (paletteImageDominantToggle) {
+    paletteImageDominantToggle.checked = bestCandidate.prioritizeDominant;
+  }
+  setPaletteAdjustmentControls(bestCandidate.settings);
+  imagePaletteVariantIndex = bestCandidate.variantIndex;
+  commitGeneratedPalette(bestCandidate.palette, {
+    previousPalette: currentPalette,
+  });
+}
+
+async function applyInspiredImagePalette() {
+  const targetCount = Number.isFinite(paletteSize) && paletteSize > 0 ? paletteSize : 5;
+  const result = await buildInspiredImagePaletteCandidate(targetCount, {
+    referencePalette: currentPalette,
+  });
+
+  if (!Array.isArray(result.palette) || result.palette.length === 0) {
+    setPaletteImageExtractionFeedback(true, IMAGE_EXTRACTION_ERROR_MESSAGE);
+    revealPaletteImageDropzoneForRetry();
+    return;
+  }
+
+  imageInspirationVariantIndex = result.variantIndex + 1;
+  rememberInspiredPalette(result.palette);
+  setPaletteAdjustmentControls(result.settings);
+  commitGeneratedPalette(result.palette, {
+    previousPalette: currentPalette,
+  });
+}
+
 function setupSurpriseButton() {
   if (!surpriseBtn) {
     return;
   }
 
   surpriseBtn.onclick = () => {
-    if (paletteBaseMode === "image") {
-      void generatePalette();
+    if (surpriseBtn.disabled) {
       return;
     }
 
-    // Pick random controls, then generate one palette
-    const randomSize = [3, 6, 9, 12][Math.floor(Math.random() * 4)];
-    setPaletteSize(randomSize);
-
-    const randomTemperatureSelection = [
-      { warm: true, cool: false },
-      { warm: false, cool: true },
-      { warm: true, cool: true },
-    ][Math.floor(Math.random() * 3)];
-    setTemperatureSelection(randomTemperatureSelection);
-
-    if (brightnessInput) {
-      // Keep the slider visual range at 0-100, but map the real lightness to 10-90.
-      const randomBrightness = 10 + Math.random() * 80;
-      brightnessInput.value = ((randomBrightness - 10) / 80) * 100;
-      updateBrightnessProgress();
+    if (paletteBaseMode === "image") {
+      void surpriseImagePalette();
+      return;
     }
 
-    if (saturationInput) {
-      saturationInput.value = Math.round((Math.random() * 100) / 5) * 5;
-      updateSaturationProgress();
-      syncTemperatureControlsState();
-    }
-
-    void generatePalette();
+    void surpriseTemperaturePalette();
   };
 }
 
@@ -1953,6 +2834,42 @@ function scorePaletteHarmony(colors) {
   );
 }
 
+function scorePaletteElegance(colors) {
+  const normalizedColors = normalizePaletteHexCollection(colors);
+  if (normalizedColors.length === 0) {
+    return -Infinity;
+  }
+
+  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  const averageSaturation =
+    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+  const averageLightness =
+    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+  const averageSaturationDeviation =
+    paletteHsl.reduce((sum, color) => sum + Math.abs(color.s - averageSaturation), 0) /
+    paletteHsl.length;
+  const averageLightnessDeviation =
+    paletteHsl.reduce((sum, color) => sum + Math.abs(color.l - averageLightness), 0) /
+    paletteHsl.length;
+  const vividCount = paletteHsl.filter((color) => color.s > 76).length;
+  const extremeLightnessCount = paletteHsl.filter((color) => color.l < 20 || color.l > 82).length;
+  const softColorCount = paletteHsl.filter((color) => color.s >= 22 && color.s <= 62).length;
+  const elegantSaturationBalance = 1 - Math.min(Math.abs(averageSaturation - 48) / 48, 1);
+  const elegantLightnessBalance = 1 - Math.min(Math.abs(averageLightness - 58) / 58, 1);
+  const saturationSpreadBalance = 1 - Math.min(Math.abs(averageSaturationDeviation - 14) / 22, 1);
+  const lightnessSpreadBalance = 1 - Math.min(Math.abs(averageLightnessDeviation - 13) / 22, 1);
+
+  return (
+    elegantSaturationBalance * 0.95 +
+    elegantLightnessBalance * 0.85 +
+    saturationSpreadBalance * 0.65 +
+    lightnessSpreadBalance * 0.6 +
+    (softColorCount / paletteHsl.length) * 0.4 -
+    (vividCount / paletteHsl.length) * 0.85 -
+    (extremeLightnessCount / paletteHsl.length) * 0.75
+  );
+}
+
 function setPaletteAdjustmentControls(settings) {
   if (brightnessInput && Number.isFinite(settings?.brightness)) {
     brightnessInput.value = settings.brightness;
@@ -1992,65 +2909,6 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   if (hasExactPaletteChanged || paletteHistory.length === 0) {
     saveHistory(currentPalette, { isAlternative: !!options.usedAlternativePalette });
   }
-}
-
-async function regenerateTemperaturePaletteWithControlVariation() {
-  const baseSettings = {
-    brightness: getCurrentBrightnessValue(),
-    saturation: getCurrentSaturationValue(),
-  };
-  const brightnessOffsets = [0, -10, 10, -20, 20];
-  const saturationOffsets = [0, -10, 10, -20, 20];
-  const candidates = [];
-  const seenSettings = new Set();
-
-  brightnessOffsets.forEach((brightnessOffset) => {
-    saturationOffsets.forEach((saturationOffset) => {
-      const candidate = {
-        brightness: clampControlValue(baseSettings.brightness + brightnessOffset, 0, 100),
-        saturation: clampControlValue(baseSettings.saturation + saturationOffset, 0, 100),
-      };
-      const candidateKey = `${candidate.brightness}:${candidate.saturation}`;
-      if (seenSettings.has(candidateKey)) {
-        return;
-      }
-
-      seenSettings.add(candidateKey);
-      candidates.push(candidate);
-    });
-  });
-
-  let bestCandidate = null;
-
-  candidates.forEach((candidateSettings) => {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      const candidateResult = buildTemperaturePaletteForSettings(paletteSize, candidateSettings);
-      if (candidateResult.palette.length === 0) {
-        continue;
-      }
-
-      const harmonyScore = scorePaletteHarmony(candidateResult.palette);
-      if (!bestCandidate || harmonyScore > bestCandidate.score) {
-        bestCandidate = {
-          settings: candidateSettings,
-          palette: candidateResult.palette,
-          usedAlternativePalette: candidateResult.usedAlternativePalette,
-          score: harmonyScore,
-        };
-      }
-    }
-  });
-
-  if (!bestCandidate) {
-    await generatePalette();
-    return;
-  }
-
-  setPaletteAdjustmentControls(bestCandidate.settings);
-  commitGeneratedPalette(bestCandidate.palette, {
-    usedAlternativePalette: bestCandidate.usedAlternativePalette,
-    previousPalette: currentPalette,
-  });
 }
 
 async function generatePalette() {

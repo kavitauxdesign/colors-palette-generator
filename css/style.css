@@ -110,9 +110,23 @@ button {
   font-size: var(--PX-16);
 }
 
+button[hidden] {
+  display: none !important;
+}
+
 .primary-btn {
   background-color: var(--primary);
   color: var(--on-accent);
+}
+
+.primary-btn[hidden] {
+  display: none;
+}
+
+.primary-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .primary-btn#generateBtn {
@@ -186,41 +200,11 @@ button {
     box-shadow 220ms ease;
 }
 
-.secondary-btn#paletteAdjustBtn {
-  transition:
-    background-color 220ms ease,
-    color 220ms ease,
-    box-shadow 220ms ease,
-    transform 220ms ease;
-}
-
 .secondary-btn#copyHexBtn span,
 .secondary-btn#copyHexBtn svg {
   transition:
     color 220ms ease,
     stroke 220ms ease;
-}
-
-.secondary-btn#copyHexBtn.is-copied {
-  background-color: transparent;
-  color: var(--accent);
-  box-shadow: none;
-}
-
-.secondary-btn#copyHexBtn.is-copied svg {
-  color: var(--accent);
-  stroke: var(--accent);
-}
-
-.secondary-btn#paletteAdjustBtn.is-active {
-  background: rgba(145, 111, 83, 0.12);
-  color: var(--primary);
-  box-shadow: inset 0 0 0 1px rgba(145, 111, 83, 0.1);
-}
-
-.secondary-btn#paletteAdjustBtn.is-active svg {
-  color: var(--primary);
-  stroke: var(--primary);
 }
 
 .secondary-btn svg,
@@ -247,21 +231,46 @@ button {
   color: var(--secondary);
 }
 
-.size,
-.primary-btn#surpriseBtn {
+.size {
   min-width: 44px;
 }
 
 .temp {
-  width: 100px;
+  min-width: 116px;
+  height: 40px;
+  padding: 0 var(--PX-14);
+  gap: var(--PX-8);
+  border: 1px solid rgba(89, 77, 77, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(69, 69, 69, 0.82);
+  font-size: 15px;
+  font-weight: 500;
   margin-right: var(--PX-10);
   transition:
     transform var(--duration-fast) ease,
     opacity var(--duration-fast) ease,
     filter var(--duration-fast) ease,
     box-shadow var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
     border-color var(--duration-fast) ease,
     color var(--duration-fast) ease;
+}
+
+.temp span {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+}
+
+.temp svg {
+  width: var(--PX-18);
+  height: var(--PX-18);
+  margin-left: 0;
+  color: rgba(145, 111, 83, 0.68);
+  stroke: currentColor;
+  transition:
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 
 .size {
@@ -331,24 +340,34 @@ button {
 
 .temp#warmBtn:hover:not(.suppress-hover),
 .temp.active#warmBtn {
-  border: var(--PX-2) solid var(--warm);
+  border-color: rgba(245, 135, 59, 0.4);
+  background: linear-gradient(180deg, rgba(245, 135, 59, 0.16), rgba(245, 135, 59, 0.08));
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 135, 59, 0.08),
+    0 8px 18px rgba(245, 135, 59, 0.12);
 }
 
 .temp#warmBtn:hover:not(.suppress-hover) svg,
 .temp.active#warmBtn svg {
   color: var(--warm);
   stroke: var(--warm);
+  transform: scale(1.04);
 }
 
 .temp#coolBtn:hover:not(.suppress-hover),
 .temp.active#coolBtn {
-  border: var(--PX-2) solid var(--cool);
+  border-color: rgba(0, 180, 216, 0.34);
+  background: linear-gradient(180deg, rgba(0, 180, 216, 0.15), rgba(0, 180, 216, 0.07));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 180, 216, 0.08),
+    0 8px 18px rgba(0, 180, 216, 0.11);
 }
 
 .temp#coolBtn:hover:not(.suppress-hover) svg,
 .temp.active#coolBtn svg {
   color: var(--cool);
   stroke: var(--cool);
+  transform: scale(1.04);
 }
 
 .temp.is-saturation-locked {
@@ -357,7 +376,8 @@ button {
   cursor: not-allowed;
   box-shadow: none;
   color: var(--accent-pale);
-  border-color: rgba(91, 102, 117, 0.3);
+  border-color: rgba(91, 102, 117, 0.22);
+  background: rgba(255, 255, 255, 0.42);
 }
 
 .temp.is-saturation-locked svg {
@@ -594,7 +614,7 @@ nav button:hover {
 .generator-container {
   display: flex;
   align-items: flex-start;
-  gap: 130px;
+  gap: 170px;
   margin: var(--PX-20) 0 50px;
 }
 
@@ -881,15 +901,16 @@ nav button:hover {
   display: inline-flex;
   align-items: flex-start;
   gap: var(--PX-10);
-  margin-top: var(--PX-4);
-  color: var(--secondary);
-  cursor: pointer;
+margin-top: 16px;
+    color: var(--secondary);
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .image-priority-toggle-input {
-  width: 16px;
-  height: 16px;
-  margin: 2px 0 0;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
   accent-color: var(--accent);
   flex-shrink: 0;
 }
@@ -925,33 +946,6 @@ nav button:hover {
   position: sticky;
   top: 88px;
   align-self: flex-start;
-}
-
-.palette-adjust-panel {
-  display: grid;
-  gap: var(--PX-18);
-  width: 100%;
-  max-height: 0;
-  padding: 0 var(--PX-18);
-  border-radius: var(--PX-20);
-  opacity: 0;
-  overflow: hidden;
-  background: #fefefe;
-  box-shadow: 0 8px 20px rgba(89, 77, 77, 0.08);
-  transform: translateY(-8px);
-  transition:
-    max-height 320ms ease,
-    opacity 240ms ease,
-    transform 280ms ease,
-    padding 280ms ease,
-    margin 280ms ease;
-}
-
-.palette-adjust-panel.is-open {
-  max-height: 240px;
-  padding: var(--PX-18);
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .palette-adjust-control {
@@ -1320,44 +1314,26 @@ nav button:hover {
   border-top-color: var(--primary);
 }
 
-#resetPaletteBtn .tooltip::after,
-#copyHexBtn .tooltip::after,
-#paletteUndoBtn .tooltip::after,
-#paletteRedoBtn .tooltip::after,
-#paletteAdjustBtn .tooltip::after,
-#paletteRegenerateBtn .tooltip::after {
-  left: 80%;
-}
-
-.primary-btn#surpriseBtn,
+.secondary-btn#surpriseBtn,
 .secondary-btn#paletteUndoBtn,
 .secondary-btn#paletteRedoBtn,
 .secondary-btn#resetPaletteBtn,
 .secondary-btn#copyHexBtn,
-.secondary-btn#paletteAdjustBtn,
-.secondary-btn#paletteRegenerateBtn {
+.secondary-btn#paletteRegenerateBtn,
+.secondary-btn#paletteInspirationBtn {
   position: relative;
 }
 
-.primary-btn#surpriseBtn:hover .tooltip,
+.secondary-btn#surpriseBtn:hover .tooltip,
 .secondary-btn#paletteUndoBtn:hover .tooltip,
 .secondary-btn#paletteRedoBtn:hover .tooltip,
 .secondary-btn#resetPaletteBtn:hover .tooltip,
 .secondary-btn#copyHexBtn:hover .tooltip,
-.secondary-btn#paletteAdjustBtn:hover .tooltip,
-.secondary-btn#paletteRegenerateBtn:hover .tooltip {
+.secondary-btn#paletteRegenerateBtn:hover .tooltip,
+.secondary-btn#paletteInspirationBtn:hover .tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
-}
-
-.secondary-btn#paletteUndoBtn .tooltip,
-.secondary-btn#paletteRedoBtn .tooltip,
-.secondary-btn#paletteAdjustBtn .tooltip,
-.secondary-btn#paletteRegenerateBtn .tooltip,
-.secondary-btn#copyHexBtn .tooltip {
-  left: -18px;
-  bottom: calc(100% + var(--PX-12));
 }
 
 .secondary-btn#copyHexBtn .tooltip.is-copied-feedback {
@@ -1391,8 +1367,14 @@ nav button:hover {
 .brightness-labels,
 .saturation-labels {
   display: flex;
-  gap: 15px;
+  gap: var(--PX-14);
   align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(89, 77, 77, 0.1);
+  border-radius: var(--PX-16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(243, 244, 246, 0.86));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 .control-group-title {
@@ -1401,7 +1383,7 @@ nav button:hover {
   justify-content: space-between;
   gap: var(--PX-10);
   font-weight: 400;
-  margin: 6px 0;
+  margin: 0 0 var(--PX-10);
 }
 
 .control-value {
@@ -1417,7 +1399,8 @@ nav button:hover {
   height: var(--PX-24);
   flex-shrink: 0;
   transform-origin: center;
-  transition: transform var(--duration-fast) ease;
+  opacity: 0.72;
+  transition: opacity var(--duration-fast) ease;
 }
 
 #brightnessControlGroup,
@@ -1433,10 +1416,10 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: var(--PX-4);
+  height: 4px;
   border-radius: 200px;
   --range-active-color: var(--accent);
-  --range-thumb-color: var(--accent-pale);
+  --range-thumb-color: #f7efe8;
 }
 
 
@@ -1444,13 +1427,13 @@ input[type="range"] {
 /* Range Track (WebKit Browsers)   */
 /* =============================== */
 input[type="range"]::-webkit-slider-runnable-track {
-  height: var(--PX-4);
+  height: 4px;
   border-radius: 200px;
   background: linear-gradient(to right,
       var(--range-active-color) 0%,
       var(--range-active-color) var(--value, 50%),
-      var(--shadow) var(--value, 50%),
-      var(--shadow) 100%);
+      rgba(207, 213, 224, 0.95) var(--value, 50%),
+      rgba(207, 213, 224, 0.95) 100%);
 }
 
 
@@ -1460,22 +1443,27 @@ input[type="range"]::-webkit-slider-runnable-track {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   background: var(--range-thumb-color);
+  border: 2px solid rgba(145, 111, 83, 0.22);
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  box-shadow:
+    0 2px 8px rgba(89, 77, 77, 0.16),
+    0 0 0 3px rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  margin-top: -6px;
+  margin-top: -7px;
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--range-active-color);
-  border: 2px solid var(--on-accent);
+  width: 16px;
+  height: 16px;
+  background: var(--range-thumb-color);
+  border: 2px solid rgba(145, 111, 83, 0.22);
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  box-shadow:
+    0 2px 8px rgba(89, 77, 77, 0.16),
+    0 0 0 3px rgba(255, 255, 255, 0.85);
   cursor: pointer;
 }
 
@@ -1652,9 +1640,9 @@ input[type="range"]::-moz-range-thumb {
   position: relative;
   width: 100%;
   height: 120px;
-  border: var(--PX-2) dashed var(--shadow);
+  border: var(--PX-2) dashed rgba(184, 160, 136, 0.42);
   border-radius: var(--PX-20);
-  background: var(--surface);
+  background: linear-gradient(180deg, rgba(243, 244, 246, 0.62), rgba(243, 244, 246, 0.4));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1666,7 +1654,7 @@ input[type="range"]::-moz-range-thumb {
 .plus-icon {
   width: 48px;
   height: 48px;
-  stroke: var(--secondary);
+  stroke: rgba(145, 111, 83, 0.46);
   stroke-width: 2;
   fill: none;
   transition: var(--duration-fast) ease;
@@ -1675,7 +1663,7 @@ input[type="range"]::-moz-range-thumb {
 .add-color-card span {
   margin-top: var(--PX-8);
   font-size: var(--PX-16);
-  color: var(--secondary);
+  color: rgba(89, 77, 77, 0.68);
   transition: var(--duration-fast) ease;
 }
 
@@ -2036,12 +2024,6 @@ input[type="range"]::-moz-range-thumb {
   .brightness-labels,
   .saturation-labels {
     padding: 0 20px;
-  }
-
-  #surpriseBtn .tooltip {
-    left: initial;
-    right: 0;
-    transform: none;
   }
 
   .bottom-toolbar {
