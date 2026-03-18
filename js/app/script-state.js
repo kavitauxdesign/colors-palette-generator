@@ -23,10 +23,14 @@ const {
   saturationControlGroup,
   paletteAdjustBtn,
   paletteAdjustPanel,
+  paletteUndoBtn,
+  paletteRedoBtn,
   paletteImageExtractionAlert,
   addColorBtn,
   addColorElement,
+  paletteGenerationButtons,
   copyHexBtn,
+  paletteRegenerateBtn,
   generateBtn,
   surpriseBtn,
   copyHexBtnTooltip,
@@ -88,6 +92,7 @@ const COLOR_NAME_REFERENCES = Array.isArray(window.AppColorNames)
 // Shared runtime state used by all script files
 let paletteSize = DEFAULT_PALETTE_SIZE;
 let paletteHistory = [];
+let paletteHistoryIndex = -1;
 let paletteBaseMode = "temperature";
 let uploadedBaseImage = null;
 let prioritizeImageDominantColors = paletteImageDominantToggle?.checked ?? true;

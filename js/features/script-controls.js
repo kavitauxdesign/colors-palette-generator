@@ -342,6 +342,38 @@ if (paletteAdjustBtn) {
   });
 }
 
+function updatePaletteModeActionVisibility() {
+  const isImageMode = paletteBaseMode === "image";
+  const hasImageSource = !!uploadedBaseImage?.dataUrl;
+
+  if (paletteGenerationButtons) {
+    paletteGenerationButtons.hidden = isImageMode;
+  }
+
+  if (paletteRegenerateBtn) {
+    const shouldShowRegenerate = isImageMode && hasImageSource;
+    paletteRegenerateBtn.hidden = !shouldShowRegenerate;
+    paletteRegenerateBtn.disabled = !shouldShowRegenerate;
+    paletteRegenerateBtn.setAttribute(
+      "aria-disabled",
+      shouldShowRegenerate ? "false" : "true"
+    );
+  }
+}
+
+async function syncImagePaletteFromSource() {
+  if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+    return;
+  }
+
+  await refreshImageDerivedControls();
+  if (!(paletteImageExtractionAlert?.hidden ?? true)) {
+    return;
+  }
+
+  await generatePalette();
+}
+
 // PALETTE BASE
 
 function setPaletteBaseMode(nextMode) {
@@ -367,6 +399,7 @@ function setPaletteBaseMode(nextMode) {
     imageBasePanel.hidden = !showImagePanel;
   }
 
+  updatePaletteModeActionVisibility();
   updatePaletteStickyState();
   updatePaletteSizeButtonsAvailability();
 
@@ -424,11 +457,13 @@ function renderPaletteImagePreview() {
   if (!hasPreview) {
     paletteImagePreviewImg.removeAttribute("src");
     paletteImageName.textContent = "";
+    updatePaletteModeActionVisibility();
     return;
   }
 
   paletteImagePreviewImg.src = uploadedBaseImage.dataUrl;
   paletteImageName.textContent = uploadedBaseImage.name;
+  updatePaletteModeActionVisibility();
 }
 
 function setAnimatedImagePanelVisibility(element, shouldShow) {
@@ -502,7 +537,7 @@ function handlePaletteImageFile(file) {
     setPaletteImageExtractionFeedback(false);
     setPaletteBaseMode("image");
     renderPaletteImagePreview();
-    void refreshImageDerivedControls();
+    void syncImagePaletteFromSource();
   });
   reader.readAsDataURL(file);
 }
@@ -538,11 +573,13 @@ if (paletteImageDominantToggle) {
       return;
     }
 
-    void refreshImageDerivedControls();
+    void syncImagePaletteFromSource();
+  });
+}
 
-    if (currentPalette.length > 0 && (paletteImageExtractionAlert?.hidden ?? true)) {
-      void generatePalette();
-    }
+if (paletteRegenerateBtn) {
+  paletteRegenerateBtn.addEventListener("click", () => {
+    void syncImagePaletteFromSource();
   });
 }
 
@@ -571,6 +608,7 @@ if (paletteImageDropzone) {
 
 setPaletteBaseMode(paletteBaseMode);
 renderPaletteImagePreview();
+updatePaletteModeActionVisibility();
 
 if (controlsPanel && paletteSection) {
   updatePaletteStickyState();
@@ -892,6 +930,105 @@ function selectRelevantImageClusters(clusters, targetCount) {
   );
 }
 
+function getImageClusterStartPenalty(cluster, allClusters) {
+  const maxWeight = Math.max(
+    ...allClusters.map((candidateCluster) => candidateCluster.weight || 0),
+    1
+  );
+  const normalizedWeight = clampControlValue((cluster.weight || 0) / maxWeight, 0, 1);
+  const saturationFactor = clampControlValue(cluster.hsl?.s ?? 0, 0, 100) / 100;
+  const balancedLightness = 1 - Math.min(Math.abs((cluster.hsl?.l ?? 50) - 58) / 58, 1);
+
+  if (prioritizeImageDominantColors) {
+    return (1 - normalizedWeight) * 0.2 + (1 - balancedLightness) * 0.04;
+  }
+
+  return (1 - saturationFactor) * 0.12 + (1 - balancedLightness) * 0.05;
+}
+
+function getImageClusterHarmonyDistance(clusterA, clusterB) {
+  const hueDifference = Math.abs((clusterA.hsl?.h ?? 0) - (clusterB.hsl?.h ?? 0));
+  const wrappedHueDifference = Math.min(hueDifference, 360 - hueDifference) / 180;
+  const saturationDifference =
+    Math.abs((clusterA.hsl?.s ?? 0) - (clusterB.hsl?.s ?? 0)) / 100;
+  const lightnessDifference =
+    Math.abs((clusterA.hsl?.l ?? 50) - (clusterB.hsl?.l ?? 50)) / 100;
+
+  return (
+    wrappedHueDifference * 0.6 +
+    saturationDifference * 0.2 +
+    lightnessDifference * 0.2
+  );
+}
+
+function orderImageClustersByHarmony(clusters) {
+  if (!Array.isArray(clusters) || clusters.length <= 2) {
+    return [...clusters];
+  }
+
+  const totalClusters = clusters.length;
+  const totalMasks = 1 << totalClusters;
+  const pathCosts = Array.from({ length: totalMasks }, () =>
+    Array(totalClusters).fill(Infinity)
+  );
+  const previousIndexes = Array.from({ length: totalMasks }, () =>
+    Array(totalClusters).fill(-1)
+  );
+
+  clusters.forEach((cluster, index) => {
+    pathCosts[1 << index][index] = getImageClusterStartPenalty(cluster, clusters);
+  });
+
+  for (let mask = 1; mask < totalMasks; mask += 1) {
+    for (let lastIndex = 0; lastIndex < totalClusters; lastIndex += 1) {
+      const currentCost = pathCosts[mask][lastIndex];
+      if (!Number.isFinite(currentCost)) {
+        continue;
+      }
+
+      for (let nextIndex = 0; nextIndex < totalClusters; nextIndex += 1) {
+        if (mask & (1 << nextIndex)) {
+          continue;
+        }
+
+        const nextMask = mask | (1 << nextIndex);
+        const nextCost =
+          currentCost +
+          getImageClusterHarmonyDistance(clusters[lastIndex], clusters[nextIndex]);
+
+        if (nextCost < pathCosts[nextMask][nextIndex]) {
+          pathCosts[nextMask][nextIndex] = nextCost;
+          previousIndexes[nextMask][nextIndex] = lastIndex;
+        }
+      }
+    }
+  }
+
+  const fullMask = totalMasks - 1;
+  let bestLastIndex = 0;
+  let bestPathCost = Infinity;
+
+  for (let lastIndex = 0; lastIndex < totalClusters; lastIndex += 1) {
+    if (pathCosts[fullMask][lastIndex] < bestPathCost) {
+      bestPathCost = pathCosts[fullMask][lastIndex];
+      bestLastIndex = lastIndex;
+    }
+  }
+
+  const orderedClusters = [];
+  let currentMask = fullMask;
+  let currentIndex = bestLastIndex;
+
+  while (currentIndex !== -1) {
+    orderedClusters.unshift(clusters[currentIndex]);
+    const previousIndex = previousIndexes[currentMask][currentIndex];
+    currentMask ^= 1 << currentIndex;
+    currentIndex = previousIndex;
+  }
+
+  return orderedClusters;
+}
+
 function expandImagePalette(selectedClusters, targetCount) {
   const palette = selectedClusters.map((cluster) => cluster.hex);
   const usedColors = new Set(palette);
@@ -1073,8 +1210,9 @@ async function buildImageBasedPalette(targetCount) {
   }
 
   const selectedClusters = selectRelevantImageClusters(clusters, targetCount);
-  return selectedClusters.length > 0
-    ? selectedClusters.map((cluster) => cluster.hex)
+  const harmonyOrderedClusters = orderImageClustersByHarmony(selectedClusters);
+  return harmonyOrderedClusters.length > 0
+    ? harmonyOrderedClusters.map((cluster) => cluster.hex)
     : [];
 }
 

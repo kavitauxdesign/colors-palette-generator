@@ -128,6 +128,27 @@ button {
   color: var(--secondary);
 }
 
+.secondary-btn-history {
+  gap: var(--PX-8);
+  padding: 0 var(--PX-14);
+  transition:
+    background-color 220ms ease,
+    color 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease;
+}
+
+.secondary-btn-history:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.secondary-btn-history:disabled svg,
+.secondary-btn-history:disabled span {
+  opacity: 0.9;
+}
+
 .secondary-btn-icon {
   width: 36px;
   padding: 0;
@@ -136,6 +157,12 @@ button {
 
 .secondary-btn-icon svg {
   margin-left: 0;
+}
+
+.secondary-btn-icon .secondary-btn-icon-asset {
+  display: block;
+  width: var(--PX-18);
+  height: var(--PX-18);
 }
 
 .secondary-btn#copyHexBtn {
@@ -867,7 +894,7 @@ nav button:hover {
 
 .copy-btn-container {
   display: inline-flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: var(--PX-10);
   width: 100%;
@@ -1281,27 +1308,39 @@ nav button:hover {
 
 #resetPaletteBtn .tooltip::after,
 #copyHexBtn .tooltip::after,
-#paletteAdjustBtn .tooltip::after {
+#paletteUndoBtn .tooltip::after,
+#paletteRedoBtn .tooltip::after,
+#paletteAdjustBtn .tooltip::after,
+#paletteRegenerateBtn .tooltip::after {
   left: 80%;
 }
 
 .primary-btn#surpriseBtn,
+.secondary-btn#paletteUndoBtn,
+.secondary-btn#paletteRedoBtn,
 .secondary-btn#resetPaletteBtn,
 .secondary-btn#copyHexBtn,
-.secondary-btn#paletteAdjustBtn {
+.secondary-btn#paletteAdjustBtn,
+.secondary-btn#paletteRegenerateBtn {
   position: relative;
 }
 
 .primary-btn#surpriseBtn:hover .tooltip,
+.secondary-btn#paletteUndoBtn:hover .tooltip,
+.secondary-btn#paletteRedoBtn:hover .tooltip,
 .secondary-btn#resetPaletteBtn:hover .tooltip,
 .secondary-btn#copyHexBtn:hover .tooltip,
-.secondary-btn#paletteAdjustBtn:hover .tooltip {
+.secondary-btn#paletteAdjustBtn:hover .tooltip,
+.secondary-btn#paletteRegenerateBtn:hover .tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
 }
 
+.secondary-btn#paletteUndoBtn .tooltip,
+.secondary-btn#paletteRedoBtn .tooltip,
 .secondary-btn#paletteAdjustBtn .tooltip,
+.secondary-btn#paletteRegenerateBtn .tooltip,
 .secondary-btn#copyHexBtn .tooltip {
   left: -18px;
   bottom: calc(100% + var(--PX-12));

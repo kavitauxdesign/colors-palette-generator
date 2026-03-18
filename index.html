@@ -163,7 +163,7 @@
           <p class="description">Una nueva paleta espera ser revelada.</p>
 
           <!-- Generation buttons -->
-          <div class="generate-btns-container">
+          <div id="paletteGenerationButtons" class="generate-btns-container">
             <button id="generateBtn" class="primary-btn">
               <img src="assets/magic-wand.svg" width="18px" height="18px" alt="Magic wand icon" />
               <span>Generar paleta</span>
@@ -180,6 +180,27 @@
         <section class="palette-section">
           <!-- Palette actions -->
           <div class="copy-btn-container">
+            <div class="palette-history-actions">
+              <button id="paletteUndoBtn" class="secondary-btn secondary-btn-history" aria-label="Undo" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 14-4-4 4-4"></path>
+                <path d="M5 10h10a4 4 0 1 1 0 8h-1"></path>
+              </svg>
+              <div class="tooltip">Deshacer</div>
+              </button>
+
+              <button id="paletteRedoBtn" class="secondary-btn secondary-btn-history" aria-label="Redo" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 14 4-4-4-4"></path>
+                <path d="M19 10H9a4 4 0 1 0 0 8h1"></path>
+              </svg>
+              <div class="tooltip">Rehacer</div>
+              </button>
+            </div>
+
+            <div>
             <button id="paletteAdjustBtn" class="secondary-btn secondary-btn-icon" aria-label="Ajustar colores"
               aria-expanded="false" aria-controls="paletteAdjustPanel">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -197,6 +218,12 @@
               <div class="tooltip">Ajustar colores</div>
             </button>
 
+            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon" aria-label="Regenerar paleta"
+              hidden>
+              <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
+              <div class="tooltip">Regenerar paleta</div>
+            </button>
+
             <button id="copyHexBtn" class="secondary-btn">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -209,6 +236,7 @@
                 Los nombres de los colores y los códigos HEX aparecerán en tu portapapeles
               </div>
             </button>
+            </div>
           </div>
 
           <div id="paletteAdjustPanel" class="palette-adjust-panel" aria-hidden="true">

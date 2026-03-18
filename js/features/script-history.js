@@ -14,6 +14,22 @@ function captureCurrentGeneratorSettings() {
   };
 }
 
+function updateHistoryNavigationButtons() {
+  const canUndo = paletteHistoryIndex > 0;
+  const canRedo =
+    paletteHistoryIndex >= 0 && paletteHistoryIndex < paletteHistory.length - 1;
+
+  if (paletteUndoBtn) {
+    paletteUndoBtn.disabled = !canUndo;
+    paletteUndoBtn.setAttribute("aria-disabled", canUndo ? "false" : "true");
+  }
+
+  if (paletteRedoBtn) {
+    paletteRedoBtn.disabled = !canRedo;
+    paletteRedoBtn.setAttribute("aria-disabled", canRedo ? "false" : "true");
+  }
+}
+
 function applyGeneratorSettings(settings, fallbackSize) {
   // Old history entries may miss settings
   const nextSize = Number.isFinite(settings?.paletteSize)
@@ -43,6 +59,10 @@ function applyGeneratorSettings(settings, fallbackSize) {
 }
 
 function saveHistory(colors, metadata = {}) {
+  if (paletteHistoryIndex < paletteHistory.length - 1) {
+    paletteHistory = paletteHistory.slice(0, paletteHistoryIndex + 1);
+  }
+
   // Save a copy so later edits do not change history
   paletteHistory.push({
     colors: [...colors],
@@ -50,8 +70,10 @@ function saveHistory(colors, metadata = {}) {
     isAlternative: !!metadata.isAlternative,
     settings: captureCurrentGeneratorSettings(),
   });
+  paletteHistoryIndex = paletteHistory.length - 1;
 
   renderHistory();
+  updateHistoryNavigationButtons();
 }
 
 function formatHistoryTime(dateValue) {
@@ -111,7 +133,7 @@ function renderHistory() {
 
     editHistoryBtn.addEventListener("click", (event) => {
       event.stopPropagation();
-      loadPaletteVersionInGenerator(entry);
+      loadPaletteVersionInGenerator(entry, { historyIndex: index });
     });
 
     copyHistoryBtn.addEventListener("click", async (event) => {
@@ -196,9 +218,11 @@ function renderHistory() {
     historyItem.appendChild(row);
     historyContainer.appendChild(historyItem);
   });
+
+  updateHistoryNavigationButtons();
 }
 
-function loadPaletteVersionInGenerator(historyEntry) {
+function loadPaletteVersionInGenerator(historyEntry, options = {}) {
   const colors = Array.isArray(historyEntry)
     ? historyEntry
     : historyEntry?.colors;
@@ -236,9 +260,47 @@ function loadPaletteVersionInGenerator(historyEntry) {
     saturation: saturationInput ? Number(saturationInput.value) : DEFAULT_SATURATION,
   });
   syncCurrentPaletteFromDom();
+  if (Number.isFinite(options.historyIndex)) {
+    paletteHistoryIndex = options.historyIndex;
+  }
+  updateHistoryNavigationButtons();
   // Scroll up so user can see the loaded palette
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
+  if (options.shouldScroll !== false) {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+}
+
+function navigatePaletteHistory(direction) {
+  if (!Array.isArray(paletteHistory) || paletteHistory.length === 0) {
+    updateHistoryNavigationButtons();
+    return;
+  }
+
+  const targetIndex = paletteHistoryIndex + direction;
+  if (targetIndex < 0 || targetIndex >= paletteHistory.length) {
+    updateHistoryNavigationButtons();
+    return;
+  }
+
+  loadPaletteVersionInGenerator(paletteHistory[targetIndex], {
+    historyIndex: targetIndex,
+    shouldScroll: false,
   });
 }
+
+if (paletteUndoBtn) {
+  paletteUndoBtn.addEventListener("click", () => {
+    navigatePaletteHistory(-1);
+  });
+}
+
+if (paletteRedoBtn) {
+  paletteRedoBtn.addEventListener("click", () => {
+    navigatePaletteHistory(1);
+  });
+}
+
+updateHistoryNavigationButtons();

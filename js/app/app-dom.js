@@ -23,11 +23,15 @@
   const saturationControlGroup = document.getElementById("saturationControlGroup");
   const paletteAdjustBtn = document.getElementById("paletteAdjustBtn");
   const paletteAdjustPanel = document.getElementById("paletteAdjustPanel");
+  const paletteUndoBtn = document.getElementById("paletteUndoBtn");
+  const paletteRedoBtn = document.getElementById("paletteRedoBtn");
   const paletteImageExtractionAlert = document.getElementById("paletteImageExtractionAlert");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker");
   const addColorElement = document.querySelector(".add-color");
+  const paletteGenerationButtons = document.getElementById("paletteGenerationButtons");
   const copyHexBtn = document.getElementById("copyHexBtn");
+  const paletteRegenerateBtn = document.getElementById("paletteRegenerateBtn");
   const generateBtn = document.getElementById("generateBtn");
   const surpriseBtn = document.getElementById("surpriseBtn");
   // Tooltip and label used by the main copy button
@@ -84,11 +88,15 @@
     saturationControlGroup,
     paletteAdjustBtn,
     paletteAdjustPanel,
+    paletteUndoBtn,
+    paletteRedoBtn,
     paletteImageExtractionAlert,
     addColorBtn,
     colorPicker,
     addColorElement,
+    paletteGenerationButtons,
     copyHexBtn,
+    paletteRegenerateBtn,
     generateBtn,
     surpriseBtn,
     copyHexBtnTooltip,
