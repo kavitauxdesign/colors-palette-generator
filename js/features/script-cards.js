@@ -356,10 +356,10 @@ function setRegenerateButtonAvailability(button, isAvailable) {
       : "No hay suficiente variedad de colores en la imagen de referencia"
   );
 }
-// Show delete only when more than 3 cards exist
+// Show delete while more than 1 card exists
 function refreshDeleteButtonsVisibility() {
   const cards = getColorCards();
-  const canDelete = cards.length > 3;
+  const canDelete = cards.length > 1;
 
   cards.forEach((card) => {
     const deleteBtn = card.querySelector(".action-delete");
@@ -586,7 +586,7 @@ function attachCardActions(card) {
   deleteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     const totalCards = getColorCards().length;
-    if (totalCards <= 3) {
+    if (totalCards <= 1) {
       return;
     }
 

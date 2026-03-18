@@ -19,6 +19,8 @@ let isPaletteAdjustPanelOpen = false;
 const imagePanelTransitionMs = 320;
 const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml"]);
 const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg"];
+const IMAGE_EXTRACTION_ERROR_MESSAGE =
+  "No se ha podido extraer colores. Has de intentar subir otra imagen.";
 
 function updateUploadedImageAnalysisCache(cachePatch) {
   if (!uploadedBaseImage) {
@@ -198,6 +200,48 @@ function setPaletteAdjustPanelOpen(shouldOpen) {
   updatePaletteStickyState();
 }
 
+function setPaletteImageExtractionFeedback(isVisible, message = IMAGE_EXTRACTION_ERROR_MESSAGE) {
+  if (paletteContainer) {
+    paletteContainer.hidden = isVisible;
+  }
+
+  if (addColorElement) {
+    addColorElement.hidden = isVisible;
+  }
+
+  if (paletteImageExtractionAlert) {
+    paletteImageExtractionAlert.hidden = !isVisible;
+    paletteImageExtractionAlert.textContent = message;
+  }
+
+  if (isVisible) {
+    getColorCards().forEach((card) => card.remove());
+    currentPalette = [];
+    capturePaletteAdjustmentBase([]);
+  }
+
+  updatePaletteStickyState();
+}
+
+function revealPaletteImageDropzoneForRetry() {
+  if (!paletteImageDropzonePanel) {
+    return;
+  }
+
+  const shouldAnimate = !isPaletteImageDropzoneVisible;
+  isPaletteImageDropzoneVisible = true;
+  isReplaceImagePending = false;
+  renderPaletteImagePreview();
+
+  if (!shouldAnimate) {
+    return;
+  }
+
+  paletteImageDropzonePanel.classList.remove("is-sliding-in");
+  void paletteImageDropzonePanel.offsetWidth;
+  paletteImageDropzonePanel.classList.add("is-sliding-in");
+}
+
 function ensurePaletteAdjustPanelVisible() {
   if (!isPaletteAdjustPanelOpen) {
     setPaletteAdjustPanelOpen(true);
@@ -302,6 +346,10 @@ if (paletteAdjustBtn) {
 
 function setPaletteBaseMode(nextMode) {
   paletteBaseMode = nextMode === "image" ? "image" : "temperature";
+
+  if (paletteBaseMode !== "image") {
+    setPaletteImageExtractionFeedback(false);
+  }
 
   if (paletteBaseModeSelect) {
     paletteBaseModeSelect.value = paletteBaseMode;
@@ -451,6 +499,7 @@ function handlePaletteImageFile(file) {
     };
     isReplaceImagePending = false;
     isPaletteImageDropzoneVisible = false;
+    setPaletteImageExtractionFeedback(false);
     setPaletteBaseMode("image");
     renderPaletteImagePreview();
     void refreshImageDerivedControls();
@@ -477,6 +526,23 @@ if (paletteImageInput) {
 if (paletteImageReplaceBtn) {
   paletteImageReplaceBtn.addEventListener("click", () => {
     openPaletteImageDropzone();
+  });
+}
+
+if (paletteImageDominantToggle) {
+  paletteImageDominantToggle.checked = prioritizeImageDominantColors;
+  paletteImageDominantToggle.addEventListener("change", () => {
+    prioritizeImageDominantColors = !!paletteImageDominantToggle.checked;
+
+    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+      return;
+    }
+
+    void refreshImageDerivedControls();
+
+    if (currentPalette.length > 0 && (paletteImageExtractionAlert?.hidden ?? true)) {
+      void generatePalette();
+    }
   });
 }
 
@@ -755,6 +821,50 @@ function cleanImageClusterDuplicates(clusters) {
   );
 }
 
+function getImageClusterPriorityScore(cluster, allClusters, selectedClusters = []) {
+  const safeClusters = Array.isArray(allClusters) && allClusters.length > 0
+    ? allClusters
+    : [cluster];
+  const maxWeight = Math.max(
+    ...safeClusters.map((candidateCluster) => candidateCluster.weight || 0),
+    1
+  );
+  const normalizedWeight = clampControlValue((cluster.weight || 0) / maxWeight, 0, 1);
+  const saturationFactor = clampControlValue(cluster.hsl?.s ?? 0, 0, 100) / 100;
+  const lightnessDistance = Math.min(Math.abs((cluster.hsl?.l ?? 50) - 50) / 50, 1);
+  const nearestDistance = selectedClusters.length > 0
+    ? Math.min(
+        ...selectedClusters.map((selectedCluster) =>
+          getRgbDistanceBetween(selectedCluster, cluster)
+        )
+      )
+    : 72;
+  const normalizedDistance = Math.min(nearestDistance / 100, 1.25);
+
+  if (prioritizeImageDominantColors) {
+    const dominanceBaseScore =
+      (cluster.weight || 0) *
+      (1 + saturationFactor * 0.35) *
+      (0.96 + lightnessDistance * 0.18);
+    const diversityBoost = selectedClusters.length > 0
+      ? 0.8 + normalizedDistance * 0.34
+      : 1;
+
+    return dominanceBaseScore * diversityBoost;
+  }
+
+  const accentBaseScore =
+    Math.pow(Math.max(cluster.weight || 1, 1), 0.45) *
+    (1 + saturationFactor * 1.15) *
+    (1 + lightnessDistance * 0.45) *
+    (0.62 + (1 - normalizedWeight) * 1.12);
+  const diversityBoost = selectedClusters.length > 0
+    ? 0.96 + normalizedDistance * 0.62
+    : 1.12;
+
+  return accentBaseScore * diversityBoost;
+}
+
 function selectRelevantImageClusters(clusters, targetCount) {
   const pool = [...clusters];
   const selectedClusters = [];
@@ -764,18 +874,9 @@ function selectRelevantImageClusters(clusters, targetCount) {
     let bestScore = -Infinity;
 
     pool.forEach((cluster, index) => {
-      const nearestDistance = selectedClusters.length
-        ? Math.min(
-            ...selectedClusters.map((selectedCluster) =>
-              getRgbDistanceBetween(selectedCluster, cluster)
-            )
-          )
-        : 72;
-      const diversityBoost = selectedClusters.length
-        ? 0.7 + Math.min(nearestDistance / 120, 0.9)
-        : 1;
       const randomBoost = 0.88 + Math.random() * 0.26;
-      const score = cluster.relevance * diversityBoost * randomBoost;
+      const score =
+        getImageClusterPriorityScore(cluster, clusters, selectedClusters) * randomBoost;
 
       if (score > bestScore) {
         bestScore = score;
@@ -875,6 +976,7 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
 
 async function refreshImageDerivedControls() {
   if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+    setPaletteImageExtractionFeedback(false);
     updatePaletteSizeButtonsAvailability();
 
     if (typeof updateRegenerateButtonsAvailability === "function") {
@@ -887,6 +989,13 @@ async function refreshImageDerivedControls() {
   }
 
   const clusters = await getImageColorClusters();
+  const hasExtractedColors = clusters.length > 0;
+
+  setPaletteImageExtractionFeedback(!hasExtractedColors);
+  if (!hasExtractedColors) {
+    revealPaletteImageDropzoneForRetry();
+  }
+
   updatePaletteSizeButtonsAvailability(clusters.length);
 
   if (typeof updateRegenerateButtonsAvailability === "function") {
@@ -905,6 +1014,7 @@ function getImageBasedCandidateColor(existingColors = new Set(), adjacentBaseNam
 
   let bestCandidate = null;
   let bestConflictCount = Infinity;
+  let bestPriorityScore = -Infinity;
 
   imageClusters.forEach((cluster, clusterIndex) => {
     const candidate = getAdjustedPaletteColor(cluster.hex, clusterIndex);
@@ -919,16 +1029,24 @@ function getImageBasedCandidateColor(existingColors = new Set(), adjacentBaseNam
     const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
       return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
     }, 0);
+    const priorityScore = getImageClusterPriorityScore(cluster, imageClusters);
 
     if (conflictCount === 0) {
-      bestCandidate = candidate;
-      bestConflictCount = 0;
+      if (priorityScore > bestPriorityScore) {
+        bestCandidate = candidate;
+        bestConflictCount = 0;
+        bestPriorityScore = priorityScore;
+      }
       return;
     }
 
-    if (conflictCount < bestConflictCount) {
+    if (
+      conflictCount < bestConflictCount ||
+      (conflictCount === bestConflictCount && priorityScore > bestPriorityScore)
+    ) {
       bestCandidate = candidate;
       bestConflictCount = conflictCount;
+      bestPriorityScore = priorityScore;
     }
   });
 
@@ -1213,6 +1331,8 @@ async function generatePalette() {
     }
 
     if (nextPalette.length === 0) {
+      setPaletteImageExtractionFeedback(true);
+      revealPaletteImageDropzoneForRetry();
       return;
     }
   } else {
@@ -1249,6 +1369,7 @@ async function generatePalette() {
   }
 
   // Remove only color cards and keep the add card
+  setPaletteImageExtractionFeedback(false);
   getColorCards().forEach((card) => card.remove());
 
   capturePaletteAdjustmentBase(nextPalette);

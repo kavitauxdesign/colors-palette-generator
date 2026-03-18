@@ -81,7 +81,7 @@
                     d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
                   </path>
                 </svg>
-                <span> Cálido</span>
+                <span> Cálidos</span>
               </button>
 
               <!-- Cool button -->
@@ -103,7 +103,7 @@
                   <path d="m7 21 3-6-1.5-3"></path>
                   <path d="m7 3 3 6h4"></path>
                 </svg>
-                <span>Frío</span>
+                <span>Fríos</span>
               </button>
             </div>
 
@@ -139,6 +139,11 @@
                     <span id="paletteImageName" class="image-upload-name"></span>
                   </div>
                 </div>
+
+                <label class="image-priority-toggle" for="paletteImageDominantToggle">
+                  <input id="paletteImageDominantToggle" class="image-priority-toggle-input" type="checkbox" checked />
+                  <span class="image-priority-toggle-label">Priorizar colores dominantes vs acentos</span>
+                </label>
               </div>
             </div>
           </div>
@@ -251,6 +256,10 @@
                 <input type="color" class="color-picker" id="colorPicker" value="#323232" />
               </div>
             </div>
+          </div>
+
+          <div id="paletteImageExtractionAlert" class="palette-alert palette-alert-warning" role="alert" hidden>
+            No se ha podido extraer colores. Has de intentar subir otra imagen.
           </div>
         </section>
       </div>

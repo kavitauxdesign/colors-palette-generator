@@ -15,6 +15,7 @@
   const paletteImagePreview = document.getElementById("paletteImagePreview");
   const paletteImagePreviewImg = document.getElementById("paletteImagePreviewImg");
   const paletteImageName = document.getElementById("paletteImageName");
+  const paletteImageDominantToggle = document.getElementById("paletteImageDominantToggle");
   const paletteImageReplaceBtn = document.getElementById("paletteImageReplaceBtn");
   const brightnessControlGroup = document.getElementById("brightnessControlGroup");
   const brightnessInput = document.getElementById("brightness");
@@ -22,6 +23,7 @@
   const saturationControlGroup = document.getElementById("saturationControlGroup");
   const paletteAdjustBtn = document.getElementById("paletteAdjustBtn");
   const paletteAdjustPanel = document.getElementById("paletteAdjustPanel");
+  const paletteImageExtractionAlert = document.getElementById("paletteImageExtractionAlert");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker");
   const addColorElement = document.querySelector(".add-color");
@@ -74,6 +76,7 @@
     paletteImagePreview,
     paletteImagePreviewImg,
     paletteImageName,
+    paletteImageDominantToggle,
     paletteImageReplaceBtn,
     brightnessControlGroup,
     brightnessInput,
@@ -81,6 +84,7 @@
     saturationControlGroup,
     paletteAdjustBtn,
     paletteAdjustPanel,
+    paletteImageExtractionAlert,
     addColorBtn,
     colorPicker,
     addColorElement,

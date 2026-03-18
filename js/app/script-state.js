@@ -15,6 +15,7 @@ const {
   paletteImagePreview,
   paletteImagePreviewImg,
   paletteImageName,
+  paletteImageDominantToggle,
   paletteImageReplaceBtn,
   brightnessControlGroup,
   brightnessInput,
@@ -22,6 +23,7 @@ const {
   saturationControlGroup,
   paletteAdjustBtn,
   paletteAdjustPanel,
+  paletteImageExtractionAlert,
   addColorBtn,
   addColorElement,
   copyHexBtn,
@@ -88,6 +90,7 @@ let paletteSize = DEFAULT_PALETTE_SIZE;
 let paletteHistory = [];
 let paletteBaseMode = "temperature";
 let uploadedBaseImage = null;
+let prioritizeImageDominantColors = paletteImageDominantToggle?.checked ?? true;
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,
   cool: !!DEFAULT_TEMPERATURE.cool,
