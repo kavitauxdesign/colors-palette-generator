@@ -21,6 +21,14 @@ const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+
 const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg"];
 const IMAGE_EXTRACTION_ERROR_MESSAGE =
   "No se ha podido extraer colores. Has de intentar subir otra imagen.";
+const IMAGE_PALETTE_VARIANT_PROFILES = [
+  { hueShift: 0, saturationShift: 0, lightnessShift: 0, stagger: [0, 0, 0, 0] },
+  { hueShift: 4, saturationShift: -6, lightnessShift: 8, stagger: [0, 6, -4, 10] },
+  { hueShift: -5, saturationShift: 8, lightnessShift: -6, stagger: [0, -8, 6, -12] },
+  { hueShift: 10, saturationShift: -10, lightnessShift: 4, stagger: [0, 10, -6, 14] },
+  { hueShift: -12, saturationShift: 6, lightnessShift: 10, stagger: [0, -10, 8, -6] },
+  { hueShift: 16, saturationShift: -4, lightnessShift: -10, stagger: [0, 12, -10, 6] },
+];
 
 function updateUploadedImageAnalysisCache(cachePatch) {
   if (!uploadedBaseImage) {
@@ -351,19 +359,74 @@ function updatePaletteModeActionVisibility() {
   }
 
   if (paletteRegenerateBtn) {
-    const shouldShowRegenerate = isImageMode && hasImageSource;
+    const shouldShowRegenerate = !isImageMode || hasImageSource;
     paletteRegenerateBtn.hidden = !shouldShowRegenerate;
-    paletteRegenerateBtn.disabled = !shouldShowRegenerate;
-    paletteRegenerateBtn.setAttribute(
-      "aria-disabled",
-      shouldShowRegenerate ? "false" : "true"
-    );
   }
 }
 
-async function syncImagePaletteFromSource() {
+function setPaletteRegenerateButtonTooltip(tooltipText) {
+  if (typeof setActionButtonTooltipText === "function") {
+    setActionButtonTooltipText(paletteRegenerateBtn, tooltipText);
+    return;
+  }
+
+  const tooltip = paletteRegenerateBtn?.querySelector(".tooltip");
+  if (!tooltip) {
+    return;
+  }
+
+  tooltip.textContent = tooltipText;
+}
+
+function updatePaletteRegenerateButtonAvailability(availableImageColors = null) {
+  if (!paletteRegenerateBtn) {
+    return;
+  }
+
+  if (paletteBaseMode !== "image") {
+    paletteRegenerateBtn.disabled = false;
+    paletteRegenerateBtn.classList.remove("is-disabled");
+    paletteRegenerateBtn.setAttribute("aria-disabled", "false");
+    setPaletteRegenerateButtonTooltip("Regenerar paleta");
+    return;
+  }
+
+  const hasImageSource = !!uploadedBaseImage?.dataUrl;
+  if (!hasImageSource) {
+    paletteRegenerateBtn.disabled = true;
+    paletteRegenerateBtn.classList.add("is-disabled");
+    paletteRegenerateBtn.setAttribute("aria-disabled", "true");
+    setPaletteRegenerateButtonTooltip("Sube una imagen para regenerar la paleta");
+    return;
+  }
+
+  const availableCount = Number.isFinite(availableImageColors)
+    ? availableImageColors
+    : getCachedImageColorClusters().length;
+  const hasLimitedExtractedColors = availableCount <= paletteSize;
+
+  paletteRegenerateBtn.disabled = hasLimitedExtractedColors;
+  paletteRegenerateBtn.classList.toggle("is-disabled", hasLimitedExtractedColors);
+  paletteRegenerateBtn.setAttribute(
+    "aria-disabled",
+    hasLimitedExtractedColors ? "true" : "false"
+  );
+  setPaletteRegenerateButtonTooltip(
+    hasLimitedExtractedColors
+      ? "No hay suficiente variedad de colores en la imagen de referencia"
+      : "Regenerar paleta"
+  );
+}
+
+async function syncImagePaletteFromSource(options = {}) {
   if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
     return;
+  }
+
+  if (options.resetVariant) {
+    imagePaletteVariantIndex = 0;
+  } else if (options.advanceVariant) {
+    imagePaletteVariantIndex += 1;
   }
 
   await refreshImageDerivedControls();
@@ -372,6 +435,50 @@ async function syncImagePaletteFromSource() {
   }
 
   await generatePalette();
+}
+
+function rotateImagePaletteCandidates(values, offset) {
+  if (!Array.isArray(values) || values.length <= 1) {
+    return Array.isArray(values) ? [...values] : [];
+  }
+
+  const normalizedOffset = ((offset % values.length) + values.length) % values.length;
+  if (normalizedOffset === 0) {
+    return [...values];
+  }
+
+  return [...values.slice(normalizedOffset), ...values.slice(0, normalizedOffset)];
+}
+
+function normalizePaletteHexCollection(colors) {
+  return Array.isArray(colors)
+    ? colors
+        .map((color) => controlsNormalizeHexColor(color))
+        .filter((hex) => /^#[0-9A-F]{6}$/.test(hex))
+    : [];
+}
+
+function areImagePalettesTooSimilar(nextPalette, referencePalette) {
+  const nextColors = normalizePaletteHexCollection(nextPalette);
+  const referenceColors = normalizePaletteHexCollection(referencePalette);
+
+  if (nextColors.length === 0 || referenceColors.length === 0) {
+    return false;
+  }
+
+  const exactMatch =
+    nextColors.length === referenceColors.length &&
+    nextColors.every((color, index) => color === referenceColors[index]);
+  if (exactMatch) {
+    return true;
+  }
+
+  const referenceSet = new Set(referenceColors);
+  const sharedColorCount = nextColors.reduce((count, color) => {
+    return count + (referenceSet.has(color) ? 1 : 0);
+  }, 0);
+
+  return sharedColorCount >= Math.max(nextColors.length - 1, 3);
 }
 
 // PALETTE BASE
@@ -400,6 +507,7 @@ function setPaletteBaseMode(nextMode) {
   }
 
   updatePaletteModeActionVisibility();
+  updatePaletteRegenerateButtonAvailability();
   updatePaletteStickyState();
   updatePaletteSizeButtonsAvailability();
 
@@ -458,12 +566,14 @@ function renderPaletteImagePreview() {
     paletteImagePreviewImg.removeAttribute("src");
     paletteImageName.textContent = "";
     updatePaletteModeActionVisibility();
+    updatePaletteRegenerateButtonAvailability();
     return;
   }
 
   paletteImagePreviewImg.src = uploadedBaseImage.dataUrl;
   paletteImageName.textContent = uploadedBaseImage.name;
   updatePaletteModeActionVisibility();
+  updatePaletteRegenerateButtonAvailability();
 }
 
 function setAnimatedImagePanelVisibility(element, shouldShow) {
@@ -537,7 +647,7 @@ function handlePaletteImageFile(file) {
     setPaletteImageExtractionFeedback(false);
     setPaletteBaseMode("image");
     renderPaletteImagePreview();
-    void syncImagePaletteFromSource();
+    void syncImagePaletteFromSource({ resetVariant: true });
   });
   reader.readAsDataURL(file);
 }
@@ -573,13 +683,22 @@ if (paletteImageDominantToggle) {
       return;
     }
 
-    void syncImagePaletteFromSource();
+    void syncImagePaletteFromSource({ resetVariant: true });
   });
 }
 
 if (paletteRegenerateBtn) {
   paletteRegenerateBtn.addEventListener("click", () => {
-    void syncImagePaletteFromSource();
+    if (paletteRegenerateBtn.disabled || paletteRegenerateBtn.classList.contains("is-disabled")) {
+      return;
+    }
+
+    if (paletteBaseMode === "image") {
+      void syncImagePaletteFromSource({ advanceVariant: true });
+      return;
+    }
+
+    void regenerateTemperaturePaletteWithControlVariation();
   });
 }
 
@@ -609,6 +728,7 @@ if (paletteImageDropzone) {
 setPaletteBaseMode(paletteBaseMode);
 renderPaletteImagePreview();
 updatePaletteModeActionVisibility();
+updatePaletteRegenerateButtonAvailability();
 
 if (controlsPanel && paletteSection) {
   updatePaletteStickyState();
@@ -903,18 +1023,40 @@ function getImageClusterPriorityScore(cluster, allClusters, selectedClusters = [
   return accentBaseScore * diversityBoost;
 }
 
-function selectRelevantImageClusters(clusters, targetCount) {
-  const pool = [...clusters];
+function selectRelevantImageClusters(clusters, targetCount, variantIndex = 0) {
+  const candidatePoolSize = Math.min(
+    clusters.length,
+    Math.max(targetCount + 4, targetCount * 2)
+  );
+  const prioritizedClusters = [...clusters].sort((clusterA, clusterB) => {
+    const scoreA = getImageClusterPriorityScore(clusterA, clusters);
+    const scoreB = getImageClusterPriorityScore(clusterB, clusters);
+    return scoreB - scoreA;
+  });
+  const rotatedPriorityPool = rotateImagePaletteCandidates(
+    prioritizedClusters.slice(0, candidatePoolSize),
+    variantIndex
+  );
+  const pool = [
+    ...rotatedPriorityPool,
+    ...prioritizedClusters.slice(candidatePoolSize),
+  ];
   const selectedClusters = [];
+  const selectionTarget = Math.min(targetCount, clusters.length);
 
-  while (pool.length > 0 && selectedClusters.length < Math.min(targetCount, pool.length)) {
+  if (pool.length > 0) {
+    selectedClusters.push(pool.shift());
+  }
+
+  while (pool.length > 0 && selectedClusters.length < selectionTarget) {
     let bestIndex = 0;
     let bestScore = -Infinity;
 
     pool.forEach((cluster, index) => {
-      const randomBoost = 0.88 + Math.random() * 0.26;
+      const poolOffset = Math.max(0, candidatePoolSize - index);
+      const rotationBias = 1 + (poolOffset / Math.max(candidatePoolSize, 1)) * 0.12;
       const score =
-        getImageClusterPriorityScore(cluster, clusters, selectedClusters) * randomBoost;
+        getImageClusterPriorityScore(cluster, clusters, selectedClusters) * rotationBias;
 
       if (score > bestScore) {
         bestScore = score;
@@ -927,6 +1069,32 @@ function selectRelevantImageClusters(clusters, targetCount) {
 
   return selectedClusters.sort(
     (clusterA, clusterB) => clusterB.relevance - clusterA.relevance
+  );
+}
+
+function getImagePaletteVariantHex(cluster, clusterIndex, variantIndex) {
+  const normalizedVariantIndex = Math.max(0, variantIndex);
+  const profile =
+    IMAGE_PALETTE_VARIANT_PROFILES[
+      normalizedVariantIndex % IMAGE_PALETTE_VARIANT_PROFILES.length
+    ];
+
+  if (normalizedVariantIndex === 0) {
+    return cluster.hex;
+  }
+
+  const direction = (clusterIndex + normalizedVariantIndex) % 2 === 0 ? 1 : -1;
+  const stagger = profile.stagger[clusterIndex % profile.stagger.length] || 0;
+  const hueOffset = profile.hueShift * direction + (clusterIndex % 3) * direction * 2;
+  const saturationOffset = profile.saturationShift + stagger * 0.45;
+  const lightnessOffset = profile.lightnessShift + stagger * 0.8;
+
+  return controlsNormalizeHexColor(
+    controlsHslToHex(
+      (cluster.hsl.h + hueOffset + 360) % 360,
+      clampControlValue(cluster.hsl.s + saturationOffset, 4, 100),
+      clampControlValue(cluster.hsl.l + lightnessOffset, 8, 92)
+    )
   );
 }
 
@@ -1029,22 +1197,36 @@ function orderImageClustersByHarmony(clusters) {
   return orderedClusters;
 }
 
-function expandImagePalette(selectedClusters, targetCount) {
-  const palette = selectedClusters.map((cluster) => cluster.hex);
+function expandImagePalette(selectedClusters, targetCount, variantIndex = 0, seedPalette = []) {
+  const palette = [...seedPalette];
   const usedColors = new Set(palette);
-  const lightnessOffsets = [-18, 18, -10, 10, -28, 28, -36, 36];
-  let variantIndex = 0;
+  const normalizedVariantIndex = Math.max(0, variantIndex);
+  const profile =
+    IMAGE_PALETTE_VARIANT_PROFILES[
+      normalizedVariantIndex % IMAGE_PALETTE_VARIANT_PROFILES.length
+    ];
+  const lightnessOffsets = normalizedVariantIndex === 0
+    ? [-18, 18, -10, 10, -28, 28, -36, 36]
+    : profile.stagger.map((offset) => Math.round(offset * 1.4)).concat([-20, 20, -30, 30]);
+  let expansionStep = 0;
 
   while (palette.length < targetCount && selectedClusters.length > 0) {
-    const cluster = selectedClusters[variantIndex % selectedClusters.length];
-    const offset = lightnessOffsets[
-      Math.floor(variantIndex / selectedClusters.length) % lightnessOffsets.length
+    const cluster = selectedClusters[
+      (normalizedVariantIndex + expansionStep) % selectedClusters.length
     ];
+    const offset = lightnessOffsets[
+      Math.floor(expansionStep / selectedClusters.length) % lightnessOffsets.length
+    ];
+    const direction = (expansionStep + normalizedVariantIndex) % 2 === 0 ? 1 : -1;
     const variantHex = controlsNormalizeHexColor(
       controlsHslToHex(
-        cluster.hsl.h,
-        clampControlValue(cluster.hsl.s + (offset > 0 ? -6 : 8), 4, 100),
-        clampControlValue(cluster.hsl.l + offset, 8, 92)
+        (cluster.hsl.h + profile.hueShift * direction + 360) % 360,
+        clampControlValue(
+          cluster.hsl.s + (offset > 0 ? -6 : 8) + profile.saturationShift * 0.7,
+          4,
+          100
+        ),
+        clampControlValue(cluster.hsl.l + offset + profile.lightnessShift * 0.55, 8, 92)
       )
     );
 
@@ -1053,8 +1235,8 @@ function expandImagePalette(selectedClusters, targetCount) {
       palette.push(variantHex);
     }
 
-    variantIndex += 1;
-    if (variantIndex > selectedClusters.length * lightnessOffsets.length * 2) {
+    expansionStep += 1;
+    if (expansionStep > selectedClusters.length * lightnessOffsets.length * 2) {
       break;
     }
   }
@@ -1115,6 +1297,7 @@ async function refreshImageDerivedControls() {
   if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
     setPaletteImageExtractionFeedback(false);
     updatePaletteSizeButtonsAvailability();
+    updatePaletteRegenerateButtonAvailability();
 
     if (typeof updateRegenerateButtonsAvailability === "function") {
       updateRegenerateButtonsAvailability();
@@ -1134,6 +1317,7 @@ async function refreshImageDerivedControls() {
   }
 
   updatePaletteSizeButtonsAvailability(clusters.length);
+  updatePaletteRegenerateButtonAvailability(clusters.length);
 
   if (typeof updateRegenerateButtonsAvailability === "function") {
     updateRegenerateButtonsAvailability();
@@ -1198,6 +1382,29 @@ function getImageRegenerationColorForCard(card, existingColors = new Set()) {
   return getImageBasedCandidateColor(existingColors, adjacentBaseNames);
 }
 
+function buildImagePaletteCandidate(selectedClusters, targetCount, variantIndex) {
+  const harmonyOrderedClusters = orderImageClustersByHarmony(selectedClusters);
+  const basePalette = [];
+  const usedColors = new Set();
+
+  harmonyOrderedClusters.forEach((cluster, clusterIndex) => {
+    const variantHex = getImagePaletteVariantHex(cluster, clusterIndex, variantIndex);
+    const nextHex =
+      !usedColors.has(variantHex) && !isDisallowedColor(variantHex)
+        ? variantHex
+        : cluster.hex;
+
+    if (usedColors.has(nextHex) || isDisallowedColor(nextHex)) {
+      return;
+    }
+
+    usedColors.add(nextHex);
+    basePalette.push(nextHex);
+  });
+
+  return expandImagePalette(harmonyOrderedClusters, targetCount, variantIndex, basePalette);
+}
+
 async function buildImageBasedPalette(targetCount) {
   if (!uploadedBaseImage?.dataUrl) {
     alert("Sube una imagen primero para generar una paleta desde ella.");
@@ -1209,11 +1416,34 @@ async function buildImageBasedPalette(targetCount) {
     return [];
   }
 
-  const selectedClusters = selectRelevantImageClusters(clusters, targetCount);
-  const harmonyOrderedClusters = orderImageClustersByHarmony(selectedClusters);
-  return harmonyOrderedClusters.length > 0
-    ? harmonyOrderedClusters.map((cluster) => cluster.hex)
-    : [];
+  const referencePalette = normalizePaletteHexCollection(
+    paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette
+  );
+  const maxVariantAttempts = Math.max(4, IMAGE_PALETTE_VARIANT_PROFILES.length);
+  let fallbackPalette = [];
+
+  for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
+    const variantIndex = imagePaletteVariantIndex + attempt;
+    const selectedClusters = selectRelevantImageClusters(clusters, targetCount, variantIndex);
+    const candidatePalette = buildImagePaletteCandidate(
+      selectedClusters,
+      targetCount,
+      variantIndex
+    );
+
+    if (candidatePalette.length === 0) {
+      continue;
+    }
+
+    fallbackPalette = candidatePalette;
+
+    if (!areImagePalettesTooSimilar(candidatePalette, referencePalette)) {
+      imagePaletteVariantIndex = variantIndex;
+      return candidatePalette;
+    }
+  }
+
+  return fallbackPalette;
 }
 
 // SIZE SELECTOR
@@ -1225,7 +1455,84 @@ function setPaletteSize(size) {
   });
 }
 
-function handlePaletteSizeButtonClick(button) {
+function removeColorsFromPaletteEnd(count) {
+  if (!Number.isFinite(count) || count <= 0) {
+    return false;
+  }
+
+  const cards = Array.from(getColorCards());
+  if (cards.length === 0) {
+    return false;
+  }
+
+  cards.slice(-count).forEach((card) => {
+    card.remove();
+  });
+
+  refreshDeleteButtonsVisibility();
+  syncCurrentPaletteFromDom();
+  capturePaletteAdjustmentBase(currentPalette);
+  return true;
+}
+
+function addColorsToPaletteEnd(count) {
+  if (!Number.isFinite(count) || count <= 0) {
+    return false;
+  }
+
+  let hasChanged = false;
+
+  for (let index = 0; index < count; index += 1) {
+    const existingColors = new Set(getCurrentPaletteHexValues());
+    const { color, isFallbackWhite } = getAddedColorForCurrentMode(existingColors);
+
+    if (!color) {
+      break;
+    }
+
+    const card = createColorCard(color);
+    if (!card) {
+      break;
+    }
+
+    card.dataset.regenerateLocked = isFallbackWhite ? "true" : "false";
+    hasChanged = true;
+  }
+
+  if (!hasChanged) {
+    return false;
+  }
+
+  syncCurrentPaletteFromDom();
+  capturePaletteAdjustmentBase(currentPalette);
+  return true;
+}
+
+async function applyPaletteSizeChange(nextSize) {
+  const currentCount = getColorCards().length;
+  const difference = nextSize - currentCount;
+
+  if (difference === 0) {
+    return;
+  }
+
+  if (currentCount === 0) {
+    if (paletteBaseMode === "image" && uploadedBaseImage?.dataUrl) {
+      await syncImagePaletteFromSource();
+    }
+    return;
+  }
+
+  const hasChanged = difference < 0
+    ? removeColorsFromPaletteEnd(Math.abs(difference))
+    : addColorsToPaletteEnd(difference);
+
+  if (hasChanged) {
+    saveHistory(currentPalette);
+  }
+}
+
+async function handlePaletteSizeButtonClick(button) {
   if (button?.classList.contains("is-disabled")) {
     return;
   }
@@ -1234,12 +1541,14 @@ function handlePaletteSizeButtonClick(button) {
     button.classList.add("suppress-hover");
   }
 
-  setPaletteSize(parseInt(button.dataset.size));
+  const nextSize = parseInt(button.dataset.size);
+  setPaletteSize(nextSize);
+  await applyPaletteSizeChange(nextSize);
 }
 
 sizeButtons.forEach((button) => {
   button.onclick = () => {
-    handlePaletteSizeButtonClick(button);
+    void handlePaletteSizeButtonClick(button);
   };
   button.addEventListener("mouseleave", () => {
     button.classList.remove("suppress-hover");
@@ -1288,7 +1597,20 @@ function handleTemperatureButtonClick(type, button) {
     button.classList.add("suppress-hover");
   }
 
+  const previousTemperatureState = {
+    warm: temperature.warm,
+    cool: temperature.cool,
+  };
+
   toggleTemperature(type);
+
+  const hasTemperatureChanged =
+    previousTemperatureState.warm !== temperature.warm ||
+    previousTemperatureState.cool !== temperature.cool;
+
+  if (hasTemperatureChanged && paletteBaseMode === "temperature") {
+    void generatePalette();
+  }
 }
 
 if (warmBtn) {
@@ -1455,9 +1777,286 @@ function buildAlternativeMonochromePalette(targetCount) {
   return palette;
 }
 
+function buildTemperatureColorFromSettings(settings) {
+  const hue = getTemperatureBasedHue();
+  const saturation = Number.isFinite(settings?.saturation)
+    ? settings.saturation
+    : getCurrentSaturationValue();
+  const brightness = Number.isFinite(settings?.brightness)
+    ? settings.brightness
+    : getCurrentBrightnessValue();
+  const lightness = 10 + (brightness / 100) * 80;
+
+  return controlsHslToHex(hue, saturation, lightness);
+}
+
+function buildAlternativeMonochromePaletteForSettings(targetCount, settings) {
+  if (!settings) {
+    return buildAlternativeMonochromePalette(targetCount);
+  }
+
+  if (targetCount <= 0) {
+    return [];
+  }
+
+  const palette = [];
+  const usedColors = new Set();
+  const centerLightness = 10 + (settings.brightness / 100) * 80;
+  const monochromeSaturation = clampControlValue(
+    settings.saturation,
+    0,
+    LOW_SATURATION_FALLBACK_THRESHOLD
+  );
+  const baseHue = getTemperatureBasedHue();
+  const spread = clampControlValue(targetCount * 8, 36, 72);
+
+  let minLightness = clampControlValue(centerLightness - spread / 2, 10, 90);
+  let maxLightness = clampControlValue(centerLightness + spread / 2, 10, 90);
+
+  if (maxLightness - minLightness < 24) {
+    minLightness = 10;
+    maxLightness = 90;
+  }
+
+  const lightnessStops = Array.from({ length: targetCount }, (_, index) => {
+    if (targetCount === 1) {
+      return centerLightness;
+    }
+
+    return minLightness + ((maxLightness - minLightness) * index) / (targetCount - 1);
+  });
+
+  const adjustments = [0, -6, 6, -12, 12, -18, 18];
+
+  lightnessStops.forEach((baseLightness) => {
+    for (const adjustment of adjustments) {
+      const candidate = controlsNormalizeHexColor(
+        controlsHslToHex(
+          baseHue,
+          monochromeSaturation,
+          clampControlValue(baseLightness + adjustment, 10, 90)
+        )
+      );
+
+      if (isDisallowedColor(candidate) || usedColors.has(candidate)) {
+        continue;
+      }
+
+      usedColors.add(candidate);
+      palette.push(candidate);
+      break;
+    }
+  });
+
+  return palette;
+}
+
+function buildTemperaturePaletteForSettings(targetCount, settings) {
+  const resolvedSettings = {
+    brightness: Number.isFinite(settings?.brightness)
+      ? settings.brightness
+      : getCurrentBrightnessValue(),
+    saturation: Number.isFinite(settings?.saturation)
+      ? settings.saturation
+      : getCurrentSaturationValue(),
+  };
+  const usedColors = new Set();
+  const nextPalette = [];
+  const maxRetriesPerColor = 12;
+
+  for (let index = 0; index < targetCount; index += 1) {
+    let color = null;
+    let retries = 0;
+
+    while (!color && retries < maxRetriesPerColor) {
+      const candidate = buildTemperatureColorFromSettings(resolvedSettings);
+      if (!usedColors.has(candidate)) {
+        color = candidate;
+      }
+      retries += 1;
+    }
+
+    if (!color) {
+      break;
+    }
+
+    usedColors.add(color);
+    nextPalette.push(color);
+  }
+
+  let usedAlternativePalette = false;
+  if (
+    nextPalette.length < targetCount &&
+    resolvedSettings.saturation <= LOW_SATURATION_FALLBACK_THRESHOLD
+  ) {
+    const alternativePalette = buildAlternativeMonochromePaletteForSettings(
+      targetCount,
+      resolvedSettings
+    );
+
+    if (alternativePalette.length === targetCount) {
+      return {
+        palette: alternativePalette,
+        usedAlternativePalette: true,
+      };
+    }
+  }
+
+  return {
+    palette: nextPalette,
+    usedAlternativePalette,
+  };
+}
+
+function scorePaletteHarmony(colors) {
+  const normalizedColors = normalizePaletteHexCollection(colors);
+  if (normalizedColors.length === 0) {
+    return -Infinity;
+  }
+
+  if (normalizedColors.length === 1) {
+    return 0;
+  }
+
+  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  let pairwiseDistanceScore = 0;
+  let pairCount = 0;
+  let closePairPenalty = 0;
+
+  for (let leftIndex = 0; leftIndex < normalizedColors.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < normalizedColors.length; rightIndex += 1) {
+      const leftRgb = controlsHexToRgb(normalizedColors[leftIndex]);
+      const rightRgb = controlsHexToRgb(normalizedColors[rightIndex]);
+      const rgbDistance = getRgbDistanceBetween(leftRgb, rightRgb);
+
+      pairwiseDistanceScore += Math.min(rgbDistance / 180, 1);
+      if (rgbDistance < 42) {
+        closePairPenalty += (42 - rgbDistance) / 42;
+      }
+      pairCount += 1;
+    }
+  }
+
+  const averageDistanceScore = pairCount > 0 ? pairwiseDistanceScore / pairCount : 0;
+  const averageSaturation =
+    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+  const averageLightness =
+    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+  const saturationBalance = 1 - Math.min(Math.abs(averageSaturation - 58) / 58, 1);
+  const lightnessBalance = 1 - Math.min(Math.abs(averageLightness - 56) / 56, 1);
+
+  return (
+    averageDistanceScore * 2.1 +
+    saturationBalance * 0.75 +
+    lightnessBalance * 0.7 -
+    closePairPenalty * 0.9
+  );
+}
+
+function setPaletteAdjustmentControls(settings) {
+  if (brightnessInput && Number.isFinite(settings?.brightness)) {
+    brightnessInput.value = settings.brightness;
+    updateBrightnessProgress();
+  }
+
+  if (saturationInput && Number.isFinite(settings?.saturation)) {
+    saturationInput.value = settings.saturation;
+    updateSaturationProgress();
+  }
+
+  syncTemperatureControlsState();
+}
+
+function commitGeneratedPalette(nextPalette, options = {}) {
+  const previousPalette = normalizePaletteHexCollection(
+    options.previousPalette ?? currentPalette
+  );
+
+  setPaletteImageExtractionFeedback(false);
+  getColorCards().forEach((card) => card.remove());
+
+  capturePaletteAdjustmentBase(nextPalette);
+  currentPalette = buildAdjustedPaletteFromBase();
+  currentPalette.forEach((color) => {
+    createColorCard(color);
+  });
+
+  refreshDeleteButtonsVisibility();
+  syncCurrentPaletteFromDom();
+
+  const generatedPalette = normalizePaletteHexCollection(currentPalette);
+  const hasExactPaletteChanged =
+    previousPalette.length !== generatedPalette.length ||
+    previousPalette.some((color, index) => color !== generatedPalette[index]);
+
+  if (hasExactPaletteChanged || paletteHistory.length === 0) {
+    saveHistory(currentPalette, { isAlternative: !!options.usedAlternativePalette });
+  }
+}
+
+async function regenerateTemperaturePaletteWithControlVariation() {
+  const baseSettings = {
+    brightness: getCurrentBrightnessValue(),
+    saturation: getCurrentSaturationValue(),
+  };
+  const brightnessOffsets = [0, -10, 10, -20, 20];
+  const saturationOffsets = [0, -10, 10, -20, 20];
+  const candidates = [];
+  const seenSettings = new Set();
+
+  brightnessOffsets.forEach((brightnessOffset) => {
+    saturationOffsets.forEach((saturationOffset) => {
+      const candidate = {
+        brightness: clampControlValue(baseSettings.brightness + brightnessOffset, 0, 100),
+        saturation: clampControlValue(baseSettings.saturation + saturationOffset, 0, 100),
+      };
+      const candidateKey = `${candidate.brightness}:${candidate.saturation}`;
+      if (seenSettings.has(candidateKey)) {
+        return;
+      }
+
+      seenSettings.add(candidateKey);
+      candidates.push(candidate);
+    });
+  });
+
+  let bestCandidate = null;
+
+  candidates.forEach((candidateSettings) => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const candidateResult = buildTemperaturePaletteForSettings(paletteSize, candidateSettings);
+      if (candidateResult.palette.length === 0) {
+        continue;
+      }
+
+      const harmonyScore = scorePaletteHarmony(candidateResult.palette);
+      if (!bestCandidate || harmonyScore > bestCandidate.score) {
+        bestCandidate = {
+          settings: candidateSettings,
+          palette: candidateResult.palette,
+          usedAlternativePalette: candidateResult.usedAlternativePalette,
+          score: harmonyScore,
+        };
+      }
+    }
+  });
+
+  if (!bestCandidate) {
+    await generatePalette();
+    return;
+  }
+
+  setPaletteAdjustmentControls(bestCandidate.settings);
+  commitGeneratedPalette(bestCandidate.palette, {
+    usedAlternativePalette: bestCandidate.usedAlternativePalette,
+    previousPalette: currentPalette,
+  });
+}
+
 async function generatePalette() {
   let nextPalette = [];
   let usedAlternativePalette = false;
+  const previousPalette = normalizePaletteHexCollection(currentPalette);
 
   if (paletteBaseMode === "image") {
     try {
@@ -1474,52 +2073,15 @@ async function generatePalette() {
       return;
     }
   } else {
-    const usedColors = new Set();
-    const maxRetriesPerColor = 12;
-
-    for (let i = 0; i < paletteSize; i++) {
-      let color = null;
-      let retries = 0;
-
-      // Retry silently before giving up on this slot
-      while (!color && retries < maxRetriesPerColor) {
-        color = getUniqueGeneratedColor(usedColors);
-        retries++;
-      }
-
-      if (!color) {
-        // Stop generation quietly if uniqueness constraints cannot be satisfied
-        break;
-      }
-
-      usedColors.add(color);
-      nextPalette.push(color);
-    }
-
-    if (nextPalette.length < paletteSize && shouldUseAlternativePalette()) {
-      const alternativePalette = buildAlternativeMonochromePalette(paletteSize);
-
-      if (alternativePalette.length === paletteSize) {
-        nextPalette = alternativePalette;
-        usedAlternativePalette = true;
-      }
-    }
+    const temperatureResult = buildTemperaturePaletteForSettings(paletteSize);
+    nextPalette = temperatureResult.palette;
+    usedAlternativePalette = temperatureResult.usedAlternativePalette;
   }
 
-  // Remove only color cards and keep the add card
-  setPaletteImageExtractionFeedback(false);
-  getColorCards().forEach((card) => card.remove());
-
-  capturePaletteAdjustmentBase(nextPalette);
-  currentPalette = buildAdjustedPaletteFromBase();
-  currentPalette.forEach((color) => {
-    createColorCard(color);
+  commitGeneratedPalette(nextPalette, {
+    usedAlternativePalette,
+    previousPalette,
   });
-
-  refreshDeleteButtonsVisibility();
-  syncCurrentPaletteFromDom();
-
-  saveHistory(currentPalette, { isAlternative: usedAlternativePalette });
 }
 
 // GENERATE COLOR

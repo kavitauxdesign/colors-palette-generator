@@ -96,6 +96,7 @@ let paletteHistoryIndex = -1;
 let paletteBaseMode = "temperature";
 let uploadedBaseImage = null;
 let prioritizeImageDominantColors = paletteImageDominantToggle?.checked ?? true;
+let imagePaletteVariantIndex = 0;
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,
   cool: !!DEFAULT_TEMPERATURE.cool,

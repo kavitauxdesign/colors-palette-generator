@@ -161,19 +161,6 @@
           </div>
 
           <p class="description">Una nueva paleta espera ser revelada.</p>
-
-          <!-- Generation buttons -->
-          <div id="paletteGenerationButtons" class="generate-btns-container">
-            <button id="generateBtn" class="primary-btn">
-              <img src="assets/magic-wand.svg" width="18px" height="18px" alt="Magic wand icon" />
-              <span>Generar paleta</span>
-            </button>
-
-            <button id="surpriseBtn" class="primary-btn">
-              <img src="assets/sparkles.svg" width="18px" height="18px" alt="Surprise icon" />
-              <div class="tooltip">¡Sorpréndeme!</div>
-            </button>
-          </div>
         </section>
 
         <!-- Palette preview and actions -->
@@ -218,24 +205,26 @@
               <div class="tooltip">Ajustar colores</div>
             </button>
 
-            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon" aria-label="Regenerar paleta"
-              hidden>
-              <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
-              <div class="tooltip">Regenerar paleta</div>
-            </button>
-
-            <button id="copyHexBtn" class="secondary-btn">
+            <button id="copyHexBtn" class="secondary-btn secondary-btn-icon" style="padding-left: 10px;" aria-label="Copiar paleta">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                 data-fg-d3bl78="0.8:6.35049:/src/app/App.tsx:500:17:18373:41:e:Copy::::::CsY9">
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
               </svg>
-              <span>Copiar paleta</span>
+              <span></span>
               <div class="tooltip">
-                Los nombres de los colores y los códigos HEX aparecerán en tu portapapeles
+                Copiar los nombres de los colores y los códigos HEX de toda la paleta
               </div>
             </button>
+
+            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon" aria-label="Regenerar paleta"
+              hidden style="padding-right: 3px; padding-bottom: 1px;">
+              <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
+              <div class="tooltip">Regenerar paleta</div>
+            </button>
+
+            
             </div>
           </div>
 

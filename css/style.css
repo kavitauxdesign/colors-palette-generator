@@ -130,7 +130,7 @@ button {
 
 .secondary-btn-history {
   gap: var(--PX-8);
-  padding: 0 var(--PX-14);
+  padding: 0 var(--PX-20);
   transition:
     background-color 220ms ease,
     color 220ms ease,
@@ -151,7 +151,7 @@ button {
 
 .secondary-btn-icon {
   width: 36px;
-  padding: 0;
+  padding: 0 0 0 3px;
   border-radius: 999px;
 }
 
@@ -163,6 +163,20 @@ button {
   display: block;
   width: var(--PX-18);
   height: var(--PX-18);
+}
+
+.secondary-btn-icon:disabled,
+.secondary-btn-icon.is-disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.secondary-btn-icon:disabled svg,
+.secondary-btn-icon:disabled .secondary-btn-icon-asset,
+.secondary-btn-icon.is-disabled svg,
+.secondary-btn-icon.is-disabled .secondary-btn-icon-asset {
+  opacity: 0.9;
 }
 
 .secondary-btn#copyHexBtn {
