@@ -1884,9 +1884,9 @@ input[type="range"]::-moz-range-thumb {
 /* Bottom Toolbar                  */
 /* =============================== */
 .bottom-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   width: 100%;
   min-height: var(--PX-40);
   padding: 0 var(--PX-16);
@@ -1901,8 +1901,10 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 4px;
-  flex: 1 1 auto;
+  grid-column: 2;
+  justify-self: center;
   min-width: 0;
 }
 
@@ -1911,7 +1913,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .bottom-toolbar-version {
-  flex: 0 0 auto;
+  grid-column: 3;
+  justify-self: end;
   margin-left: var(--PX-12);
   font-size: 11px;
   line-height: 1;
@@ -2126,6 +2129,22 @@ input[type="range"]::-moz-range-thumb {
     left: inherit;
     right: 0;
     transform: none !important;
+  }
+
+  .bottom-toolbar {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    row-gap: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .bottom-toolbar-main,
+  .bottom-toolbar-version {
+    grid-column: 1;
+    justify-self: center;
+    margin-left: 0;
+    text-align: center;
   }
 }
 
