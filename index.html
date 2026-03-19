@@ -1,11 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Classic HEX reúne mini-herramientas de color como el generador de paletas y la conversión de HEX a CSS filter." />
   <title>Classic HEX - Herramienta de trabajo con color</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/design-system.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/apps/shared.css" />
+  <link rel="stylesheet" href="css/apps/palette-generator.css" />
+  <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
       function loadMetrica() {
@@ -32,8 +38,8 @@
   <!-- /Metrika counter -->
   </head>
 
-<body>
-  <header>
+<body class="site-body">
+  <header class="site-header">
     <div class="header-inner">
       <!-- Logo -->
       <div class="logo">
@@ -45,44 +51,49 @@
         <span>HEX <span class="sw-subtitle">— Herramienta de trabajo con color</span></span>
       </div>
       <!-- Navigation -->
-      <nav>
-        <button data-view="palette_generator">Generar Paletas</button>
-        <button data-view="hex_to_filter">HEX to CSS filter</button>
+      <nav class="site-nav" aria-label="Seleccionar mini-app">
+        <button class="site-nav-button" type="button" data-view="palette_generator">Generar Paletas</button>
+        <button class="site-nav-button" type="button" data-view="hex_to_filter">HEX to CSS filter</button>
       </nav>
     </div>
   </header>
 
-  <main>
+  <main class="site-main">
     <!-- ==============================  -->
     <!--       PALETTE GENERATOR         -->
     <!-- =============================== -->
-    <section id="palette_generator" class="view-tab active">
-      <!-- Intro -->
-      <div class="section-heading-row">
-        <h1>Generador de Paletas de Colores</h1>
-        <!-- Restart button -->
-        <button id="resetPaletteBtn" class="secondary-btn reset-btn-offset">
-          <!-- Inline SVG to style icon color via CSS variables -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            class="lucide lucide-rotate-ccw size-5 text-gray-600"
-            data-fg-d3bl11="0.8:6.35049:/src/app/App.tsx:362:13:11461:46:e:RotateCcw::::::D1GU">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-          </svg>
-          <div class="tooltip">Limpiar historial y reiniciar el generador</div>
-        </button>
-      </div>
-      <p class="description">
-        <b>Generación de paletas</b> en distintos modos (<i>Temperatura e Imagen</i>), con opciones para regenerar, explorar variaciones o inspirarse a partir de una imagen.&#x2728;
-        <br />
-        También permite ir fijando colores para construir una paleta propia poco a poco, mientras cada resultado se guarda automáticamente en el historial que aparece más abajo.
-      </p>
+    <section id="palette_generator" class="view-tab app-view active" data-app="palette-generator">
+      <div class="app-view-shell">
+        <header class="app-view-hero">
+          <div class="app-view-meta">
+            <span class="app-view-kicker">Mini-app 01</span>
+            <div class="section-heading-row app-view-heading">
+              <h1>Generador de Paletas de Colores</h1>
+              <!-- Restart button -->
+                <button id="resetPaletteBtn" class="secondary-btn reset-btn-offset" type="button">
+                  <!-- Inline SVG to style icon color via CSS variables -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+                <div class="tooltip">Limpiar historial y reiniciar el generador</div>
+              </button>
+            </div>
+            <p class="description app-view-description">
+              <b>Generación de paletas</b> en distintos modos (<i>Temperatura e Imagen</i>), con opciones para
+              regenerar, explorar variaciones o inspirarse a partir de una imagen.&#x2728;
+              <br />
+              También permite ir fijando colores para construir una paleta propia poco a poco, mientras cada resultado
+              se guarda automáticamente en el historial que aparece más abajo.
+            </p>
+          </div>
+        </header>
 
       <!-- Generator area -->
-      <div class="generator-container">
+      <div class="generator-container app-workspace">
         <!-- Control panel -->
-        <section class="controls">
+        <section class="controls app-panel app-panel--sidebar" aria-label="Controles del generador de paletas">
           <!-- Palette Base -->
           <div id="paletteBaseControlGroup" class="control-group">
             <h4>(1) Base de la paleta:</h4>
@@ -96,11 +107,9 @@
 
             <div id="temperatureBasePanel" class="base-panel active">
               <!-- Warm button -->
-              <button id="warmBtn" class="temp active">
+              <button id="warmBtn" class="temp active" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                  class="lucide lucide-flame size-7 text-gray-400"
-                  data-fg-d3bl45="0.8:6.35049:/src/app/App.tsx:426:19:14807:78:e:Flame::::::DE75">
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path
                     d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
                   </path>
@@ -109,11 +118,9 @@
               </button>
 
               <!-- Cool button -->
-              <button id="coolBtn" class="temp">
+              <button id="coolBtn" class="temp" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                  class="lucide lucide-snowflake size-7 text-blue-500"
-                  data-fg-d3bl49="0.8:6.35049:/src/app/App.tsx:437:19:15552:80:e:Snowflake::::::EFSK">
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m10 20-1.25-2.5L6 18"></path>
                   <path d="M10 4 8.75 6.5 6 6"></path>
                   <path d="m14 20 1.25-2.5L18 18"></path>
@@ -177,10 +184,10 @@
             <h4>(2) Cantidad de colores:</h4>
 
             <div class="palette-size">
-              <button class="size active" data-size="3">3</button>
-              <button class="size" data-size="6">6</button>
-              <button class="size" data-size="9">9</button>
-              <button class="size" data-size="12">12</button>
+              <button class="size active" type="button" data-size="3">3</button>
+              <button class="size" type="button" data-size="6">6</button>
+              <button class="size" type="button" data-size="9">9</button>
+              <button class="size" type="button" data-size="12">12</button>
             </div>
           </div>
 
@@ -196,7 +203,8 @@
 
               <div class="range-labels brightness-labels">
                 <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
-                <input type="range" id="brightness" min="0" max="100" step="5" value="75" style="--value: 75%;" />
+                <input type="range" id="brightness" class="range-input--brightness" min="0" max="100"
+                  step="5" value="75" />
                 <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
               </div>
             </div>
@@ -210,7 +218,8 @@
 
               <div class="range-labels saturation-labels">
                 <img class="range-icon saturation-icon" src="assets/saturation-low.svg" alt="Icono de saturación mínima" />
-                <input type="range" id="saturation" min="0" max="100" step="5" value="100" style="--value: 100%;" />
+                <input type="range" id="saturation" class="range-input--saturation" min="0" max="100"
+                  step="5" value="100" />
                 <img class="range-icon saturation-icon" src="assets/saturation-high.svg" alt="Icono de saturación máxima" />
               </div>
             </div>
@@ -220,11 +229,11 @@
         </section>
 
         <!-- Palette preview and actions -->
-        <section class="palette-section">
+        <section class="palette-section app-stack" aria-label="Vista previa y acciones de la paleta">
           <!-- Palette actions -->
-          <div class="copy-btn-container">
-            <div class="palette-history-actions">
-              <button id="paletteUndoBtn" class="secondary-btn secondary-btn-history" aria-label="Undo" disabled>
+          <div class="copy-btn-container app-toolbar">
+            <div class="u-flex u-row u-center u-wrap u-gap-sm">
+              <button id="paletteUndoBtn" class="secondary-btn secondary-btn-history" type="button" aria-label="Undo" disabled>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m9 14-4-4 4-4"></path>
@@ -233,7 +242,7 @@
               <div class="tooltip">Deshacer</div>
               </button>
 
-              <button id="paletteRedoBtn" class="secondary-btn secondary-btn-history" aria-label="Redo" disabled>
+              <button id="paletteRedoBtn" class="secondary-btn secondary-btn-history" type="button" aria-label="Redo" disabled>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m15 14 4-4-4-4"></path>
@@ -243,54 +252,58 @@
               </button>
             </div>
 
-            <div class="palette-primary-actions">
-            <button id="copyHexBtn" class="secondary-btn secondary-btn-icon copy-btn-icon" aria-label="Copiar paleta">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                data-fg-d3bl78="0.8:6.35049:/src/app/App.tsx:500:17:18373:41:e:Copy::::::CsY9">
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-              </svg>
-              <span></span>
-              <div class="tooltip">
-                Copiar los nombres de los colores y los códigos HEX de toda la paleta
-              </div>
-            </button>
+            <div class="palette-primary-actions u-flex u-row u-center u-wrap u-gap-sm">
+              <button id="copyHexBtn" class="secondary-btn secondary-btn-icon copy-btn-icon" type="button"
+                aria-label="Copiar paleta">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                </svg>
+                <span></span>
+                <div class="tooltip">
+                  Copiar los nombres de los colores y los códigos HEX de toda la paleta
+                </div>
+              </button>
 
-            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon palette-regenerate-icon-btn" aria-label="Regenerar paleta"
-              hidden>
-              <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
-              <div class="tooltip">Regenerar paleta</div>
-            </button>
+              <button id="paletteRegenerateBtn"
+                class="secondary-btn secondary-btn-icon palette-regenerate-icon-btn" type="button"
+                aria-label="Regenerar paleta" hidden>
+                <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
+                <div class="tooltip">Regenerar paleta</div>
+              </button>
 
-            <button id="surpriseBtn" class="secondary-btn secondary-btn-icon" aria-label="Sorpréndeme" hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
-                <path d="m14 7 3 3"></path>
-                <path d="M5 6v4"></path>
-                <path d="M19 14v4"></path>
-                <path d="M10 2v2"></path>
-                <path d="M7 8H3"></path>
-                <path d="M21 16h-4"></path>
-                <path d="M11 3H9"></path>
-              </svg>
-              <div class="tooltip">Generar una variante más libre sin cambiar la cantidad de colores</div>
-            </button>
+              <button id="surpriseBtn" class="secondary-btn secondary-btn-icon" type="button"
+                aria-label="Sorpréndeme" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
+                  <path d="m14 7 3 3"></path>
+                  <path d="M5 6v4"></path>
+                  <path d="M19 14v4"></path>
+                  <path d="M10 2v2"></path>
+                  <path d="M7 8H3"></path>
+                  <path d="M21 16h-4"></path>
+                  <path d="M11 3H9"></path>
+                </svg>
+                <div class="tooltip">Generar una variante más libre sin cambiar la cantidad de colores</div>
+              </button>
 
-            <button id="paletteInspirationBtn" class="secondary-btn secondary-btn-icon" aria-label="Modo inspiración" hidden>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
-                <path d="M20 3v4"></path>
-                <path d="M22 5h-4"></path>
-                <path d="M4 17v2"></path>
-                <path d="M5 18H3"></path>
-              </svg>
-              <div class="tooltip">Generar una paleta inspirada en la imagen</div>
-            </button>
-
-            
+              <button id="paletteInspirationBtn" class="secondary-btn secondary-btn-icon" type="button"
+                aria-label="Modo inspiración" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                  <path d="M20 3v4"></path>
+                  <path d="M22 5h-4"></path>
+                  <path d="M4 17v2"></path>
+                  <path d="M5 18H3"></path>
+                </svg>
+                <div class="tooltip">Generar una paleta inspirada en la imagen</div>
+              </button>
             </div>
           </div>
 
@@ -317,49 +330,59 @@
         </section>
       </div>
 
-      <!-- Palette history -->
-      <hr />
-      <h2>Historial de paletas</h2>
-
-      <div id="history" class="history"></div>
+        <section class="app-history-block" aria-labelledby="paletteHistoryTitle">
+          <hr class="app-divider" />
+          <div class="u-flex u-row u-between u-wrap u-gap-md">
+            <h2 id="paletteHistoryTitle" class="app-section-title">Historial de paletas</h2>
+            <p class="app-note">Las paletas se guardan automáticamente mientras trabajas.</p>
+          </div>
+          <div id="history" class="history"></div>
+        </section>
+      </div>
     </section>
     <!-- ==============================  -->
     <!--       HEX TO CSS FILTER         -->
     <!-- =============================== -->
-    <section id="hex_to_filter" class="view-tab view-tab-offset">
-      <h1>HEX to CSS Filter</h1>
-      <p class="description">
-        Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
-        Útil para colorear iconos SVG mediante <code>filter</code>.
-      </p>
+    <section id="hex_to_filter" class="view-tab view-tab-offset app-view" data-app="hex-to-filter">
+      <div class="app-view-shell">
+        <header class="app-view-hero">
+          <div class="app-view-meta">
+            <span class="app-view-kicker">Mini-app 02</span>
+            <h1>HEX to CSS Filter</h1>
+            <p class="description app-view-description">
+              Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
+              Útil para colorear iconos SVG mediante <code>filter</code>.
+            </p>
+          </div>
+        </header>
 
-      <div id="hex_to_code" class="filter-tool">
-        <div class="filter-tool-panel">
-          <div class="filter-target-card">
-            <button class="target-color-swatch" type="button" aria-label="Seleccionar color objetivo">
-              <span class="target-color-swatch-fill"></span>
-            </button>
+        <div id="hex_to_code" class="filter-tool app-stack">
+          <div class="filter-tool-panel app-panel">
+            <div class="filter-target-card">
+              <button class="target-color-swatch" type="button" aria-label="Seleccionar color objetivo">
+                <span class="target-color-swatch-fill"></span>
+              </button>
 
-            <div class="filter-tool-form">
-              <label for="filterTarget" class="filter-tool-label">Color objetivo</label>
-              <div class="filter-tool-input-row">
-                <input id="filterTarget" class="target filter-tool-input" type="text" placeholder="HEX, rgb, hsl..."
-                  value="#00a4d6" />
+              <div class="filter-tool-form">
+                <label for="filterTarget" class="filter-tool-label">Color objetivo</label>
+                <div class="filter-tool-input-row">
+                  <input id="filterTarget" class="target filter-tool-input" type="text"
+                    placeholder="HEX, rgb, hsl..." value="#00a4d6" />
+                </div>
+                <p class="filter-tool-feedback" aria-live="polite"></p>
               </div>
-              <p class="filter-tool-feedback" aria-live="polite"></p>
+
+              <input class="filter-target-picker" type="color" value="#00a4d6" aria-hidden="true" tabindex="-1" />
             </div>
 
-            <input class="filter-target-picker" type="color" value="#00a4d6" aria-hidden="true" tabindex="-1" />
-          </div>
-
-          <div class="filter-tool-previews">
+          <div class="filter-tool-previews app-grid-2">
             <div class="filter-preview-card">
               <p class="filter-preview-title">Píxel real</p>
               <p class="filter-preview-copy">
                 Base sobre la que se aplicará el filtro CSS.
               </p>
               <div class="filter-source-comparison">
-                <div class="pixel filterPixel filterSourceImage"></div>
+                <div class="pixel filterPixel"></div>
 
                 <div class="filter-applied-preview">
                   <div class="filter-source-stack">
@@ -395,11 +418,11 @@
                 </button>
               </div>
 
-              <code class="filter-code-output filterDetail">Aquí aparecerá el código CSS del filtro calculado.</code>
+              <code class="filter-code-output">Aquí aparecerá el código CSS del filtro calculado.</code>
             </div>
           </div>
 
-          <div class="filter-tool-details">
+          <div class="filter-tool-details app-stack">
             <div class="lossDetail-wrap">
               <p class="lossDetail lossDetail-emphasis"></p>
               <div class="tooltip">Cuanto más bajo es este número, más cerca está el resultado del color objetivo.</div>
@@ -424,17 +447,18 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <div class="bottom-toolbar">
+  <footer class="bottom-toolbar site-footer">
     <div class="bottom-toolbar-main">
       © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
         id="footerYear"></span> · Reportar un bug o comentario en <a class="footer-report-link" href="https://github.com/kavitauxdesign/colors-palette-generator/issues" target="_blank" rel="noopener noreferrer">GitHub</a> o <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">DM</a>
     </div>
     <span class="bottom-toolbar-version">Version 2.1.0.</span>
-  </div>
+  </footer>
 
   <!-- Scripts -->
   <!-- Script order is important: first we load shared files, 

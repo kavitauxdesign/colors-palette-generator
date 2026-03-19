@@ -106,62 +106,66 @@ Its behavior is similar to refreshing the page, but it avoids forcing the user t
 
 Structure of the project files:
 
-```
+```text
 index.html
-styles.css
 
 css/
-  style.css
+  design-system.css
+  layout.css
+  apps/
+    shared.css
+    palette-generator.css
+    hex-to-filter.css
 
 assets/
 fonts/
 
 js/
-  script-init.js
-
   app/
+    app-bootstrap.js
     app-constants.js
     app-dom.js
-    script-state.js
+    app-shell.js
 
-  features/
-    script-controls.js
-    script-cards.js
-    script-history.js
+  apps/
+    palette-generator/
+      palette-generator-app.js
+      palette-generator-controls.js
+      palette-generator-cards.js
+      palette-generator-history.js
+      palette-generator-image-analysis.js
+      palette-generator-image-palette.js
+      palette-generator-image-ui.js
+      palette-generator-state.js
+      palette-generator-temperature.js
+    hex-to-filter/
+      hex-to-filter-app.js
+      hex-to-filter-core.js
 
-  math/
-    app-color-utils.js
-
-  lists/
-    color-names.js
+  shared/
+    colors/
+      app-color-utils.js
+      color-names.js
+    services/
+      app-event-bus.js
+      app-registry.js
+      app-shared-colors.js
+      clipboard-service.js
 ```
 
-The JavaScript code is divided into several folders in order to keep responsibilities separated.
-
-- app contains application state and shared constants  
-- features contains logic for specific interface features  
-- math contains color utility functions and calculations  
-- lists contains static datasets used by the generator  
-
-At the beginning of development everything lived inside a single JavaScript file.
-
-Eventually that file grew to more than a thousand lines of code, which made refactoring absolutely necessary.
-
-We then divided the code into several modules to improve readability and maintainability.
+El CSS queda separado por capas: design system, layout global, estilos compartidos entre mini-apps y estilos específicos por mini-app.
+El JavaScript también está dividido por responsabilidad para mantener cada mini-app más aislada y preparada para crecer.
 
 The project still uses pure Vanilla JavaScript without frameworks such as React or Vue.
+The difference is that the codebase is now organized around a small shared application shell plus isolated modules for each mini-app.
 
 ---
 
 ## CSS Implementation
 
-The CSS approach is intentionally simple.
-
-We did not try to simulate any large styling framework. Layout is handled using Flexbox.
-
-We used CSS variables mainly for colors and for some recurring spacing values as a part of our small Design System.
-
-It is slightly funny that in a web application that generates color palettes, the interface itself uses very few fixed colors.
+The CSS approach stays intentionally lightweight.
+We use CSS variables for tokens, a small shared layout layer, and app-specific files instead of a large utility framework.
+That keeps each mini-app easier to evolve without turning the stylesheet into a single oversized file again.
 
 ---
 
