@@ -440,6 +440,8 @@
   <!-- Script order is important: first we load shared files, 
          then files that use them -->
   <script src="js/app/app-constants.js"></script>
+  <script src="js/shared/services/app-registry.js"></script>
+  <script src="js/shared/services/app-event-bus.js"></script>
   <script>
     // Footer year logic: show 2026 or 2026–current year if different
     (function () {
@@ -449,15 +451,27 @@
       yearSpan.textContent = (currentYear === baseYear) ? baseYear : (baseYear + '–' + currentYear);
     })();
   </script>
-  <script src="js/math/app-color-utils.js"></script>
-  <script src="js/lists/color-names.js"></script>
+  <script src="js/shared/colors/app-color-utils.js"></script>
+  <script src="js/shared/services/clipboard-service.js"></script>
+  <script src="js/shared/services/app-shared-colors.js"></script>
+  <script src="js/shared/colors/color-names.js"></script>
   <script src="js/app/app-dom.js"></script>
-  <script src="js/app/script-state.js"></script>
-  <script src="js/features/script-controls.js"></script>
-  <script src="js/features/script-cards.js"></script>
-  <script src="js/features/script-history.js"></script>
-  <script src="js/features/script-filter-tool.js"></script>
-  <script src="js/script-init.js"></script>
+  <script src="js/app/app-shell.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-state.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-core.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-image-analysis.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-image-palette.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-temperature.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-image-ui.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-controls.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-card-helpers.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-card-names.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-cards.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-history.js"></script>
+  <script src="js/apps/palette-generator/palette-generator-app.js"></script>
+  <script src="js/apps/hex-to-filter/hex-to-filter-core.js"></script>
+  <script src="js/apps/hex-to-filter/hex-to-filter-app.js"></script>
+  <script src="js/app/app-bootstrap.js"></script>
 </body>
 
 </html>

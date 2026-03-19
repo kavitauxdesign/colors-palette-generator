@@ -1,62 +1,6 @@
-// HEX to Filter UI foundation
-(function () {
-  const root = document.getElementById("hex_to_code");
-  if (!root) {
-    return;
-  }
+// HEX to Filter core: solver and color parsing helpers shared by the mini-app controller.
 
-  const textInput = root.querySelector(".target");
-  const copyButton = root.querySelector(".filter-copy-btn");
-  const copyTooltip = copyButton?.querySelector(".tooltip") ?? null;
-  const swatchButton = root.querySelector(".target-color-swatch");
-  const swatchFill = root.querySelector(".target-color-swatch-fill");
-  const colorPicker = root.querySelector(".filter-target-picker");
-  const feedback = root.querySelector(".filter-tool-feedback");
-  const filterCodeOutput = root.querySelector(".filter-code-output");
-  const lossDetail = root.querySelector(".lossDetail");
-  const filterPreviewPixel = root.querySelector(".filterPixel");
-  const filterPreviewImage = root.querySelector(".filter-source-icon-after");
-
-  if (
-    !textInput ||
-    !swatchButton ||
-    !swatchFill ||
-    !colorPicker ||
-    !feedback ||
-    !filterCodeOutput ||
-    !lossDetail ||
-    !filterPreviewPixel ||
-    !filterPreviewImage
-  ) {
-    return;
-  }
-
-  const parserElement = document.createElement("div");
-  parserElement.style.position = "absolute";
-  parserElement.style.opacity = "0";
-  parserElement.style.pointerEvents = "none";
-  parserElement.style.inset = "-9999px auto auto -9999px";
-  document.body.appendChild(parserElement);
-
-  let autoSolveTimeoutId = null;
-  let copyFeedbackTimeoutId = null;
-  let currentResultColorCss = "";
-  const copyTooltipDefaultText = copyTooltip?.textContent ?? "Copiar CSS a portapapeles";
-  const defaultTargetColors = [
-    "#9EBB89",
-    "#6EC5CE",
-    "#E7AA6E",
-    "#B1BDCD",
-    "#6BBDB6",
-    "#B88965",
-    "#DCC9B3",
-    "#A8AA98",
-    "#6B8F71",
-    "#29A9CA",
-    "#B86346",
-    "#5BAB9C",
-  ];
-
+(function initializeHexToFilterCore() {
   class Color {
     constructor(r, g, b) {
       this.set(r, g, b);
@@ -357,8 +301,8 @@
 
     loss(filters) {
       const color = this.colorFromFilters(filters);
-
       const colorHsl = color.hsl();
+
       return (
         Math.abs(color.r - this.target.r) +
         Math.abs(color.g - this.target.g) +
@@ -430,67 +374,6 @@
     return rawValue;
   }
 
-  function pickRandomDefaultTargetColor() {
-    const randomIndex = Math.floor(Math.random() * defaultTargetColors.length);
-    return defaultTargetColors[randomIndex];
-  }
-
-  function normalizeCssColor(value) {
-    const normalizedInputValue = normalizeHexInputValue(value);
-    if (!normalizedInputValue) {
-      return null;
-    }
-
-    parserElement.style.color = "";
-    parserElement.style.color = normalizedInputValue;
-
-    if (!parserElement.style.color) {
-      return null;
-    }
-
-    const computedColor = window.getComputedStyle(parserElement).color;
-    const hexColor = rgbStringToHex(computedColor);
-    if (!hexColor) {
-      return null;
-    }
-
-    const rgbMatch = computedColor.match(/rgba?\(([^)]+)\)/i);
-    if (!rgbMatch) {
-      return null;
-    }
-
-    const rgbChannels = rgbMatch[1]
-      .split(",")
-      .slice(0, 3)
-      .map((channel) => Number.parseFloat(channel.trim()));
-
-    if (rgbChannels.length !== 3 || rgbChannels.some((channel) => !Number.isFinite(channel))) {
-      return null;
-    }
-
-    return {
-      hex: hexColor,
-      css: computedColor,
-      rgb: rgbChannels,
-      inputValue: normalizedInputValue,
-    };
-  }
-
-  function clearValidationState() {
-    textInput.classList.remove("is-invalid");
-    feedback.textContent = "";
-  }
-
-  function showInvalidColorMessage() {
-    textInput.classList.add("is-invalid");
-    feedback.textContent = "No se ha detectado un color valido. Usa HEX, rgb(), hsl() o un nombre CSS reconocido.";
-  }
-
-  function applyTargetColor(color) {
-    swatchFill.style.backgroundColor = color.css;
-    colorPicker.value = color.hex;
-  }
-
   function getLossMessage(loss) {
     if (loss < 1) {
       return "Resultado excelente.";
@@ -504,164 +387,11 @@
     return "Resultado util, pero algo alejado del color objetivo.";
   }
 
-  function getReadableTooltipTextToken(colorCss) {
-    const normalizedColor = normalizeCssColor(colorCss);
-    if (!normalizedColor) {
-      return "var(--on-accent)";
-    }
-
-    const [r, g, b] = normalizedColor.rgb;
-    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-    return yiq >= 140 ? "var(--primary)" : "var(--on-accent)";
-  }
-
-  const copyToClipboard =
-    typeof window.copyTextToClipboard === "function"
-      ? window.copyTextToClipboard
-      : async (text) => {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-          return;
-        }
-
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.opacity = "0";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textArea);
-      };
-
-  function setCopyFeedback() {
-    if (!copyButton || !copyTooltip) {
-      return;
-    }
-
-    const feedbackBg = currentResultColorCss || filterPreviewPixel.style.backgroundColor || "var(--accent)";
-    const feedbackTextColor = getReadableTooltipTextToken(feedbackBg);
-
-    copyTooltip.style.setProperty("--tooltip-feedback-bg", feedbackBg);
-    copyTooltip.style.setProperty("--tooltip-feedback-fg", feedbackTextColor);
-    copyTooltip.textContent = "¡Copiado!";
-    copyTooltip.classList.add("is-copied-feedback");
-    copyButton.classList.add("show-feedback");
-    clearTimeout(copyFeedbackTimeoutId);
-    copyFeedbackTimeoutId = window.setTimeout(() => {
-      copyTooltip.textContent = copyTooltipDefaultText;
-      copyTooltip.classList.remove("is-copied-feedback");
-      copyButton.classList.remove("show-feedback");
-      copyTooltip.style.removeProperty("--tooltip-feedback-bg");
-      copyTooltip.style.removeProperty("--tooltip-feedback-fg");
-    }, 1400);
-  }
-
-  function updateResult(result) {
-    currentResultColorCss = result.colorCss;
-    filterCodeOutput.textContent = result.css;
-    lossDetail.textContent = `Loss: ${result.loss.toFixed(1)}. ${getLossMessage(result.loss)}`;
-    filterPreviewPixel.style.backgroundColor = result.colorCss;
-    filterPreviewImage.style.filter = result.filterValue;
-  }
-
-  function computeBestFilter() {
-    const normalizedColor = normalizeCssColor(textInput.value);
-    if (!normalizedColor) {
-      showInvalidColorMessage();
-      return null;
-    }
-
-    if (textInput.value !== normalizedColor.inputValue) {
-      textInput.value = normalizedColor.inputValue;
-    }
-
-    clearValidationState();
-    applyTargetColor(normalizedColor);
-    const targetColor = new Color(
-      normalizedColor.rgb[0],
-      normalizedColor.rgb[1],
-      normalizedColor.rgb[2],
-    );
-    const solver = new Solver(targetColor);
-    const result = solver.solve();
-    updateResult(result);
-    return result;
-  }
-
-  function scheduleAutoSolve() {
-    window.clearTimeout(autoSolveTimeoutId);
-    autoSolveTimeoutId = window.setTimeout(() => {
-      const normalizedColor = normalizeCssColor(textInput.value);
-      if (!normalizedColor) {
-        return;
-      }
-
-      clearValidationState();
-      applyTargetColor(normalizedColor);
-      computeBestFilter();
-    }, 220);
-  }
-
-  textInput.addEventListener("input", () => {
-    const normalizedColor = normalizeCssColor(textInput.value);
-    if (normalizedColor) {
-      if (textInput.value !== normalizedColor.inputValue) {
-        textInput.value = normalizedColor.inputValue;
-      }
-      applyTargetColor(normalizedColor);
-      clearValidationState();
-      scheduleAutoSolve();
-    }
-  });
-
-  textInput.addEventListener("blur", () => {
-    const normalizedInputValue = normalizeHexInputValue(textInput.value);
-    if (normalizedInputValue && textInput.value !== normalizedInputValue) {
-      textInput.value = normalizedInputValue;
-    }
-  });
-
-  textInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      computeBestFilter();
-    }
-  });
-
-  swatchButton.addEventListener("click", () => {
-    if (typeof colorPicker.showPicker === "function") {
-      colorPicker.showPicker();
-      return;
-    }
-
-    colorPicker.click();
-  });
-
-  colorPicker.addEventListener("input", () => {
-    textInput.value = colorPicker.value.toUpperCase();
-    clearValidationState();
-    applyTargetColor(normalizeCssColor(textInput.value));
-    computeBestFilter();
-  });
-
-  copyButton?.addEventListener("click", async () => {
-    try {
-      await copyToClipboard(filterCodeOutput.textContent.trim());
-      setCopyFeedback();
-    } catch (error) {
-      // Ignore clipboard errors silently to avoid disrupting the workflow.
-    }
-  });
-
-  const initialTargetColor = pickRandomDefaultTargetColor();
-  textInput.value = initialTargetColor;
-  colorPicker.value = initialTargetColor;
-
-  const initialColor = normalizeCssColor(textInput.value) || normalizeCssColor("#00A4D6");
-  if (initialColor) {
-    applyTargetColor(initialColor);
-    computeBestFilter();
-  }
+  window.HexToFilterCore = {
+    Color,
+    Solver,
+    rgbStringToHex,
+    normalizeHexInputValue,
+    getLossMessage,
+  };
 })();
