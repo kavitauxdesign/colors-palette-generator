@@ -71,6 +71,9 @@ const hexToHsl =
       };
     };
 
+const COPY_FEEDBACK_TEXT = "¡Copiado!";
+const COPY_FEEDBACK_DURATION_MS = 2000;
+
 // ===============================
 // Core Card Flow
 // ===============================
@@ -338,7 +341,19 @@ function createCardActionButton(actionName, tooltipText) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = `color-action-btn action-${actionName}`;
-  button.setAttribute("aria-label", actionName);
+  const actionAriaLabelMap = {
+    regenerate: "Regenerar color",
+    edit: "Editar color",
+    copy: "Copiar color",
+    delete: "Eliminar color",
+  };
+  const actionIconAltMap = {
+    regenerate: "icono de regenerar color",
+    edit: "icono de editar color",
+    copy: "icono de copiar color",
+    delete: "icono de eliminar color",
+  };
+  button.setAttribute("aria-label", actionAriaLabelMap[actionName] || actionName);
 
   const actionIconSrcMap = {
     regenerate: "assets/regenerate.svg",
@@ -350,7 +365,7 @@ function createCardActionButton(actionName, tooltipText) {
   const icon = document.createElement("img");
   icon.className = "action-icon";
   icon.src = actionIconSrcMap[actionName] || "assets/edit.svg";
-  icon.alt = `${actionName} icon placeholder`;
+  icon.alt = actionIconAltMap[actionName] || `icono de ${actionName}`;
   button.appendChild(icon);
 
   const tooltip = document.createElement("div");
@@ -404,6 +419,49 @@ function setActionButtonTooltipText(button, tooltipText) {
   tooltip.textContent = tooltipText;
 }
 
+function showButtonCopyFeedback(
+  button,
+  {
+    defaultTooltipText,
+    feedbackBg = null,
+    feedbackTextColor = null,
+    durationMs = COPY_FEEDBACK_DURATION_MS,
+  } = {}
+) {
+  const tooltip = button?.querySelector(".tooltip");
+  if (!button || !tooltip) {
+    return null;
+  }
+
+  if (feedbackBg) {
+    tooltip.style.setProperty("--tooltip-feedback-bg", feedbackBg);
+  }
+  if (feedbackTextColor) {
+    tooltip.style.setProperty("--tooltip-feedback-fg", feedbackTextColor);
+  }
+
+  tooltip.textContent = COPY_FEEDBACK_TEXT;
+  tooltip.classList.add("is-copied-feedback");
+  button.classList.add("show-feedback");
+
+  return window.setTimeout(() => {
+    tooltip.textContent = defaultTooltipText ?? CARD_COPY_TOOLTIP_DEFAULT;
+    tooltip.classList.remove("is-copied-feedback");
+    button.classList.remove("show-feedback");
+    tooltip.style.removeProperty("--tooltip-feedback-bg");
+    tooltip.style.removeProperty("--tooltip-feedback-fg");
+  }, durationMs);
+}
+
+function persistCurrentPaletteSnapshot(saveHistoryEntry = true) {
+  syncCurrentPaletteFromDom();
+  capturePaletteAdjustmentBase(currentPalette);
+
+  if (saveHistoryEntry) {
+    saveHistory(currentPalette);
+  }
+}
+
 function updateCardPinButtonState(card) {
   const pinBtn = card?.querySelector(".color-pin-btn");
   if (!pinBtn) {
@@ -445,7 +503,7 @@ function setRegenerateButtonAvailability(button, isAvailable, tooltipText = null
     button,
     tooltipText || (
       isAvailable
-        ? "Regenerate color"
+        ? "Regenerar color"
         : "No hay suficiente variedad de colores en la imagen de referencia"
     )
   );
@@ -589,11 +647,11 @@ function attachCardActions(card) {
 
   const regenerateBtn = createCardActionButton(
     "regenerate",
-    "Regenerate color",
+    "Regenerar color",
   );
-  const editBtn = createCardActionButton("edit", "Edit color");
+  const editBtn = createCardActionButton("edit", "Editar color");
   const copyBtn = createCardActionButton("copy", CARD_COPY_TOOLTIP_DEFAULT);
-  const deleteBtn = createCardActionButton("delete", "Delete color");
+  const deleteBtn = createCardActionButton("delete", "Eliminar color");
   const pinBtn = createCardPinButton();
 
   let cardCopyFeedbackTimeout = null;
@@ -609,14 +667,12 @@ function attachCardActions(card) {
 
     const newColor = getRegeneratedColorForCard(card, existingColors);
     if (!newColor) {
-      alert("Could not find a unique color. Please try again.");
+      alert("No se ha podido encontrar un color unico. Intentalo de nuevo.");
       return;
     }
 
     setCardColor(card, newColor);
-    syncCurrentPaletteFromDom();
-    capturePaletteAdjustmentBase(currentPalette);
-    saveHistory(currentPalette);
+    persistCurrentPaletteSnapshot();
   });
 
   editBtn.addEventListener("click", (event) => {
@@ -632,7 +688,7 @@ function attachCardActions(card) {
     // Wait one frame so fixed position is applied before opening picker
     requestAnimationFrame(() => {
       if (!openNativeColorPicker(globalEditPicker)) {
-        alert("Could not open color picker. Please try again.");
+        alert("No se ha podido abrir el selector de color. Intentalo de nuevo.");
       }
     });
   });
@@ -651,35 +707,19 @@ function attachCardActions(card) {
     try {
       await copyTextToClipboard(text);
 
-      const copyTooltip = copyBtn.querySelector(".tooltip");
-      if (copyTooltip) {
-        const feedbackBg = normalizeHexColor(hex);
-        const feedbackTextColor = getReadableTooltipTextColor(feedbackBg);
-
-        copyTooltip.style.setProperty("--tooltip-feedback-bg", feedbackBg);
-        copyTooltip.style.setProperty(
-          "--tooltip-feedback-fg",
-          feedbackTextColor,
-        );
-        copyTooltip.textContent = "¡Copiado!";
-        copyTooltip.classList.add("is-copied-feedback");
-        copyBtn.classList.add("show-feedback");
-
-        if (cardCopyFeedbackTimeout) {
-          clearTimeout(cardCopyFeedbackTimeout);
-        }
-
-        cardCopyFeedbackTimeout = setTimeout(() => {
-          copyTooltip.textContent = CARD_COPY_TOOLTIP_DEFAULT;
-          copyTooltip.classList.remove("is-copied-feedback");
-          copyBtn.classList.remove("show-feedback");
-          copyTooltip.style.removeProperty("--tooltip-feedback-bg");
-          copyTooltip.style.removeProperty("--tooltip-feedback-fg");
-          cardCopyFeedbackTimeout = null;
-        }, 2000);
+      if (cardCopyFeedbackTimeout) {
+        clearTimeout(cardCopyFeedbackTimeout);
       }
+
+      const feedbackBg = normalizeHexColor(hex);
+      const feedbackTextColor = getReadableTooltipTextColor(feedbackBg);
+      cardCopyFeedbackTimeout = showButtonCopyFeedback(copyBtn, {
+        defaultTooltipText: CARD_COPY_TOOLTIP_DEFAULT,
+        feedbackBg,
+        feedbackTextColor,
+      });
     } catch (error) {
-      alert("Could not copy this color value.");
+      alert("No se ha podido copiar este valor HEX.");
     }
   });
 
@@ -692,17 +732,13 @@ function attachCardActions(card) {
 
     card.remove();
     refreshDeleteButtonsVisibility();
-    syncCurrentPaletteFromDom();
-    capturePaletteAdjustmentBase(currentPalette);
-    saveHistory(currentPalette);
+    persistCurrentPaletteSnapshot();
   });
 
   pinBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     setCardPinnedState(card, !isCardPinned(card));
-    syncCurrentPaletteFromDom();
-    capturePaletteAdjustmentBase(currentPalette);
-    saveHistory(currentPalette);
+    persistCurrentPaletteSnapshot();
   });
 
   actions.appendChild(regenerateBtn);
@@ -739,8 +775,7 @@ globalEditPicker.addEventListener("change", () => {
   const previousColor = activeEditOriginalColor;
 
   if (isColorAlreadyInPalette(candidate, activeEditCard)) {
-    alert("El color ya está en la paleta.\uD83C\uDFA8" + 
-      "No se añaden duplicados para mantener el conjunto limpio y consistente.\u2728");
+    alert("El color ya esta en la paleta. No se anaden duplicados para mantener el conjunto limpio y consistente.");
     setCardColor(activeEditCard, activeEditOriginalColor);
     syncCurrentPaletteFromDom();
     return;
@@ -748,12 +783,7 @@ globalEditPicker.addEventListener("change", () => {
 
   setCardColor(activeEditCard, candidate);
   activeEditOriginalColor = candidate;
-  syncCurrentPaletteFromDom();
-  capturePaletteAdjustmentBase(currentPalette);
-
-  if (candidate !== previousColor) {
-    saveHistory(currentPalette);
-  }
+  persistCurrentPaletteSnapshot(candidate !== previousColor);
 });
 
 globalEditPicker.addEventListener("blur", () => {
@@ -907,11 +937,7 @@ function refreshColorCardNames() {
 }
 
 function getCurrentPaletteHexValues() {
-  return Array.from(
-    paletteContainer.querySelectorAll(".color-card .color-label"),
-  )
-    .map((label) => label.textContent.trim().toUpperCase())
-    .filter((hex) => isValidHexColor(hex));
+  return getCurrentPaletteCardEntries().map((entry) => entry.hex);
 }
 
 async function copyTextToClipboard(text) {
@@ -947,11 +973,11 @@ async function copyTextToClipboard(text) {
 }
 
 if (copyHexBtn) {
-  copyHexBtn.onclick = async () => {
+  copyHexBtn.addEventListener("click", async () => {
     const hexValues = getCurrentPaletteHexValues();
 
     if (hexValues.length === 0) {
-      alert("No colors found in the current palette.");
+      alert("No hay colores en la paleta actual.");
       return;
     }
     const paletteDisplayNames = getPaletteDisplayNames(hexValues);
@@ -964,26 +990,17 @@ if (copyHexBtn) {
     try {
       await copyTextToClipboard(plainText);
 
-      if (copyHexBtnTooltip) {
-        copyHexBtnTooltip.textContent = "¡Copiado!";
-        copyHexBtnTooltip.classList.add("is-copied-feedback");
-      }
-
       if (copyBtnFeedbackTimeout) {
         clearTimeout(copyBtnFeedbackTimeout);
       }
 
-      copyBtnFeedbackTimeout = setTimeout(() => {
-        if (copyHexBtnTooltip) {
-          copyHexBtnTooltip.textContent = copyHexBtnDefaultTooltip;
-          copyHexBtnTooltip.classList.remove("is-copied-feedback");
-        }
-        copyBtnFeedbackTimeout = null;
-      }, 2000);
+      copyBtnFeedbackTimeout = showButtonCopyFeedback(copyHexBtn, {
+        defaultTooltipText: copyHexBtnDefaultTooltip,
+      });
     } catch (error) {
-      alert("Could not copy palette values to clipboard.");
+      alert("No se han podido copiar los valores de la paleta.");
     }
-  };
+  });
 }
 
 // ADD COLOR
@@ -1015,7 +1032,7 @@ if (addColorBtn) {
     const existingColors = new Set(getCurrentPaletteHexValues());
     const { color, isFallbackWhite } = getAddedColorForCurrentMode(existingColors);
     if (!color) {
-      alert("Could not find a unique color. Please try again.");
+      alert("No se ha podido encontrar un color unico. Intentalo de nuevo.");
       return;
     }
 
@@ -1025,8 +1042,6 @@ if (addColorBtn) {
       card.dataset.regenerateLocked = isFallbackWhite ? "true" : "false";
     }
 
-    syncCurrentPaletteFromDom();
-    capturePaletteAdjustmentBase(currentPalette);
-    saveHistory(currentPalette);
+    persistCurrentPaletteSnapshot();
   });
 }

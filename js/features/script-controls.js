@@ -1,11 +1,13 @@
 ﻿// Update range controls UI
 const controlsHslToHex = window.AppColorUtils?.hslToHex;
 const controlsNormalizeHexColor = window.AppColorUtils?.normalizeHexColor;
+const controlsIsValidHexColor = window.AppColorUtils?.isValidHexColor;
 const controlsHexToRgb = window.AppColorUtils?.hexToRgb;
 const controlsHexToHsl = window.AppColorUtils?.hexToHsl;
 if (
   typeof controlsHslToHex !== "function" ||
   typeof controlsNormalizeHexColor !== "function" ||
+  typeof controlsIsValidHexColor !== "function" ||
   typeof controlsHexToRgb !== "function" ||
   typeof controlsHexToHsl !== "function"
 ) {
@@ -51,6 +53,10 @@ function resolvePaletteAdjustmentSettings(settings = {}) {
       ? settings.saturation
       : getCurrentSaturationValue(),
   };
+}
+
+function isValidPaletteHex(hex) {
+  return controlsIsValidHexColor(hex);
 }
 
 function updateUploadedImageAnalysisCache(cachePatch) {
@@ -115,7 +121,7 @@ function capturePaletteAdjustmentBase(colors = currentPalette, settings = getCur
   const validColors = Array.isArray(colors)
     ? colors
         .map((color) => controlsNormalizeHexColor(color))
-        .filter((hex) => /^#[0-9A-F]{6}$/.test(hex))
+        .filter((hex) => isValidPaletteHex(hex))
     : [];
 
   paletteAdjustmentBase = [...validColors];
@@ -441,6 +447,12 @@ function setPaletteInspirationButtonTooltip(tooltipText) {
   setPaletteActionButtonTooltip(paletteInspirationBtn, tooltipText);
 }
 
+function updatePaletteActionButtonsAvailability(availableImageColors = null) {
+  updatePaletteRegenerateButtonAvailability(availableImageColors);
+  updatePaletteSurpriseButtonAvailability(availableImageColors);
+  updatePaletteInspirationButtonAvailability(availableImageColors);
+}
+
 function updatePaletteRegenerateButtonAvailability(availableImageColors = null) {
   if (!paletteRegenerateBtn) {
     return;
@@ -603,7 +615,7 @@ function normalizePaletteHexCollection(colors) {
   return Array.isArray(colors)
     ? colors
         .map((color) => controlsNormalizeHexColor(color))
-        .filter((hex) => /^#[0-9A-F]{6}$/.test(hex))
+        .filter((hex) => isValidPaletteHex(hex))
     : [];
 }
 
@@ -741,9 +753,7 @@ function setPaletteBaseMode(nextMode) {
   }
 
   updatePaletteModeActionVisibility();
-  updatePaletteRegenerateButtonAvailability();
-  updatePaletteSurpriseButtonAvailability();
-  updatePaletteInspirationButtonAvailability();
+  updatePaletteActionButtonsAvailability();
   updatePaletteStickyState();
   updatePaletteSizeButtonsAvailability();
 
@@ -802,18 +812,14 @@ function renderPaletteImagePreview() {
     paletteImagePreviewImg.removeAttribute("src");
     paletteImageName.textContent = "";
     updatePaletteModeActionVisibility();
-    updatePaletteRegenerateButtonAvailability();
-    updatePaletteSurpriseButtonAvailability();
-    updatePaletteInspirationButtonAvailability();
+    updatePaletteActionButtonsAvailability();
     return;
   }
 
   paletteImagePreviewImg.src = uploadedBaseImage.dataUrl;
   paletteImageName.textContent = uploadedBaseImage.name;
   updatePaletteModeActionVisibility();
-  updatePaletteRegenerateButtonAvailability();
-  updatePaletteSurpriseButtonAvailability();
-  updatePaletteInspirationButtonAvailability();
+  updatePaletteActionButtonsAvailability();
 }
 
 function setAnimatedImagePanelVisibility(element, shouldShow) {
@@ -978,9 +984,7 @@ if (paletteImageDropzone) {
 setPaletteBaseMode(paletteBaseMode);
 renderPaletteImagePreview();
 updatePaletteModeActionVisibility();
-updatePaletteRegenerateButtonAvailability();
-updatePaletteSurpriseButtonAvailability();
-updatePaletteInspirationButtonAvailability();
+updatePaletteActionButtonsAvailability();
 
 if (controlsPanel && paletteSection) {
   updatePaletteStickyState();
@@ -1533,7 +1537,7 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
     : getCachedImageColorClusters().length;
 
   sizeButtons.forEach((button) => {
-    const buttonSize = parseInt(button.dataset.size);
+    const buttonSize = Number.parseInt(button.dataset.size, 10);
     const shouldDisable =
       paletteBaseMode === "image" &&
       !!uploadedBaseImage?.dataUrl &&
@@ -1549,9 +1553,7 @@ async function refreshImageDerivedControls() {
   if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
     setPaletteImageExtractionFeedback(false);
     updatePaletteSizeButtonsAvailability();
-    updatePaletteRegenerateButtonAvailability();
-    updatePaletteSurpriseButtonAvailability();
-    updatePaletteInspirationButtonAvailability();
+    updatePaletteActionButtonsAvailability();
 
     if (typeof updateRegenerateButtonsAvailability === "function") {
       updateRegenerateButtonsAvailability();
@@ -1571,9 +1573,7 @@ async function refreshImageDerivedControls() {
   }
 
   updatePaletteSizeButtonsAvailability(clusters.length);
-  updatePaletteRegenerateButtonAvailability(clusters.length);
-  updatePaletteSurpriseButtonAvailability(clusters.length);
-  updatePaletteInspirationButtonAvailability(clusters.length);
+  updatePaletteActionButtonsAvailability(clusters.length);
 
   if (typeof updateRegenerateButtonsAvailability === "function") {
     updateRegenerateButtonsAvailability();
@@ -2181,7 +2181,7 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
 function setPaletteSize(size) {
   paletteSize = size;
   sizeButtons.forEach((button) => {
-    button.classList.toggle("active", parseInt(button.dataset.size) === size);
+    button.classList.toggle("active", Number.parseInt(button.dataset.size, 10) === size);
   });
 }
 
@@ -2271,15 +2271,15 @@ async function handlePaletteSizeButtonClick(button) {
     button.classList.add("suppress-hover");
   }
 
-  const nextSize = parseInt(button.dataset.size);
+  const nextSize = Number.parseInt(button.dataset.size, 10);
   setPaletteSize(nextSize);
   await applyPaletteSizeChange(nextSize);
 }
 
 sizeButtons.forEach((button) => {
-  button.onclick = () => {
+  button.addEventListener("click", () => {
     void handlePaletteSizeButtonClick(button);
-  };
+  });
   button.addEventListener("mouseleave", () => {
     button.classList.remove("suppress-hover");
   });
@@ -2344,14 +2344,18 @@ function handleTemperatureButtonClick(type, button) {
 }
 
 if (warmBtn) {
-  warmBtn.onclick = () => handleTemperatureButtonClick("warm", warmBtn);
+  warmBtn.addEventListener("click", () => {
+    handleTemperatureButtonClick("warm", warmBtn);
+  });
   warmBtn.addEventListener("mouseleave", () => {
     warmBtn.classList.remove("suppress-hover");
   });
 }
 
 if (coolBtn) {
-  coolBtn.onclick = () => handleTemperatureButtonClick("cool", coolBtn);
+  coolBtn.addEventListener("click", () => {
+    handleTemperatureButtonClick("cool", coolBtn);
+  });
   coolBtn.addEventListener("mouseleave", () => {
     coolBtn.classList.remove("suppress-hover");
   });
@@ -2360,18 +2364,18 @@ if (coolBtn) {
 // RESET
 
 if (resetPaletteBtn) {
-  resetPaletteBtn.onclick = () => {
+  resetPaletteBtn.addEventListener("click", () => {
     // Reload page to reset app state
     window.location.reload();
-  };
+  });
 }
 
 // GENERATE
 
 if (generateBtn) {
-  generateBtn.onclick = () => {
+  generateBtn.addEventListener("click", () => {
     void generatePalette();
-  };
+  });
 }
 
 function getRandomSteppedValue(min = 0, max = 100, step = 5) {
@@ -2652,7 +2656,7 @@ function setupSurpriseButton() {
     return;
   }
 
-  surpriseBtn.onclick = () => {
+  surpriseBtn.addEventListener("click", () => {
     if (surpriseBtn.disabled) {
       return;
     }
@@ -2663,7 +2667,7 @@ function setupSurpriseButton() {
     }
 
     void surpriseTemperaturePalette();
-  };
+  });
 }
 
 function clampControlValue(value, min, max) {
@@ -2997,7 +3001,7 @@ function getPinnedPaletteEntriesSnapshot() {
       index: entry.index,
       hex: controlsNormalizeHexColor(entry.hex),
     }))
-    .filter((entry) => /^#[0-9A-F]{6}$/.test(entry.hex));
+    .filter((entry) => isValidPaletteHex(entry.hex));
 }
 
 function mergePaletteWithPinnedColors(nextPalette, pinnedEntries = []) {
@@ -3015,7 +3019,7 @@ function mergePaletteWithPinnedColors(nextPalette, pinnedEntries = []) {
     }
 
     const normalizedHex = controlsNormalizeHexColor(entry.hex);
-    if (!/^#[0-9A-F]{6}$/.test(normalizedHex) || usedColors.has(normalizedHex)) {
+    if (!isValidPaletteHex(normalizedHex) || usedColors.has(normalizedHex)) {
       return;
     }
 
@@ -3041,7 +3045,7 @@ function mergePaletteWithPinnedColors(nextPalette, pinnedEntries = []) {
     colorCursor += 1;
   }
 
-  return mergedPalette.filter((color) => /^#[0-9A-F]{6}$/.test(color));
+  return mergedPalette.filter((color) => isValidPaletteHex(color));
 }
 
 function commitGeneratedPalette(nextPalette, options = {}) {

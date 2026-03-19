@@ -119,57 +119,60 @@
 })();
 
 // MENU TAB FUNCTIONALITY
-const views = document.querySelectorAll(".view-tab");
-const navButtons = document.querySelectorAll("nav button");
+const DEFAULT_VIEW_NAME = "palette_generator";
+const views = Array.from(document.querySelectorAll(".view-tab"));
+const navButtons = Array.from(document.querySelectorAll("nav button"));
+
+function resolveViewName(name) {
+  const normalizedName = String(name ?? "").trim();
+  const hasMatchingView = views.some((view) => view.id === normalizedName);
+  return hasMatchingView ? normalizedName : DEFAULT_VIEW_NAME;
+}
+
+// ACTIVE MENU BUTTON
+function updateActiveMenuButton(view) {
+  navButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+}
 
 // Main function to show the correct view based on the current target name.
 function showView(name) {
+  const resolvedViewName = resolveViewName(name);
 
-  views.forEach(v => v.classList.remove("active"));
+  views.forEach((view) => {
+    view.classList.toggle("active", view.id === resolvedViewName);
+  });
 
-  const target = document.getElementById(name);
-  if (target) {
-    target.classList.add("active");
-  }
-  updateActiveMenuButton(name);
+  updateActiveMenuButton(resolvedViewName);
+  return resolvedViewName;
+}
+
+function syncViewFromLocation() {
+  return showView(location.hash.replace("#", ""));
 }
 
 // Click on menu: update URL without triggering the browser's anchor jump.
 navButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
-    const target = btn.dataset.view;
-    if (!target) {
+    if (!btn.dataset.view) {
       return;
     }
 
-    showView(target);
-    history.replaceState(null, "", `#${target}`);
+    const targetView = showView(btn.dataset.view);
+    history.replaceState(null, "", `#${targetView}`);
     window.scrollTo({ top: 0, behavior: "auto" });
   });
 });
 
 // HASH CHANGE VIEW HANDLER
-window.addEventListener("hashchange", () => {
-  const view = location.hash.replace("#", "");
-  showView(view);
-});
+window.addEventListener("hashchange", syncViewFromLocation);
 
 // INITIAL LOAD
-window.addEventListener("DOMContentLoaded", () => {
-
-  const view = location.hash.replace("#", "") || "palette_generator";
-  showView(view);
-  updateActiveMenuButton(view);
-
-});
-
-// ACTIVE MENU BUTTON
-function updateActiveMenuButton(view) {
-  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
-  const activeBtn = document.querySelector(`nav button[data-view="${view}"]`);
-  if (activeBtn) {
-    activeBtn.classList.add("active");
-  }
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", syncViewFromLocation, { once: true });
+} else {
+  syncViewFromLocation();
 }
 
 
