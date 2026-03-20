@@ -1,0 +1,582 @@
+/* Design system: tokens, base elements and shared UI primitives. */
+
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&display=swap');
+
+/* =============================== */
+/* Design Tokens                   */
+/* =============================== */
+:root {
+  --primary: #454545;
+  --secondary: #594d4d;
+  --accent: #916f53;
+  --accent-pale: #B8A088;
+  --on-accent: #ffffff;
+  --grey: #999999;
+  --neutral: #f2f2f2;
+  --surface: #f3f4f6;
+  --shadow: #cfd5e0;
+  --warm: #f5873b;
+  --cool: #00b4d8;
+  --content-max-width: 1100px;
+  --danger: #ce1c1c;
+  --page-bg: #fdfcfb;
+  --surface-border-soft: rgba(89, 77, 77, 0.08);
+  --surface-border-muted: rgba(89, 77, 77, 0.14);
+  --radius-pill: 999px;
+  --control-disabled-opacity: 0.48;
+  --shadow-panel-soft: 0 var(--PX-10) 25px rgba(89, 77, 77, 0.08);
+  --tooltip-bg: var(--primary);
+  --tooltip-fg: var(--on-accent);
+  --tooltip-hidden-transform: translateX(-50%) translateY(var(--PX-10));
+  --tooltip-visible-transform: translateX(-50%) translateY(0);
+  --transition-interactive-colors: background-color 220ms ease, color 220ms ease, box-shadow 220ms ease;
+  --transition-icon-colors: color 220ms ease, stroke 220ms ease;
+  --transition-tooltip:
+    opacity var(--duration-ui) ease,
+    visibility var(--duration-ui) ease,
+    transform var(--duration-ui) ease;
+  --pin-color-outline: #ADADAD;
+  --pin-color-filled: #DBDBDB;
+
+  --PX-1: 1px;
+  --PX-2: 2px;
+  --PX-4: 4px;
+  --PX-6: 6px;
+  --PX-8: 8px;
+  --PX-10: 10px;
+  --PX-12: 12px;
+  --PX-14: 14px;
+  --PX-16: 16px;
+  --PX-18: 18px;
+  --PX-20: 20px;
+  --PX-22: 22px;
+  --PX-24: 24px;
+  --PX-30: 30px;
+  --PX-40: 40px;
+
+  --duration-fast: 0.2s;
+  --duration-ui: 200ms;
+}
+
+
+/* =============================== */
+/* Base Elements                   */
+/* =============================== */
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  color: var(--primary);
+  background-color: var(--page-bg);
+  overflow-x: hidden;
+}
+
+body * {
+  font-family: "Figtree", sans-serif;
+  font-size: 17px;
+  letter-spacing: .3px;
+  line-height: 1.4;
+}
+
+h1 {
+  font-size: var(--PX-24);
+}
+
+h2 {
+  font-size: var(--PX-22);
+}
+
+hr {
+  border: none;
+  height: var(--PX-1);
+  background: var(--shadow);
+}
+
+code {
+  font-family: "Google Sans Code", monospace;
+  background: var(--neutral);
+  color: var(--secondary);
+  padding: 2px 6px;
+  border-radius: var(--PX-6);
+  font-size: var(--PX-14);
+}
+
+.sw-subtitle {
+  opacity: 0.7;
+  color: var(--secondary) !important;
+}
+
+
+/* =============================== */
+/* Buttons (General)               */
+/* =============================== */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--PX-6);
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: var(--PX-16);
+}
+
+button[hidden] {
+  display: none !important;
+}
+
+.secondary-btn {
+  height: 36px;
+  padding: 0 var(--PX-20);
+  font-size: 14px;
+  background-color: var(--neutral);
+  color: var(--secondary);
+}
+
+.secondary-btn-history {
+  gap: var(--PX-8);
+  padding: 0 var(--PX-20);
+  transition: var(--transition-interactive-colors), opacity 220ms ease;
+}
+
+.secondary-btn-history:disabled svg,
+.secondary-btn-history:disabled span {
+  opacity: 0.9;
+}
+
+.secondary-btn-icon {
+  width: 36px;
+  padding: 0 0 0 3px;
+  border-radius: var(--radius-pill);
+}
+
+.secondary-btn-icon svg {
+  margin-left: 0;
+}
+
+.secondary-btn-icon .secondary-btn-icon-asset {
+  display: block;
+  width: var(--PX-18);
+  height: var(--PX-18);
+}
+
+.secondary-btn-icon:disabled svg,
+.secondary-btn-icon:disabled .secondary-btn-icon-asset,
+.secondary-btn-icon.is-disabled svg,
+.secondary-btn-icon.is-disabled .secondary-btn-icon-asset {
+  opacity: 0.9;
+}
+
+.secondary-btn#copyHexBtn {
+  transition: var(--transition-interactive-colors);
+}
+
+.secondary-btn#copyHexBtn span,
+.secondary-btn#copyHexBtn svg {
+  transition: var(--transition-icon-colors);
+}
+
+.copy-btn-icon {
+  padding-left: var(--PX-10);
+}
+
+.palette-regenerate-icon-btn {
+  padding-right: 3px;
+  padding-bottom: 1px;
+}
+
+:is(.secondary-btn-history:disabled, .secondary-btn-icon:disabled, .secondary-btn-icon.is-disabled) {
+  opacity: var(--control-disabled-opacity);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.secondary-btn svg,
+.temp svg {
+  margin-left: -4px;
+  color: var(--secondary);
+  stroke: var(--secondary);
+}
+
+.secondary-btn svg {
+  width: var(--PX-18);
+  height: var(--PX-18);
+}
+
+.temp svg {
+  width: var(--PX-24);
+  height: var(--PX-24);
+}
+
+.size,
+.temp {
+  border-radius: var(--PX-12);
+  background: var(--neutral);
+  color: var(--secondary);
+}
+
+.size {
+  min-width: 44px;
+}
+
+.temp {
+  min-width: 116px;
+  height: 40px;
+  padding: 0 var(--PX-14);
+  gap: var(--PX-8);
+  border: 1px solid var(--surface-border-muted);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(69, 69, 69, 0.82);
+  font-size: 15px;
+  font-weight: 500;
+  margin-right: var(--PX-10);
+  transition:
+    transform var(--duration-fast) ease,
+    opacity var(--duration-fast) ease,
+    filter var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+.temp span {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1;
+}
+
+.temp svg {
+  width: var(--PX-18);
+  height: var(--PX-18);
+  margin-left: 0;
+  color: rgba(145, 111, 83, 0.68);
+  stroke: currentColor;
+  transition:
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.size {
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid rgba(89, 77, 77, 0.12);
+  background: rgba(255, 255, 255, 0.5);
+  color: rgba(69, 69, 69, 0.78);
+  font-size: 15px;
+  font-weight: 500;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+.size.active {
+  border-color: rgba(145, 111, 83, 0.32);
+  background: rgba(145, 111, 83, 0.12);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px rgba(145, 111, 83, 0.08);
+}
+
+.size.is-disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+
+/* =============================== */
+/* Buttons (Hover)                 */
+/* =============================== */
+.secondary-btn:hover,
+.size:hover,
+.temp:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 var(--PX-10) 13px -7px var(--shadow);
+}
+
+.size:hover:not(.suppress-hover) {
+  filter: none;
+  transform: translateY(-1px);
+  border-color: rgba(145, 111, 83, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 16px rgba(89, 77, 77, 0.08);
+}
+
+.size.is-disabled:hover {
+  filter: none;
+  transform: none;
+  border-color: rgba(89, 77, 77, 0.12);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+}
+
+.temp:hover:not(.suppress-hover),
+.temp.active {
+  color: var(--primary);
+}
+
+.temp#warmBtn:hover:not(.suppress-hover),
+.temp.active#warmBtn {
+  border-color: rgba(245, 135, 59, 0.4);
+  background: linear-gradient(180deg, rgba(245, 135, 59, 0.16), rgba(245, 135, 59, 0.08));
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 135, 59, 0.08),
+    0 8px 18px rgba(245, 135, 59, 0.12);
+}
+
+.temp#warmBtn:hover:not(.suppress-hover) svg,
+.temp.active#warmBtn svg {
+  color: var(--warm);
+  stroke: var(--warm);
+  transform: scale(1.04);
+}
+
+.temp#coolBtn:hover:not(.suppress-hover),
+.temp.active#coolBtn {
+  border-color: rgba(0, 180, 216, 0.34);
+  background: linear-gradient(180deg, rgba(0, 180, 216, 0.15), rgba(0, 180, 216, 0.07));
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 180, 216, 0.08),
+    0 8px 18px rgba(0, 180, 216, 0.11);
+}
+
+.temp#coolBtn:hover:not(.suppress-hover) svg,
+.temp.active#coolBtn svg {
+  color: var(--cool);
+  stroke: var(--cool);
+  transform: scale(1.04);
+}
+
+.temp.is-saturation-locked {
+  opacity: 0.48;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+  box-shadow: none;
+  color: var(--accent-pale);
+  border-color: rgba(91, 102, 117, 0.22);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.temp.is-saturation-locked svg {
+  color: var(--accent-pale) !important;
+  stroke: var(--accent-pale) !important;
+}
+
+.temp.is-saturation-locked:hover {
+  filter: grayscale(0.35);
+  box-shadow: none;
+}
+
+
+/* =============================== */
+
+.description {
+  margin-top: var(--PX-10);
+  color: var(--secondary);
+}
+
+/* =============================== */
+/* Tooltip                         */
+/* =============================== */
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + var(--PX-12));
+  left: 50%;
+  transform: var(--tooltip-hidden-transform);
+  background-color: var(--tooltip-bg);
+  color: var(--tooltip-fg);
+  padding: var(--PX-8) var(--PX-12);
+  border-radius: var(--PX-6);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition-tooltip);
+  pointer-events: none;
+  box-shadow: 0 4px var(--PX-12) var(--shadow);
+  z-index: 1000;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--tooltip-bg);
+}
+
+.secondary-btn#surpriseBtn,
+.secondary-btn#paletteUndoBtn,
+.secondary-btn#paletteRedoBtn,
+.secondary-btn#resetPaletteBtn,
+.secondary-btn#copyHexBtn,
+.secondary-btn#paletteRegenerateBtn,
+.secondary-btn#paletteInspirationBtn {
+  position: relative;
+}
+
+:is(
+  .lossDetail-wrap,
+  .filter-copy-btn,
+  .color-action-btn,
+  .color-pin-btn,
+  .history-color,
+  .secondary-btn#surpriseBtn,
+  .secondary-btn#paletteUndoBtn,
+  .secondary-btn#paletteRedoBtn,
+  .secondary-btn#resetPaletteBtn,
+  .secondary-btn#copyHexBtn,
+  .secondary-btn#paletteRegenerateBtn,
+  .secondary-btn#paletteInspirationBtn
+):is(:hover, :focus-visible, :focus-within, .show-feedback) .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: var(--tooltip-visible-transform);
+}
+
+.secondary-btn#copyHexBtn .tooltip.is-copied-feedback {
+  background-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.secondary-btn#copyHexBtn .tooltip.is-copied-feedback::after {
+  border-top-color: var(--accent);
+}
+
+.secondary-btn#resetPaletteBtn .tooltip {
+  top: calc(100% + var(--PX-12));
+  left: -18px;
+  bottom: auto;
+  transform: translateX(-50%) translateY(calc(-1 * var(--PX-10)));
+}
+
+.secondary-btn#resetPaletteBtn .tooltip::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--tooltip-bg);
+}
+
+
+/* =============================== */
+/* Brightness                      */
+/* =============================== */
+.range-labels,
+.brightness-labels,
+.saturation-labels {
+  display: flex;
+  gap: var(--PX-14);
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(89, 77, 77, 0.1);
+  border-radius: var(--PX-16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(243, 244, 246, 0.86));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.control-group-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--PX-10);
+  font-weight: 400;
+  margin: 0 0 var(--PX-10);
+}
+
+.control-value {
+  color: var(--accent);
+  font-size: var(--PX-16);
+  font-weight: 600;
+}
+
+.range-icon,
+.brightness-icon,
+.saturation-icon {
+  width: var(--PX-24);
+  height: var(--PX-24);
+  flex-shrink: 0;
+  transform-origin: center;
+  opacity: 0.72;
+  transition: opacity var(--duration-fast) ease;
+}
+
+#brightnessControlGroup,
+#saturationControlGroup {
+  transform-origin: center;
+}
+
+#saturationControlGroup.needs-attention {
+  animation: saturation-attention 0.38s ease;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 200px;
+  --range-active-color: var(--accent);
+  --range-thumb-color: #f7efe8;
+}
+
+
+/* =============================== */
+/* Range Track (WebKit Browsers)   */
+/* =============================== */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 200px;
+  background: linear-gradient(to right,
+      var(--range-active-color) 0%,
+      var(--range-active-color) var(--value, 50%),
+      rgba(207, 213, 224, 0.95) var(--value, 50%),
+      rgba(207, 213, 224, 0.95) 100%);
+}
+
+
+/* =============================== */
+/* Range Thumb (WebKit Browsers)   */
+/* =============================== */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--range-thumb-color);
+  border: 2px solid rgba(145, 111, 83, 0.22);
+  border-radius: 50%;
+  box-shadow:
+    0 2px 8px rgba(89, 77, 77, 0.16),
+    0 0 0 3px rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  margin-top: -7px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--range-thumb-color);
+  border: 2px solid rgba(145, 111, 83, 0.22);
+  border-radius: 50%;
+  box-shadow:
+    0 2px 8px rgba(89, 77, 77, 0.16),
+    0 0 0 3px rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+

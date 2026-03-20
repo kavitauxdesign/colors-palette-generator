@@ -1,13 +1,13 @@
-# SHIFTA·HEX — Version 2.1.0
+# Classic·HEX — Version 2.2.0
 
-A color palette generator built with Vanilla JavaScript, with support for temperature-based generation, image-based palettes, inspiration mode, and palette history tools.
+A small suite of color tools built with Vanilla JavaScript. The current release includes a palette generator and a `HEX to CSS filter` converter, both mounted as mini-apps inside a shared front-end shell.
 
 ---
 
 # Table of Contents
 
-- [Introduction](#introduction)
 - [Live Version](#live-version)
+- [Mini-apps](#mini-apps)
 - [Features](#features)
 - [Visual Design](#visual-design)
 - [Implementation](#implementation)
@@ -21,9 +21,20 @@ A color palette generator built with Vanilla JavaScript, with support for temper
 
 Live version:
 
-```
+```text
 https://kavita.es/classic-hex
 ```
+
+---
+
+# Mini-apps
+
+The project currently contains two tools:
+
+- `Palette Generator`, focused on building and iterating on palettes with temperature, image, inspiration, and history workflows
+- `HEX to CSS filter`, focused on converting a target color into the closest CSS `filter` chain for recoloring SVG assets
+
+Both views live inside the same page and share a small shell for navigation, script bootstrapping, clipboard handling, and color state.
 
 ---
 
@@ -31,6 +42,7 @@ https://kavita.es/classic-hex
 
 The application allows users to:
 
+- switch between mini-apps from a shared header navigation
 - generate palettes from `Temperature mode` or `Image mode`
 - choose warm, cool, or mixed temperature behavior
 - adjust brightness and saturation
@@ -45,6 +57,10 @@ The application allows users to:
 - copy individual HEX values or the full palette
 - use `Undo / Redo`
 - store palette history during the session
+- convert `HEX`, `rgb()`, `hsl()`, or CSS named colors into the closest CSS filter
+- preview the original target color and the filtered SVG result side by side
+- copy the final CSS filter code
+- reuse the latest active palette color inside the filter tool through shared color state
 
 ---
 
@@ -64,39 +80,39 @@ The interface was primarily designed for desktop computers with a mouse, but the
 
 We imagine this tool being used mostly by designers or developers during their work, so the most likely context of use would be a desktop environment.
 
-The interface contains three main sections.
+The interface is now organized around a shared shell plus two focused mini-app views.
 
-### Generator Controls
+### Shared Header and Navigation
 
-The left side of the interface contains the palette generator controls.
+At the top of the interface there is a sticky header.
 
-Here the user can define parameters for palette generation.
+It contains the project logo and the navigation used to move between the two mini-apps.
 
-### Palette Area
+This keeps the page-level chrome stable while each tool can keep its own workspace and controls.
+
+### Palette Generator View
+
+The palette generator view contains three main sections.
+
+The left side contains the generator controls.
 
 The main area displays the active palette.
-
-Each color appears as a color card that allows interaction such as copying the HEX value, editing the color, regenerating it or deleting it.
-
-### Palette History
 
 The bottom section stores previous versions of palettes generated during the session.
 
 Every change creates a new version in the history, which makes it quite difficult to accidentally lose previous palette combinations.
 
----
+### HEX to CSS Filter View
 
-## Sticky Top Bar
+The filter view is more compact and task-oriented.
 
-At the top of the interface there is a sticky bar.
+It combines the target color input, a live swatch, before-and-after previews, the computed CSS filter code, and a short explanation of the resulting `Loss` value.
 
-It contains two elements.
+### Reset Flow
 
-The first element is our logo (a small invented mark that simply references the cosmic theme of the project).
+The reset action is now part of the palette generator view itself instead of the global header.
 
-The second element is the Reset Palette button. This button clears the palette and the palette history.
-
-Its behavior is similar to refreshing the page, but it avoids forcing the user to reload the browser manually.
+This keeps the shared header focused on navigation while the reset button stays close to the palette workflow it affects.
 
 ---
 
@@ -106,64 +122,105 @@ Its behavior is similar to refreshing the page, but it avoids forcing the user t
 
 Structure of the project files:
 
-```
+```text
 index.html
-styles.css
+
+html/
+  index.template.html
+  apps/
+    palette-generator.html
+    hex-to-filter.html
 
 css/
-  style.css
+  design-system.css
+  layout.css
+  apps/
+    shared.css
+    palette-generator.css
+    hex-to-filter.css
 
 assets/
-fonts/
 
 js/
-  script-init.js
-
   app/
+    app-bootstrap.js
     app-constants.js
     app-dom.js
-    script-state.js
+    app-init.js
+    app-shell.js
 
-  features/
-    script-controls.js
-    script-cards.js
-    script-history.js
+  apps/
+    palette-generator/
+      palette-generator-app.js
+      palette-generator-card-helpers.js
+      palette-generator-card-names.js
+      palette-generator-cards.js
+      palette-generator-controls.js
+      palette-generator-core.js
+      palette-generator-history.js
+      palette-generator-image-analysis.js
+      palette-generator-image-palette.js
+      palette-generator-image-ui.js
+      palette-generator-state.js
+      palette-generator-temperature.js
+    hex-to-filter/
+      hex-to-filter-app.js
+      hex-to-filter-core.js
 
-  math/
-    app-color-utils.js
+  shared/
+    colors/
+      app-color-utils.js
+      color-names.js
+    services/
+      app-event-bus.js
+      app-registry.js
+      app-shared-colors.js
+      clipboard-service.js
 
-  lists/
-    color-names.js
+scripts/
+  build-index.js
 ```
 
-The JavaScript code is divided into several folders in order to keep responsibilities separated.
+The CSS is separated into layers: a design system, global layout, shared app styles, and app-specific stylesheets.
 
-- app contains application state and shared constants  
-- features contains logic for specific interface features  
-- math contains color utility functions and calculations  
-- lists contains static datasets used by the generator  
-
-At the beginning of development everything lived inside a single JavaScript file.
-
-Eventually that file grew to more than a thousand lines of code, which made refactoring absolutely necessary.
-
-We then divided the code into several modules to improve readability and maintainability.
+The JavaScript is also split by responsibility so each mini-app stays more isolated and easier to expand.
 
 The project still uses pure Vanilla JavaScript without frameworks such as React or Vue.
 
----
+## HTML Structure
+
+`index.html` is generated from `html/index.template.html` plus the mini-app partials in `html/apps/`.
+
+This keeps the shell layout separate from the markup of each tool and makes new mini-apps easier to add later.
+
+When you edit those source HTML files, regenerate the final page with:
+
+```bash
+node scripts/build-index.js
+```
+
+The runtime script loading was also simplified to a single entry point in `js/app/app-init.js`.
+
+## App Architecture
+
+The current front-end is organized around a very small shared shell:
+
+- `app-init.js` loads the script graph from one place
+- `app-shell.js` manages view changes and URL hash synchronization
+- `app-bootstrap.js` initializes each registered mini-app
+- `app-registry.js` provides a lightweight registry for those mini-apps
+- `app-event-bus.js` and `app-shared-colors.js` let tools communicate without tight coupling
+- `clipboard-service.js` keeps copy behavior consistent across tools
+
+This is much easier to maintain than the previous monolithic script structure and makes future mini-app additions more realistic.
 
 ## CSS Implementation
 
-The CSS approach is intentionally simple.
+The CSS approach stays intentionally lightweight.
 
-We did not try to simulate any large styling framework. Layout is handled using Flexbox.
+We use CSS variables for tokens, a small shared layout layer, and app-specific files instead of a large utility framework.
 
-We used CSS variables mainly for colors and for some recurring spacing values as a part of our small Design System.
-
-It is slightly funny that in a web application that generates color palettes, the interface itself uses very few fixed colors.
-
----
+That keeps each mini-app easier to evolve without turning the stylesheet into a single oversized file again.
 
 ## Typography and Assets
 
@@ -171,11 +228,9 @@ The project uses the Figtree typeface.
 
 The font is loaded from Google Fonts.
 
-The assets folder mainly contains icons.
+The assets folder mainly contains icons and small decorative images used by the UI.
 
-Some SVG elements are embedded directly in the HTML or JavaScript code. This makes it easier to change colors dynamically (for example on hover).
-
----
+Some SVG elements are embedded directly in the HTML or JavaScript code. This makes it easier to change colors dynamically, for example on hover.
 
 ## AI Assistance
 
@@ -183,7 +238,7 @@ During development we did not avoid using AI tools.
 
 We used them for different purposes.
 
-In some cases AI helped improve text or microcopy. However, we never used generated text directly.   We always wrote our own text first and then used AI mainly to polish the language.
+In some cases AI helped improve text or microcopy. However, we never used generated text directly. We always wrote our own text first and then used AI mainly to polish the language.
 
 AI was also helpful in certain mathematical parts of the project, particularly in calculations related to color conversions. This saved us a significant amount of time.
 
@@ -219,11 +274,11 @@ The temperature selector always has one option selected.
 
 Available options:
 
-- warm  
-- cool  
-- both  
+- warm
+- cool
+- both
 
-The option "both" simply means that the generator is free to choose colors from the entire color dataset.
+The option `both` simply means that the generator is free to choose colors from the entire color dataset.
 
 ---
 
@@ -293,7 +348,7 @@ If the user prefers, the color can then be edited manually using the color picke
 
 Some colors are restricted.
 
-For example pure black (#000000) cannot be added to the palette.
+For example pure black (`#000000`) cannot be added to the palette.
 
 Other small restrictions exist as well, but we prefer to leave those for curious users to discover while exploring the application.
 
@@ -309,13 +364,41 @@ Every change creates a new entry in the history.
 
 This includes:
 
-- regenerating a color  
-- editing a color  
-- deleting a color  
-- generating a completely new palette  
-- pinning or unpinning a color  
+- regenerating a color
+- editing a color
+- deleting a color
+- generating a completely new palette
+- pinning or unpinning a color
 
 Because of this it is very difficult to accidentally lose a palette configuration.
+
+---
+
+## HEX to CSS Filter
+
+The second mini-app converts a target color into the closest CSS filter chain that can reproduce that tone on a black SVG source.
+
+The tool accepts normalized `HEX` input, but it can also parse `rgb()`, `hsl()`, and CSS named colors before converting them internally.
+
+The workflow includes:
+
+- a target color text input and native color picker
+- a live swatch for the current target color
+- a before-and-after preview using an SVG asset
+- the computed CSS filter code ready to copy
+- a `Loss` indicator that describes how close the approximation is
+
+Because CSS filter combinations have real limitations, some colors remain harder to reproduce exactly. The app explains that directly in the UI so the user understands why a higher `Loss` value does not always mean the tool failed.
+
+---
+
+## Shared Color Flow
+
+The two mini-apps are loosely connected through shared color state.
+
+For example, when a user copies a HEX value from the palette generator, that color becomes the active shared color and can immediately feed the `HEX to CSS filter` tool.
+
+This makes the overall workflow feel connected without tightly coupling the internal logic of both tools.
 
 ---
 
@@ -329,4 +412,4 @@ This project is released under the MIT License.
 
 This project ended up being longer than we initially expected, both in terms of documentation and code.
 
-Regardless of the final result, the development process was genuinely fun and enriching. 🚀
+Regardless of the final result, the development process was genuinely fun and enriching.

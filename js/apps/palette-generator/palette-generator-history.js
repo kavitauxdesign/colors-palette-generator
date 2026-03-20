@@ -104,7 +104,7 @@ function formatHistoryTime(dateValue) {
 }
 
 function renderHistory() {
-  historyContainer.innerHTML = "";
+  historyContainer.replaceChildren();
 
   paletteHistory.forEach((entry, index) => {
     // Support both old and new history formats
@@ -163,23 +163,15 @@ function renderHistory() {
       try {
         await copyTextToClipboard(plainText);
 
-        const tooltip = copyHistoryBtn.querySelector(".tooltip");
-        if (tooltip) {
-          tooltip.textContent = "¡Copiado!";
-          copyHistoryBtn.classList.add("show-feedback");
-
-          if (historyCopyFeedbackTimeout) {
-            clearTimeout(historyCopyFeedbackTimeout);
-          }
-
-          historyCopyFeedbackTimeout = setTimeout(() => {
-            tooltip.textContent = HISTORY_COPY_TOOLTIP_DEFAULT;
-            copyHistoryBtn.classList.remove("show-feedback");
-            historyCopyFeedbackTimeout = null;
-          }, 2000);
+        if (historyCopyFeedbackTimeout) {
+          clearTimeout(historyCopyFeedbackTimeout);
         }
+
+        historyCopyFeedbackTimeout = showButtonCopyFeedback(copyHistoryBtn, {
+          defaultTooltipText: HISTORY_COPY_TOOLTIP_DEFAULT,
+        });
       } catch (error) {
-        alert("Could not copy palette values to clipboard.");
+        alert("No se han podido copiar los valores de la paleta.");
       }
     });
 
@@ -189,18 +181,18 @@ function renderHistory() {
     header.appendChild(titleGroup);
     header.appendChild(actions);
 
-    let row = document.createElement("div");
+    const row = document.createElement("div");
     row.className = "history-row";
 
     palette.forEach((color) => {
       const hex = normalizeHexColor(color);
       let historyColorCopyFeedbackTimeout = null;
 
-      let box = document.createElement("button");
+      const box = document.createElement("button");
       box.type = "button";
       box.className = "history-color";
       box.style.background = hex;
-      box.setAttribute("aria-label", `Copy ${hex}`);
+      box.setAttribute("aria-label", `Copiar ${hex}`);
 
       const tooltip = document.createElement("div");
       tooltip.className = "tooltip";
@@ -211,18 +203,13 @@ function renderHistory() {
         try {
           await copyTextToClipboard(hex);
 
-          tooltip.textContent = "¡Copiado!";
-          box.classList.add("show-feedback");
-
           if (historyColorCopyFeedbackTimeout) {
             clearTimeout(historyColorCopyFeedbackTimeout);
           }
 
-          historyColorCopyFeedbackTimeout = setTimeout(() => {
-            tooltip.textContent = "Copiar HEX";
-            box.classList.remove("show-feedback");
-            historyColorCopyFeedbackTimeout = null;
-          }, 2000);
+          historyColorCopyFeedbackTimeout = showButtonCopyFeedback(box, {
+            defaultTooltipText: "Copiar HEX",
+          });
         } catch (error) {
           alert("No se pudo copiar este valor HEX.");
         }
