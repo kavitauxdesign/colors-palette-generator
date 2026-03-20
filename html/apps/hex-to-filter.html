@@ -1,0 +1,110 @@
+<!-- ==============================  -->
+<!--       HEX TO CSS FILTER         -->
+<!-- =============================== -->
+<section id="hex_to_filter" class="view-tab view-tab-offset app-view" data-app="hex-to-filter">
+  <div class="app-view-shell">
+    <header class="app-view-hero">
+      <div class="app-view-meta">
+        <span class="app-view-kicker">Mini-app 02</span>
+        <h1>HEX to CSS Filter</h1>
+        <p class="description app-view-description">
+          Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
+          Útil para colorear iconos SVG mediante <code>filter</code>.
+        </p>
+      </div>
+    </header>
+
+    <div id="hex_to_code" class="filter-tool app-stack">
+      <div class="filter-tool-panel app-panel">
+        <div class="filter-target-card">
+          <button class="target-color-swatch" type="button" aria-label="Seleccionar color objetivo">
+            <span class="target-color-swatch-fill"></span>
+          </button>
+
+          <div class="filter-tool-form">
+            <label for="filterTarget" class="filter-tool-label">Color objetivo</label>
+            <div class="filter-tool-input-row">
+              <input id="filterTarget" class="target filter-tool-input" type="text" placeholder="HEX, rgb, hsl..."
+                value="#00a4d6" />
+            </div>
+            <p class="filter-tool-feedback" aria-live="polite"></p>
+          </div>
+
+          <input class="filter-target-picker" type="color" value="#00a4d6" aria-hidden="true" tabindex="-1" />
+        </div>
+
+        <div class="filter-tool-previews app-grid-2">
+          <div class="filter-preview-card">
+            <p class="filter-preview-title">Píxel real</p>
+            <p class="filter-preview-copy">
+              Base sobre la que se aplicará el filtro CSS.
+            </p>
+            <div class="filter-source-comparison">
+              <div class="pixel filterPixel"></div>
+
+              <div class="filter-applied-preview">
+                <div class="filter-source-stack">
+                  <img class="filter-source-icon" src="assets/paint-mark.svg" alt="Arbol de Navidad original" />
+                  <span class="filter-icon-label">Antes</span>
+                </div>
+
+                <span class="filter-source-arrow" aria-hidden="true">➞</span>
+
+                <div class="filter-source-stack">
+                  <img class="filter-source-icon filter-source-icon-after" src="assets/paint-mark.svg"
+                    alt="Arbol de Navidad con filtro aplicado" />
+                  <span class="filter-icon-label">Después</span>
+                </div>
+              </div>
+            </div>
+            <p class="filter-source-note">
+              El filtro ha de aplicarse sobre imágenes SVG de color negro puro, <code>#000</code>.
+            </p>
+          </div>
+
+          <div class="filter-result-card">
+            <div class="filter-result-header">
+              <p class="filter-preview-title">Código final</p>
+              <button class="secondary-btn filter-copy-btn" type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                </svg>
+                <span>Copiar</span>
+                <div class="tooltip">Copiar CSS a portapapeles</div>
+              </button>
+            </div>
+
+            <code class="filter-code-output">Aquí aparecerá el código CSS del filtro calculado.</code>
+          </div>
+        </div>
+
+        <div class="filter-tool-details app-stack">
+          <div class="lossDetail-wrap">
+            <p class="lossDetail lossDetail-emphasis"></p>
+            <div class="tooltip">Cuanto más bajo es este número, más cerca está el resultado del color objetivo.</div>
+          </div>
+          <div class="footer-loss-help">
+            <div class="footer-loss-help-wrap">
+              <button class="footer-loss-help-trigger" type="button">
+                ¿Por qué el Loss puede seguir alto?
+              </button>
+              <div class="footer-loss-help-popover">
+                <p class="footer-loss-help-title">Si el valor de Loss sigue siendo alto, normalmente no se debe a la
+                  necesidad de recalcular el filtro, sino a algunas limitaciones del método:</p>
+                <ul class="footer-loss-help-list">
+                  <li>Algunos colores son difíciles de aproximar únicamente mediante <code>filter</code>.</li>
+                  <li>Partir de negro puro (<code>#000</code>) limita el espacio de resultados posibles.</li>
+                  <li>La combinación de <code>invert</code>, <code>sepia</code>, <code>saturate</code>,
+                    <code>hue-rotate</code>, <code>brightness</code> y <code>contrast</code> no permite reproducir con
+                    exactitud todos los colores.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

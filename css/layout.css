@@ -113,19 +113,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--PX-10);
-  max-width: 78ch;
 }
 
 .app-view-heading {
   align-items: flex-start;
 }
 
-.app-view-description {
-  max-width: 70ch;
-}
-
 .app-view-kicker {
-  display: inline-flex;
+  display: none;
   align-items: center;
   width: fit-content;
   padding: 8px 12px;

@@ -109,6 +109,12 @@ Structure of the project files:
 ```text
 index.html
 
+html/
+  index.template.html
+  apps/
+    palette-generator.html
+    hex-to-filter.html
+
 css/
   design-system.css
   layout.css
@@ -122,6 +128,7 @@ fonts/
 
 js/
   app/
+    app-init.js
     app-bootstrap.js
     app-constants.js
     app-dom.js
@@ -151,6 +158,9 @@ js/
       app-registry.js
       app-shared-colors.js
       clipboard-service.js
+
+scripts/
+  build-index.js
 ```
 
 El CSS queda separado por capas: design system, layout global, estilos compartidos entre mini-apps y estilos específicos por mini-app.
@@ -158,6 +168,19 @@ El JavaScript también está dividido por responsabilidad para mantener cada min
 
 The project still uses pure Vanilla JavaScript without frameworks such as React or Vue.
 The difference is that the codebase is now organized around a small shared application shell plus isolated modules for each mini-app.
+
+## HTML Structure
+
+`index.html` is now generated from `html/index.template.html` plus the mini-app partials in `html/apps/`.
+This keeps the shell layout separate from the markup of each tool and makes new mini-apps easier to add later.
+
+When you edit those source HTML files, regenerate the final page with:
+
+```bash
+node scripts/build-index.js
+```
+
+The runtime script loading was also simplified to a single entry point in `js/app/app-init.js`.
 
 ---
 
