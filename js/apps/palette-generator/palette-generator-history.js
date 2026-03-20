@@ -106,7 +106,14 @@ function formatHistoryTime(dateValue) {
 function renderHistory() {
   historyContainer.replaceChildren();
 
-  paletteHistory.forEach((entry, index) => {
+  const historyEntries = paletteHistory
+    .map((entry, index) => ({
+      entry,
+      historyIndex: index,
+    }))
+    .reverse();
+
+  historyEntries.forEach(({ entry, historyIndex }) => {
     // Support both old and new history formats
     const palette = Array.isArray(entry) ? entry : entry.colors;
     const createdAt = Array.isArray(entry) ? null : entry.createdAt;
@@ -124,8 +131,8 @@ function renderHistory() {
     const title = document.createElement("h3");
     title.className = "history-title";
     title.textContent = isAlternative
-      ? `Paleta Alternativa ${index + 1}`
-      : `Paleta ${index + 1}`;
+      ? `Paleta Alternativa ${historyIndex + 1}`
+      : `Paleta ${historyIndex + 1}`;
 
     const time = document.createElement("span");
     time.className = "history-time";
@@ -150,7 +157,7 @@ function renderHistory() {
 
     editHistoryBtn.addEventListener("click", (event) => {
       event.stopPropagation();
-      loadPaletteVersionInGenerator(entry, { historyIndex: index });
+      loadPaletteVersionInGenerator(entry, { historyIndex });
     });
 
     copyHistoryBtn.addEventListener("click", async (event) => {
