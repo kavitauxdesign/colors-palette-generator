@@ -19,8 +19,8 @@ let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
 let isPaletteAdjustPanelOpen = false;
 const imagePanelTransitionMs = 320;
-const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml"]);
-const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg"];
+const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml", "image/webp"]);
+const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg", ".webp"];
 const IMAGE_EXTRACTION_ERROR_MESSAGE =
   "No se ha podido extraer colores. Has de intentar subir otra imagen.";
 const IMAGE_PALETTE_VARIANT_PROFILES = [

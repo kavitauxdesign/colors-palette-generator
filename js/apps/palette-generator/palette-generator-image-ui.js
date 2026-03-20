@@ -501,7 +501,7 @@ function openPaletteImageDropzone() {
 
 function handlePaletteImageFile(file) {
   if (!isAcceptedPaletteImageFile(file)) {
-    alert("Solo se permiten imágenes JPG, PNG o SVG.");
+    alert("Solo se permiten imágenes JPG, PNG, SVG o WEBP.");
     return;
   }
 
