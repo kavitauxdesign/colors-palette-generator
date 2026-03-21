@@ -77,25 +77,10 @@ const {
 } = window.AppConstants;
 
 const colorUtilsForState = window.AppColorUtils || {};
-const stateHexToRgb =
-  typeof colorUtilsForState.hexToRgb === "function"
-    ? colorUtilsForState.hexToRgb
-    : function fallbackHexToRgb(hex) {
-  const normalized = String(hex ?? "").trim().toUpperCase().replace("#", "");
-  const value =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((char) => char + char)
-          .join("")
-      : normalized;
-
-  return {
-    r: parseInt(value.slice(0, 2), 16),
-    g: parseInt(value.slice(2, 4), 16),
-    b: parseInt(value.slice(4, 6), 16),
-  };
-  };
+const stateCreateColor =
+  typeof colorUtilsForState.createColor === "function"
+    ? colorUtilsForState.createColor
+    : () => null;
 
 const COLOR_NAME_REFERENCES = Array.isArray(window.AppColorNames)
   ? window.AppColorNames
@@ -133,8 +118,7 @@ let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;
 let activeEditOriginalColor = "#000000";
 
-// Build RGB lookup once for faster color name search
-const COLOR_NAME_REFERENCES_RGB = COLOR_NAME_REFERENCES.map((entry) => ({
+const COLOR_NAME_REFERENCES_COLOR = COLOR_NAME_REFERENCES.map((entry) => ({
   ...entry,
-  rgb: stateHexToRgb(entry.hex),
+  color: stateCreateColor(entry.hex),
 }));

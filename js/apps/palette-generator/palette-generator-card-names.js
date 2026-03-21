@@ -1,20 +1,27 @@
 // Palette generator card naming and palette copy helpers.
 
+const colorUtilsForNames = window.AppColorUtils || {};
+const getColorDistanceForNames =
+  typeof colorUtilsForNames.getColorDistance === "function"
+    ? colorUtilsForNames.getColorDistance
+    : () => Infinity;
+
 function getNearestColorName(hex) {
   if (normalizeHexColor(hex) === "#FFFFFF") {
     return "Pure white";
   }
 
-  const target = hexToRgb(hex);
   let closestName = "Unknown";
   let minDistance = Infinity;
 
-  COLOR_NAME_REFERENCES_RGB.forEach((entry) => {
-    const candidate = entry.rgb;
-    const distance =
-      (target.r - candidate.r) ** 2 +
-      (target.g - candidate.g) ** 2 +
-      (target.b - candidate.b) ** 2;
+  COLOR_NAME_REFERENCES_COLOR.forEach((entry) => {
+    if (!entry.color) {
+      return;
+    }
+
+    const distance = getColorDistanceForNames(hex, entry.color, {
+      method: "deltae2000",
+    });
 
     if (distance < minDistance) {
       minDistance = distance;

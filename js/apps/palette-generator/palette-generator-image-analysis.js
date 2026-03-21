@@ -1,4 +1,15 @@
 // Palette generator image analysis: sampling, clustering and derived candidates.
+const imageAnalysisColorUtils = window.AppColorUtils || {};
+const imageAnalysisRgbToHex = imageAnalysisColorUtils.rgbToHex;
+const imageAnalysisGetRgbDistance = imageAnalysisColorUtils.getRgbDistance;
+
+if (
+  typeof imageAnalysisRgbToHex !== "function" ||
+  typeof imageAnalysisGetRgbDistance !== "function"
+) {
+  throw new Error("AppColorUtils helpers are required before palette-generator-image-analysis.js loads.");
+}
+
 function rotateImagePaletteCandidates(values, offset) {
   if (!Array.isArray(values) || values.length <= 1) {
     return Array.isArray(values) ? [...values] : [];
@@ -13,19 +24,11 @@ function rotateImagePaletteCandidates(values, offset) {
 }
 
 function rgbToHex(color) {
-  return `#${[color.r, color.g, color.b]
-    .map((channel) =>
-      clampControlValue(Math.round(channel), 0, 255).toString(16).padStart(2, "0")
-    )
-    .join("")
-    .toUpperCase()}`;
+  return imageAnalysisRgbToHex(color);
 }
 
 function getRgbDistanceBetween(colorA, colorB) {
-  const dr = colorA.r - colorB.r;
-  const dg = colorA.g - colorB.g;
-  const db = colorA.b - colorB.b;
-  return Math.sqrt(dr * dr + dg * dg + db * db);
+  return imageAnalysisGetRgbDistance(colorA, colorB);
 }
 
 function loadImageElement(dataUrl) {

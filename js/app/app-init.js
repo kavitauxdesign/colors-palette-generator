@@ -7,6 +7,7 @@
       "js/app/app-constants.js",
       "js/shared/services/app-registry.js",
       "js/shared/services/app-event-bus.js",
+      "js/vendor/color.global.min.js",
       "js/shared/colors/app-color-utils.js",
       "js/shared/services/clipboard-service.js",
       "js/shared/services/app-shared-colors.js",

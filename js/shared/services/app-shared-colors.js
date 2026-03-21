@@ -1,14 +1,13 @@
 // Shared color state that mini-apps can read from or publish to.
 (function initializeAppSharedColors() {
-  const colorUtils = window.AppColorUtils || {};
-  const normalizeHexColor =
-    typeof colorUtils.normalizeHexColor === "function"
-      ? colorUtils.normalizeHexColor
-      : (color) => String(color ?? "").trim().toUpperCase();
-  const isValidHexColor =
-    typeof colorUtils.isValidHexColor === "function"
-      ? colorUtils.isValidHexColor
-      : (hex) => /^#[0-9A-F]{6}$/.test(String(hex ?? "").trim().toUpperCase());
+  const {
+    normalizeHexColor,
+    isValidHexColor,
+  } = window.AppColorUtils || {};
+
+  if (typeof normalizeHexColor !== "function" || typeof isValidHexColor !== "function") {
+    throw new Error("AppColorUtils helpers are required before AppSharedColors loads.");
+  }
 
   let sharedState = {
     palette: [],

@@ -518,6 +518,9 @@ function setPaletteBaseMode(nextMode) {
   if (typeof updateRegenerateButtonsAvailability === "function") {
     updateRegenerateButtonsAvailability();
   }
+  if (typeof updateColorModeCardActionVisibility === "function") {
+    updateColorModeCardActionVisibility();
+  }
   if (typeof updateAddColorButtonState === "function") {
     updateAddColorButtonState();
   }

@@ -1,75 +1,30 @@
 // Palette generator card helpers: color utilities, accessibility and shared button UI.
 
-const colorUtilsForCards = window.AppColorUtils || {};
+const {
+  normalizeHexColor,
+  isValidHexColor,
+  hexToRgb,
+  hexToHsl,
+  getRelativeLuminance,
+  getContrastRatio: getContrastRatioForColors,
+  mixHexColors,
+  getReadableTextColor,
+  getRgbDistance: getRgbDistanceBetweenColors,
+} = window.AppColorUtils || {};
 
-const normalizeHexColor =
-  typeof colorUtilsForCards.normalizeHexColor === "function"
-    ? colorUtilsForCards.normalizeHexColor
-    : (color) => String(color ?? "").trim().toUpperCase();
-
-const isValidHexColor =
-  typeof colorUtilsForCards.isValidHexColor === "function"
-    ? colorUtilsForCards.isValidHexColor
-    : (hex) => /^#[0-9A-F]{6}$/.test(String(hex ?? "").trim().toUpperCase());
-
-const hexToRgb =
-  typeof colorUtilsForCards.hexToRgb === "function"
-    ? colorUtilsForCards.hexToRgb
-    : (hex) => {
-      const normalized = String(hex ?? "").trim().toUpperCase().replace("#", "");
-      const value =
-        normalized.length === 3
-          ? normalized
-              .split("")
-              .map((char) => char + char)
-              .join("")
-          : normalized;
-
-      return {
-        r: parseInt(value.slice(0, 2), 16),
-        g: parseInt(value.slice(2, 4), 16),
-        b: parseInt(value.slice(4, 6), 16),
-      };
-    };
-
-const hexToHsl =
-  typeof colorUtilsForCards.hexToHsl === "function"
-    ? colorUtilsForCards.hexToHsl
-    : (hex) => {
-      const rgb = hexToRgb(hex);
-      const rNorm = rgb.r / 255;
-      const gNorm = rgb.g / 255;
-      const bNorm = rgb.b / 255;
-      const max = Math.max(rNorm, gNorm, bNorm);
-      const min = Math.min(rNorm, gNorm, bNorm);
-      const delta = max - min;
-
-      let h = 0;
-      let s = 0;
-      const l = (max + min) / 2;
-
-      if (delta !== 0) {
-        s = delta / (1 - Math.abs(2 * l - 1));
-
-        if (max === rNorm) {
-          h = 60 * (((gNorm - bNorm) / delta) % 6);
-        } else if (max === gNorm) {
-          h = 60 * ((bNorm - rNorm) / delta + 2);
-        } else {
-          h = 60 * ((rNorm - gNorm) / delta + 4);
-        }
-      }
-
-      if (h < 0) {
-        h += 360;
-      }
-
-      return {
-        h,
-        s: s * 100,
-        l: l * 100,
-      };
-    };
+if (
+  typeof normalizeHexColor !== "function" ||
+  typeof isValidHexColor !== "function" ||
+  typeof hexToRgb !== "function" ||
+  typeof hexToHsl !== "function" ||
+  typeof getRelativeLuminance !== "function" ||
+  typeof getContrastRatioForColors !== "function" ||
+  typeof mixHexColors !== "function" ||
+  typeof getReadableTextColor !== "function" ||
+  typeof getRgbDistanceBetweenColors !== "function"
+) {
+  throw new Error("AppColorUtils helpers are required before palette-generator-card-helpers.js loads.");
+}
 
 const writeTextToClipboard =
   window.AppClipboard?.writeText || window.copyTextToClipboard;
@@ -87,6 +42,9 @@ function syncCurrentPaletteFromDom() {
     source: "palette-generator",
   });
   refreshColorCardNames();
+  if (typeof updateColorModeCardActionVisibility === "function") {
+    updateColorModeCardActionVisibility();
+  }
   updateRegenerateButtonsAvailability();
   if (typeof updatePaletteActionButtonsAvailability === "function") {
     updatePaletteActionButtonsAvailability();
@@ -149,45 +107,12 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function srgbChannelToLinear(channel) {
-  const normalized = channel / 255;
-  if (normalized <= 0.03928) {
-    return normalized / 12.92;
-  }
-
-  return ((normalized + 0.055) / 1.055) ** 2.4;
-}
-
 function getRelativeLuminanceFromHex(hex) {
-  const { r, g, b } = hexToRgb(hex);
-  const rLin = srgbChannelToLinear(r);
-  const gLin = srgbChannelToLinear(g);
-  const bLin = srgbChannelToLinear(b);
-
-  return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+  return getRelativeLuminance(hex);
 }
 
 function getContrastRatio(hexA, hexB) {
-  const luminanceA = getRelativeLuminanceFromHex(hexA);
-  const luminanceB = getRelativeLuminanceFromHex(hexB);
-  const lighter = Math.max(luminanceA, luminanceB);
-  const darker = Math.min(luminanceA, luminanceB);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function blendHexColors(baseHex, mixHex, mixAmount) {
-  const amount = clamp(mixAmount, 0, 1);
-  const base = hexToRgb(baseHex);
-  const mix = hexToRgb(mixHex);
-
-  const r = Math.round(base.r + (mix.r - base.r) * amount);
-  const g = Math.round(base.g + (mix.g - base.g) * amount);
-  const b = Math.round(base.b + (mix.b - base.b) * amount);
-
-  return `#${[r, g, b]
-    .map((channel) => channel.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase()}`;
+  return getContrastRatioForColors(hexA, hexB);
 }
 
 function getAccessibleColorNameStyle(backgroundHex) {
@@ -198,12 +123,12 @@ function getAccessibleColorNameStyle(backgroundHex) {
   const contrastFallbackTarget = 2.8;
   const extremeColor = needsLighterText ? "#FFFFFF" : "#000000";
   let mixAmount = 0.34;
-  let candidate = blendHexColors(normalized, extremeColor, mixAmount);
+  let candidate = mixHexColors(normalized, extremeColor, mixAmount);
   let contrast = getContrastRatio(candidate, normalized);
 
   while (contrast < contrastTarget && mixAmount < 0.92) {
     mixAmount += 0.06;
-    candidate = blendHexColors(normalized, extremeColor, mixAmount);
+    candidate = mixHexColors(normalized, extremeColor, mixAmount);
     contrast = getContrastRatio(candidate, normalized);
   }
 
@@ -238,9 +163,7 @@ function applyAccessibleColorNameStyle(colorNameElement, backgroundHex) {
 }
 
 function getReadableTooltipTextColor(backgroundHex) {
-  const { r, g, b } = hexToRgb(backgroundHex);
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 140 ? "#000000" : "#FFFFFF";
+  return getReadableTextColor(backgroundHex);
 }
 
 function getAccessibleOverlayIconStyle(backgroundHex) {
@@ -275,10 +198,7 @@ function getAdaptiveMinColorDistance(existingCount, attempt) {
 }
 
 function getRgbDistance(colorA, colorB) {
-  const dr = colorA.r - colorB.r;
-  const dg = colorA.g - colorB.g;
-  const db = colorA.b - colorB.b;
-  return Math.sqrt(dr * dr + dg * dg + db * db);
+  return getRgbDistanceBetweenColors(colorA, colorB);
 }
 
 function isColorTooCloseToExisting(candidateHex, existingColors, attempt) {
@@ -287,11 +207,9 @@ function isColorTooCloseToExisting(candidateHex, existingColors, attempt) {
   }
 
   const minDistance = getAdaptiveMinColorDistance(existingColors.size, attempt);
-  const candidateRgb = hexToRgb(candidateHex);
 
   for (const existingHex of existingColors) {
-    const existingRgb = hexToRgb(existingHex);
-    if (getRgbDistance(candidateRgb, existingRgb) < minDistance) {
+    if (getRgbDistance(candidateHex, existingHex) < minDistance) {
       return true;
     }
   }

@@ -32,6 +32,10 @@ function normalizePaletteBaseColorInput(value) {
 }
 
 function normalizePaletteBaseCssColor(value) {
+  if (typeof window.AppColorUtils?.parseCssColor === "function") {
+    return window.AppColorUtils.parseCssColor(value);
+  }
+
   const normalizedInputValue = normalizePaletteBaseColorInput(value);
   if (!normalizedInputValue) {
     return null;
@@ -112,7 +116,34 @@ function applyPaletteBaseColorInputState(parsedColor, options = {}) {
   }
 
   setPaletteBaseColorFeedback("");
+  syncSelectedPaletteBaseColorCard();
   return true;
+}
+
+function syncSelectedPaletteBaseColorCard() {
+  if (
+    paletteBaseMode !== "color" ||
+    currentPalette.length === 0 ||
+    typeof getColorCards !== "function" ||
+    typeof setCardColor !== "function" ||
+    typeof syncCurrentPaletteFromDom !== "function"
+  ) {
+    return;
+  }
+
+  const baseCard = Array.from(getColorCards())[0];
+  if (!baseCard) {
+    return;
+  }
+
+  setCardColor(baseCard, selectedPaletteBaseColor);
+  if (typeof setCardPinnedState === "function") {
+    setCardPinnedState(baseCard, true);
+  }
+  if (typeof updateColorModeCardActionVisibility === "function") {
+    updateColorModeCardActionVisibility();
+  }
+  syncCurrentPaletteFromDom();
 }
 
 function getPaletteBaseColorSnapshot() {
@@ -384,8 +415,9 @@ function createColorModeCandidateColor(baseHsl, hueOffset, index, variantIndex, 
 }
 
 function getMonochromaticScalePerceivedLightness(hex) {
-  const rgb = controlsHexToRgb(hex);
-  return ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 2550;
+  return typeof window.AppColorUtils?.getPerceivedLightness === "function"
+    ? window.AppColorUtils.getPerceivedLightness(hex)
+    : controlsHexToHsl(hex).l;
 }
 
 function getMonochromaticScaleDirection(baseColor) {
@@ -401,92 +433,61 @@ function getMonochromaticScaleDirection(baseColor) {
 }
 
 function getMonochromaticScaleTarget(baseHsl, settings, direction) {
-  const brightnessBias = (settings.brightness - 50) / 50;
+  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
 
   if (direction === "light") {
+    const darkerTintLightness = clampControlValue(baseHsl.l + 12, 58, 82);
+    const brighterTintLightness = 98;
+    const darkerTintSaturation = clampControlValue(
+      Math.max(16, baseHsl.s * 0.32) + (settings.saturation - 50) * 0.08,
+      10,
+      32
+    );
+    const brighterTintSaturation = clampControlValue(
+      5 + settings.saturation * 0.08,
+      4,
+      16
+    );
+
     return {
-      lightness: clampControlValue(95 + brightnessBias * 1.8, 92, 98),
-      saturation: clampControlValue(5 + settings.saturation * 0.08, 4, 16),
+      lightness: clampControlValue(
+        blendControlValue(darkerTintLightness, brighterTintLightness, brightnessRatio),
+        Math.max(baseHsl.l + 6, 48),
+        brighterTintLightness
+      ),
+      saturation: clampControlValue(
+        blendControlValue(darkerTintSaturation, brighterTintSaturation, brightnessRatio),
+        4,
+        32
+      ),
     };
   }
 
+  const darkestShadeLightness = 2;
+  const softerShadeLightness = clampControlValue(baseHsl.l - 18, 18, 34);
+  const darkestShadeSaturation = clampControlValue(
+    Math.max(14, baseHsl.s * 0.44) + (settings.saturation - 50) * 0.12,
+    10,
+    42
+  );
+  const softerShadeSaturation = clampControlValue(
+    Math.max(9, baseHsl.s * 0.24) + (settings.saturation - 50) * 0.06,
+    8,
+    28
+  );
+
   return {
-    lightness: clampControlValue(6 + brightnessBias * 1.4, 4, 10),
+    lightness: clampControlValue(
+      blendControlValue(darkestShadeLightness, softerShadeLightness, brightnessRatio),
+      darkestShadeLightness,
+      Math.max(baseHsl.l - 8, 12)
+    ),
     saturation: clampControlValue(
-      Math.max(10, baseHsl.s * 0.34) + (settings.saturation - 50) * 0.08,
+      blendControlValue(darkestShadeSaturation, softerShadeSaturation, brightnessRatio),
       8,
-      34
+      42
     ),
   };
-}
-
-function getMonochromaticScaleProgress(stepIndex, stepCount) {
-  const progress = clampControlValue(stepIndex / Math.max(stepCount, 1), 0, 1);
-  return progress * progress * (3 - (2 * progress));
-}
-
-function createMonochromaticScaleColor(
-  baseHsl,
-  stepIndex,
-  stepCount,
-  settings,
-  direction,
-  target,
-  usedColors
-) {
-  const progress = getMonochromaticScaleProgress(stepIndex, stepCount);
-  const baseSaturation = clampControlValue(
-    blendControlValue(baseHsl.s, settings.saturation, 0.22),
-    4,
-    96
-  );
-  const lightness = blendControlValue(baseHsl.l, target.lightness, progress);
-  const saturationProgress = direction === "light"
-    ? Math.pow(progress, 0.9)
-    : Math.pow(progress, 1.05);
-  const midScaleSaturationLift = direction === "dark"
-    ? Math.sin(progress * Math.PI) * Math.min(6, baseSaturation * 0.08)
-    : 0;
-  const saturation = clampControlValue(
-    blendControlValue(baseSaturation, target.saturation, saturationProgress) + midScaleSaturationLift,
-    4,
-    96
-  );
-  const adjustments = [
-    { lightness: 0, saturation: 0 },
-    direction === "light"
-      ? { lightness: 1, saturation: -1 }
-      : { lightness: -1, saturation: 1 },
-    direction === "light"
-      ? { lightness: 2, saturation: -2 }
-      : { lightness: -2, saturation: 2 },
-    direction === "light"
-      ? { lightness: -1, saturation: -2 }
-      : { lightness: 1, saturation: 2 },
-    direction === "light"
-      ? { lightness: 3, saturation: -3 }
-      : { lightness: -3, saturation: 3 },
-  ];
-
-  for (const adjustment of adjustments) {
-    const candidate = controlsNormalizeHexColor(
-      controlsHslToHex(
-        baseHsl.h,
-        clampControlValue(saturation + adjustment.saturation, 4, 96),
-        direction === "light"
-          ? clampControlValue(lightness + adjustment.lightness, baseHsl.l, target.lightness)
-          : clampControlValue(lightness + adjustment.lightness, target.lightness, baseHsl.l)
-      )
-    );
-
-    if (usedColors.has(candidate) || isDisallowedColor(candidate)) {
-      continue;
-    }
-
-    return candidate;
-  }
-
-  return null;
 }
 
 // Monochromatic palettes stay on the same hue and extend from the base color toward tints or shades.
@@ -499,32 +500,54 @@ function buildMonochromaticColorModePalette(targetCount, settings, options = {})
   const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
   const baseHex = parsedBaseColor.hex;
   const baseHsl = parsedBaseColor.hsl;
-  const palette = [baseHex];
-  const usedColors = new Set([baseHex]);
-  const totalScaleSteps = Math.max(0, targetCount - 1);
   const direction = getMonochromaticScaleDirection(parsedBaseColor);
   const target = getMonochromaticScaleTarget(baseHsl, resolvedSettings, direction);
+  const targetHex = controlsHslToHex(
+    baseHsl.h,
+    target.saturation,
+    target.lightness
+  );
 
-  for (let stepIndex = 1; stepIndex <= totalScaleSteps; stepIndex += 1) {
-    const nextColor = createMonochromaticScaleColor(
-      baseHsl,
-      stepIndex,
-      totalScaleSteps,
-      resolvedSettings,
-      direction,
-      target,
-      usedColors
-    );
-
-    if (!nextColor) {
-      break;
-    }
-
-    usedColors.add(nextColor);
-    palette.push(nextColor);
+  if (targetCount <= 1) {
+    return [baseHex];
   }
 
-  return palette;
+  const colorSteps = typeof window.AppColorUtils?.getHexColorSteps === "function"
+    ? window.AppColorUtils.getHexColorSteps(baseHex, targetHex, targetCount, {
+      space: "oklch",
+      outputSpace: "srgb",
+    })
+    : [];
+
+  if (colorSteps.length > 0) {
+    const palette = [];
+    const usedColors = new Set();
+
+    colorSteps.forEach((color) => {
+      const normalizedColor = controlsNormalizeHexColor(color);
+
+      if (normalizedColor !== baseHex && isDisallowedColor(normalizedColor)) {
+        return;
+      }
+
+      if (usedColors.has(normalizedColor)) {
+        return;
+      }
+
+      usedColors.add(normalizedColor);
+      palette.push(normalizedColor);
+    });
+
+    if (palette.length > targetCount) {
+      return palette.slice(0, targetCount);
+    }
+
+    if (palette.length === targetCount) {
+      return palette;
+    }
+  }
+
+  return [baseHex];
 }
 
 function orderColorModePaletteByHarmony(colors, baseHex) {

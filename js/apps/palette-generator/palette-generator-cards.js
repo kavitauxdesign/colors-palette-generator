@@ -42,6 +42,15 @@ function isLockedColorModeBaseCard(card) {
   return cards.indexOf(card) === 0;
 }
 
+function updateColorModeCardActionVisibility() {
+  Array.from(getColorCards()).forEach((card) => {
+    const editBtn = card.querySelector(".action-edit");
+    if (editBtn) {
+      editBtn.classList.toggle("is-hidden", isLockedColorModeBaseCard(card));
+    }
+  });
+}
+
 function toggleCardPinnedState(card) {
   if (!card) {
     return;
@@ -208,7 +217,19 @@ function updateRegenerateButtonsAvailability() {
       return;
     }
 
-    regenerateBtn.classList.toggle("is-hidden", shouldHideRegenerateButtons);
+    const shouldHideRegenerateButton =
+      shouldHideRegenerateButtons || isLockedColorModeBaseCard(card);
+
+    regenerateBtn.classList.toggle("is-hidden", shouldHideRegenerateButton);
+
+    if (isLockedColorModeBaseCard(card)) {
+      setRegenerateButtonAvailability(
+        regenerateBtn,
+        false,
+        "El color base se ajusta desde el panel de controles"
+      );
+      return;
+    }
 
     if (shouldHideRegenerateButtons) {
       setRegenerateButtonAvailability(
@@ -270,6 +291,10 @@ function attachCardActions(card) {
   regenerateBtn.addEventListener("click", (event) => {
     event.stopPropagation();
 
+    if (isLockedColorModeBaseCard(card)) {
+      return;
+    }
+
     if (regenerateBtn.classList.contains("is-disabled")) {
       return;
     }
@@ -288,6 +313,11 @@ function attachCardActions(card) {
 
   editBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+
+    if (isLockedColorModeBaseCard(card)) {
+      return;
+    }
+
     const currentHex = normalizeHexColor(
       card.querySelector(".color-label")?.textContent?.trim() || "#000000",
     );
@@ -459,6 +489,7 @@ function createColorCard(color, options = {}) {
   card.appendChild(label);
   setCardColor(card, color);
   setCardPinnedState(card, !!options.pinned);
+  updateColorModeCardActionVisibility();
 
   if (addColorElement) {
     paletteContainer.insertBefore(card, addColorElement);

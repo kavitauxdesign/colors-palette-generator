@@ -4,12 +4,14 @@ const controlsNormalizeHexColor = window.AppColorUtils?.normalizeHexColor;
 const controlsIsValidHexColor = window.AppColorUtils?.isValidHexColor;
 const controlsHexToRgb = window.AppColorUtils?.hexToRgb;
 const controlsHexToHsl = window.AppColorUtils?.hexToHsl;
+const controlsGetRgbDistance = window.AppColorUtils?.getRgbDistance;
 if (
   typeof controlsHslToHex !== "function" ||
   typeof controlsNormalizeHexColor !== "function" ||
   typeof controlsIsValidHexColor !== "function" ||
   typeof controlsHexToRgb !== "function" ||
-  typeof controlsHexToHsl !== "function"
+  typeof controlsHexToHsl !== "function" ||
+  typeof controlsGetRgbDistance !== "function"
 ) {
   throw new Error("AppColorUtils helpers are required before script-controls.js loads.");
 }
@@ -467,7 +469,7 @@ function scorePaletteHarmony(colors) {
     for (let rightIndex = leftIndex + 1; rightIndex < normalizedColors.length; rightIndex += 1) {
       const leftRgb = controlsHexToRgb(normalizedColors[leftIndex]);
       const rightRgb = controlsHexToRgb(normalizedColors[rightIndex]);
-      const rgbDistance = getRgbDistanceBetween(leftRgb, rightRgb);
+      const rgbDistance = controlsGetRgbDistance(leftRgb, rightRgb);
 
       pairwiseDistanceScore += Math.min(rgbDistance / 180, 1);
       if (rgbDistance < 42) {
@@ -549,7 +551,19 @@ function getPinnedPaletteEntriesSnapshot() {
   }
 
   return getCurrentPaletteCardEntries()
-    .filter((entry) => entry.pinned)
+    .filter((entry) => {
+      if (!entry.pinned) {
+        return false;
+      }
+
+      // In color mode, the first card is controlled by the base-color input,
+      // so it should not behave like a regular pinned slot during regeneration.
+      if (paletteBaseMode === "color" && entry.index === 0) {
+        return false;
+      }
+
+      return true;
+    })
     .map((entry) => ({
       index: entry.index,
       hex: controlsNormalizeHexColor(entry.hex),
