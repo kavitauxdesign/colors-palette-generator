@@ -155,6 +155,10 @@ if (paletteAdjustBtn) {
 
 function updatePaletteModeActionVisibility() {
   const isImageMode = paletteBaseMode === "image";
+  const isColorMode = paletteBaseMode === "color";
+  const isMonochromaticColorScale =
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive();
   const hasImageSource = !!uploadedBaseImage?.dataUrl;
 
   if (paletteGenerationButtons) {
@@ -162,12 +166,16 @@ function updatePaletteModeActionVisibility() {
   }
 
   if (paletteRegenerateBtn) {
-    const shouldShowRegenerate = !isImageMode || hasImageSource;
+    const shouldShowRegenerate = isColorMode
+      ? !isMonochromaticColorScale
+      : (!isImageMode || hasImageSource);
     paletteRegenerateBtn.hidden = !shouldShowRegenerate;
   }
 
   if (surpriseBtn) {
-    const shouldShowSurprise = !isImageMode || hasImageSource;
+    const shouldShowSurprise =
+      !isColorMode &&
+      (!isImageMode || hasImageSource);
     surpriseBtn.hidden = !shouldShowSurprise;
   }
 
@@ -216,6 +224,32 @@ function updatePaletteRegenerateButtonAvailability(availableImageColors = null) 
   const pinnedEntries = getPinnedPaletteEntriesSnapshot();
   const mutableSlotCount = getMutablePaletteSlotCount(paletteSize, pinnedEntries);
 
+  if (paletteBaseMode === "color") {
+    if (
+      typeof isColorModeMonochromaticScaleActive === "function" &&
+      isColorModeMonochromaticScaleActive()
+    ) {
+      paletteRegenerateBtn.disabled = true;
+      paletteRegenerateBtn.classList.add("is-disabled");
+      paletteRegenerateBtn.setAttribute("aria-disabled", "true");
+      setPaletteRegenerateButtonTooltip("Ajusta el color base o Brillo/Saturación");
+      return;
+    }
+
+    const isDisabled = mutableSlotCount <= 0 || !hasValidSelectedPaletteBaseColor();
+    paletteRegenerateBtn.disabled = isDisabled;
+    paletteRegenerateBtn.classList.toggle("is-disabled", isDisabled);
+    paletteRegenerateBtn.setAttribute("aria-disabled", isDisabled ? "true" : "false");
+    setPaletteRegenerateButtonTooltip(
+      !hasValidSelectedPaletteBaseColor()
+        ? "Introduce un color base válido"
+        : mutableSlotCount <= 0
+          ? "Todos los colores están fijados"
+          : "Generar paleta"
+    );
+    return;
+  }
+
   if (paletteBaseMode !== "image") {
     const isDisabled = mutableSlotCount <= 0;
     paletteRegenerateBtn.disabled = isDisabled;
@@ -259,6 +293,14 @@ function updatePaletteRegenerateButtonAvailability(availableImageColors = null) 
 
 function updatePaletteSurpriseButtonAvailability(availableImageColors = null) {
   if (!surpriseBtn) {
+    return;
+  }
+
+  if (paletteBaseMode === "color") {
+    surpriseBtn.disabled = true;
+    surpriseBtn.classList.add("is-disabled");
+    surpriseBtn.setAttribute("aria-disabled", "true");
+    setPaletteSurpriseButtonTooltip("Modo no disponible en Color");
     return;
   }
 
@@ -369,7 +411,7 @@ function regeneratePinnedPaletteSlots() {
     let candidate = null;
     const excludedColors = new Set([normalizeHexColor(entry.hex)]);
     const maxAttempts =
-      paletteBaseMode === "image"
+      paletteBaseMode === "image" || paletteBaseMode === "color"
         ? Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 2)
         : 1;
 
@@ -377,11 +419,11 @@ function regeneratePinnedPaletteSlots() {
       candidate = getRegeneratedColorForCard(entry.card, new Set(nextColors), {
         excludedColors,
         variantSeedOffset:
-          paletteBaseMode === "image"
+          paletteBaseMode === "image" || paletteBaseMode === "color"
             ? attempt * Math.max(1, IMAGE_PALETTE_VARIANT_PROFILES.length)
             : 0,
         maxVariantSweeps:
-          paletteBaseMode === "image"
+          paletteBaseMode === "image" || paletteBaseMode === "color"
             ? Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
             : undefined,
       });
@@ -434,7 +476,13 @@ async function syncImagePaletteFromSource(options = {}) {
 // PALETTE BASE
 
 function setPaletteBaseMode(nextMode) {
-  paletteBaseMode = nextMode === "image" ? "image" : "temperature";
+  if (nextMode === "image") {
+    paletteBaseMode = "image";
+  } else if (nextMode === "temperature") {
+    paletteBaseMode = "temperature";
+  } else {
+    paletteBaseMode = "color";
+  }
 
   if (paletteBaseMode !== "image") {
     setPaletteImageExtractionFeedback(false);
@@ -442,6 +490,12 @@ function setPaletteBaseMode(nextMode) {
 
   if (paletteBaseModeSelect) {
     paletteBaseModeSelect.value = paletteBaseMode;
+  }
+
+  if (colorBasePanel) {
+    const showColorPanel = paletteBaseMode === "color";
+    colorBasePanel.classList.toggle("active", showColorPanel);
+    colorBasePanel.hidden = !showColorPanel;
   }
 
   if (temperatureBasePanel) {
@@ -470,6 +524,12 @@ function setPaletteBaseMode(nextMode) {
 
   if (paletteBaseMode === "image" && uploadedBaseImage?.dataUrl) {
     void refreshImageDerivedControls();
+    return;
+  }
+
+  if (paletteBaseMode === "color") {
+    syncColorModeBaseControls();
+    syncColorModeSizeSelection();
   }
 }
 
@@ -656,6 +716,11 @@ if (paletteRegenerateBtn) {
       return;
     }
 
+    if (paletteBaseMode === "color") {
+      void generatePalette();
+      return;
+    }
+
     void regenerateTemperaturePaletteKeepingPreferences();
   });
 }
@@ -721,17 +786,29 @@ if (controlsPanel && paletteSection) {
   window.addEventListener("resize", updatePaletteStickyState, { passive: true });
 }
 function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
+  const allowedColorModeSizes = getAllowedPaletteSizesForCurrentMode();
   const availableCount = Number.isFinite(availableImageColors)
     ? availableImageColors
     : getCachedImageColorClusters().length;
 
   sizeButtons.forEach((button) => {
     const buttonSize = Number.parseInt(button.dataset.size, 10);
-    const shouldDisable =
+    const shouldDisableByImage =
       paletteBaseMode === "image" &&
       !!uploadedBaseImage?.dataUrl &&
       Number.isFinite(buttonSize) &&
       buttonSize > availableCount;
+    const shouldShowForMode =
+      paletteBaseMode === "color"
+        ? true
+        : buttonSize !== 2 && buttonSize !== 4;
+    const shouldDisableByColorMode =
+      paletteBaseMode === "color" &&
+      Number.isFinite(buttonSize) &&
+      !allowedColorModeSizes.includes(buttonSize);
+    const shouldDisable = shouldDisableByImage || shouldDisableByColorMode;
+
+    button.hidden = !shouldShowForMode;
 
     button.classList.toggle("is-disabled", shouldDisable);
     button.setAttribute("aria-disabled", shouldDisable ? "true" : "false");

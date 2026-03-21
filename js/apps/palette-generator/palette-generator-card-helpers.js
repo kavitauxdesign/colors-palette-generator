@@ -78,6 +78,10 @@ const COPY_FEEDBACK_TEXT = "¡Copiado!";
 const COPY_FEEDBACK_DURATION_MS = 2000;
 
 function syncCurrentPaletteFromDom() {
+  Array.from(getColorCards()).forEach((card, index) => {
+    card.dataset.index = String(index);
+  });
+
   currentPalette = getCurrentPaletteHexValues();
   sharedColors?.setPalette(currentPalette, {
     source: "palette-generator",

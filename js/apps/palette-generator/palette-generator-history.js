@@ -5,6 +5,8 @@ function captureCurrentGeneratorSettings() {
   return {
     paletteSize,
     baseMode: paletteBaseMode,
+    baseColor: selectedPaletteBaseColor,
+    colorPaletteType: selectedColorPaletteType,
     prioritizeImageDominantColors,
     temperature: {
       warm: !!temperature.warm,
@@ -51,6 +53,20 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (settings?.temperature) {
     setTemperatureSelection(settings.temperature);
+  }
+
+  if (typeof settings?.baseColor === "string") {
+    setSelectedPaletteBaseColor(settings.baseColor, {
+      syncTextInput: true,
+      generate: false,
+      publish: false,
+    });
+  }
+
+  if (typeof settings?.colorPaletteType === "string") {
+    setSelectedColorPaletteType(settings.colorPaletteType, {
+      generate: false,
+    });
   }
 
   if (brightnessInput && Number.isFinite(settings?.brightness)) {

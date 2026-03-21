@@ -10,7 +10,10 @@ window.AppConstants = {
   ADD_DISABLED_LABEL:
     "Esperemos, que con 24 colores la paleta esté completa\u261D\uFE0F",
   DEFAULT_PALETTE_SIZE: 3,
+  DEFAULT_PALETTE_BASE_MODE: "color",
   DEFAULT_TEMPERATURE: { warm: true, cool: false },
+  DEFAULT_COLOR_BASE: "#00A4D6",
+  DEFAULT_COLOR_PALETTE_TYPE: "automatic",
   DEFAULT_BRIGHTNESS: 75,
   DEFAULT_SATURATION: 100,
   LOW_SATURATION_FALLBACK_THRESHOLD: 15,

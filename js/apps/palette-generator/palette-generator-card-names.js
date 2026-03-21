@@ -82,14 +82,26 @@ function refreshColorCardNames() {
 
   cards.forEach((card, index) => {
     const colorName = card.querySelector(".color-name");
+    const colorBaseIndicator = card.querySelector(".color-base-indicator");
     if (!colorName) {
       return;
     }
 
     const hex = hexValues[index];
     const displayName = displayNames[index] || getNearestColorName(hex);
+    const isBaseColorCard = paletteBaseMode === "color" && index === 0;
+
+    card.classList.toggle("is-base-color", isBaseColorCard);
+    if (isBaseColorCard && !isCardPinned(card)) {
+      setCardPinnedState(card, true);
+    }
     colorName.textContent = displayName;
     applyAccessibleColorNameStyle(colorName, hex);
+
+    if (colorBaseIndicator) {
+      colorBaseIndicator.hidden = !isBaseColorCard;
+      applyAccessibleColorNameStyle(colorBaseIndicator, hex);
+    }
   });
 }
 

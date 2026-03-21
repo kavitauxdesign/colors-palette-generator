@@ -33,8 +33,21 @@ function updateCardPinButtonState(card) {
   }
 }
 
+function isLockedColorModeBaseCard(card) {
+  if (paletteBaseMode !== "color") {
+    return false;
+  }
+
+  const cards = Array.from(getColorCards());
+  return cards.indexOf(card) === 0;
+}
+
 function toggleCardPinnedState(card) {
   if (!card) {
+    return;
+  }
+
+  if (isLockedColorModeBaseCard(card)) {
     return;
   }
 
@@ -47,8 +60,9 @@ function setCardPinnedState(card, isPinned) {
     return;
   }
 
-  card.dataset.pinned = isPinned ? "true" : "false";
-  card.classList.toggle("is-pinned", !!isPinned);
+  const resolvedPinnedState = isLockedColorModeBaseCard(card) ? true : !!isPinned;
+  card.dataset.pinned = resolvedPinnedState ? "true" : "false";
+  card.classList.toggle("is-pinned", resolvedPinnedState);
   updateCardPinButtonState(card);
 }
 
@@ -78,12 +92,23 @@ function refreshDeleteButtonsVisibility() {
     if (!deleteBtn) {
       return;
     }
-    deleteBtn.classList.toggle("is-hidden", !canDelete);
+    const shouldHideDelete =
+      !canDelete || isLockedColorModeBaseCard(card);
+    deleteBtn.classList.toggle("is-hidden", shouldHideDelete);
   });
 }
 // Enable or disable add button by card limit
 function updateAddColorButtonState() {
   if (!addColorBtn || !addColorLabel) {
+    return;
+  }
+
+  const shouldHideAddColor = paletteBaseMode === "color";
+  if (addColorElement) {
+    addColorElement.hidden = shouldHideAddColor;
+  }
+
+  if (shouldHideAddColor) {
     return;
   }
 
@@ -112,6 +137,10 @@ function getAdjacentBaseColorNames(card) {
 }
 
 function getRegeneratedColorForCard(card, existingColors, options = {}) {
+  if (paletteBaseMode === "color" && typeof getColorModeRegenerationColorForCard === "function") {
+    return getColorModeRegenerationColorForCard(card, existingColors, options);
+  }
+
   if (paletteBaseMode === "image" && typeof getImageRegenerationColorForCard === "function") {
     return getImageRegenerationColorForCard(card, existingColors, options);
   }
@@ -169,10 +198,24 @@ function getAddedColorForCurrentMode(existingColors) {
 
 function updateRegenerateButtonsAvailability() {
   const cards = Array.from(getColorCards());
+  const shouldHideRegenerateButtons =
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive();
 
   cards.forEach((card) => {
     const regenerateBtn = card.querySelector(".action-regenerate");
     if (!regenerateBtn) {
+      return;
+    }
+
+    regenerateBtn.classList.toggle("is-hidden", shouldHideRegenerateButtons);
+
+    if (shouldHideRegenerateButtons) {
+      setRegenerateButtonAvailability(
+        regenerateBtn,
+        false,
+        "Ajusta el color base o Brillo/Saturación"
+      );
       return;
     }
 
@@ -297,6 +340,10 @@ function attachCardActions(card) {
 
   deleteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    if (isLockedColorModeBaseCard(card)) {
+      return;
+    }
+
     const totalCards = getColorCards().length;
     if (totalCards <= 1) {
       return;
@@ -399,11 +446,15 @@ function createColorCard(color, options = {}) {
 
   const colorName = document.createElement("div");
   colorName.className = "color-name";
+  const colorBaseIndicator = document.createElement("div");
+  colorBaseIndicator.className = "color-base-indicator";
+  colorBaseIndicator.textContent = "Color base";
 
   const label = document.createElement("div");
   label.className = "color-label";
 
   attachCardActions(card);
+  card.appendChild(colorBaseIndicator);
   card.appendChild(colorName);
   card.appendChild(label);
   setCardColor(card, color);

@@ -242,6 +242,28 @@ function applyCurrentPaletteAdjustments() {
     return;
   }
 
+  if (
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive() &&
+    typeof buildMonochromaticColorModePalette === "function"
+  ) {
+    const nextPalette = buildMonochromaticColorModePalette(
+      paletteSize,
+      getCurrentPaletteAdjustmentSnapshot(),
+      {
+        baseColor:
+          typeof getPaletteBaseColorSnapshot === "function"
+            ? getPaletteBaseColorSnapshot()
+            : null,
+      }
+    );
+
+    if (nextPalette.length > 0) {
+      renderAdjustedPalette(nextPalette);
+      return;
+    }
+  }
+
   renderAdjustedPalette(buildAdjustedPaletteFromBase());
 }
 
@@ -595,10 +617,16 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   getColorCards().forEach((card) => card.remove());
 
   capturePaletteAdjustmentBase(mergedPalette);
-  currentPalette = mergePaletteWithPinnedColors(
-    buildAdjustedPaletteFromBase(),
-    pinnedEntries
-  );
+  const shouldRenderRawGeneratedPalette =
+    paletteBaseMode === "color" &&
+    options.effectiveType === "monochromatic";
+
+  currentPalette = shouldRenderRawGeneratedPalette
+    ? [...mergedPalette]
+    : mergePaletteWithPinnedColors(
+      buildAdjustedPaletteFromBase(),
+      pinnedEntries
+    );
   currentPalette.forEach((color, index) => {
     createColorCard(color, {
       pinned: pinnedIndexes.includes(index),
@@ -624,6 +652,7 @@ function commitGeneratedPalette(nextPalette, options = {}) {
 async function generatePalette() {
   let nextPalette = [];
   let usedAlternativePalette = false;
+  let effectiveColorPaletteType = null;
   const previousPalette = normalizePaletteHexCollection(currentPalette);
 
   if (paletteBaseMode === "image") {
@@ -640,6 +669,20 @@ async function generatePalette() {
       revealPaletteImageDropzoneForRetry();
       return;
     }
+  } else if (paletteBaseMode === "color") {
+    const candidate = createColorModePaletteCandidate(getCurrentPaletteAdjustmentSnapshot(), {
+      referencePalette: currentPalette,
+      effectiveType: getEffectiveColorPaletteType(),
+    });
+
+    if (!candidate?.palette?.length) {
+      alert("No se pudo generar una paleta válida a partir del color base.");
+      return;
+    }
+
+    nextPalette = candidate.palette;
+    effectiveColorPaletteType = candidate.effectiveType;
+    colorPaletteVariantIndex = candidate.variantIndex;
   } else {
     const temperatureResult = buildTemperaturePaletteForSettings(paletteSize);
     nextPalette = temperatureResult.palette;
@@ -647,6 +690,7 @@ async function generatePalette() {
   }
 
   commitGeneratedPalette(nextPalette, {
+    effectiveType: effectiveColorPaletteType,
     usedAlternativePalette,
     previousPalette,
   });

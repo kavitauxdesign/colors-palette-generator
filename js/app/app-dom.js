@@ -7,8 +7,16 @@
   const historyContainer = document.getElementById("history");
   const paletteBaseControlGroup = document.getElementById("paletteBaseControlGroup");
   const paletteBaseModeSelect = document.getElementById("paletteBaseModeSelect");
+  const colorBasePanel = document.getElementById("colorBasePanel");
   const temperatureBasePanel = document.getElementById("temperatureBasePanel");
   const imageBasePanel = document.getElementById("imageBasePanel");
+  const paletteColorSwatchBtn = document.getElementById("paletteColorSwatchBtn");
+  const paletteColorSwatchFill = document.getElementById("paletteColorSwatchFill");
+  const paletteColorTextInput = document.getElementById("paletteColorTextInput");
+  const paletteColorInputFeedback = document.getElementById("paletteColorInputFeedback");
+  const paletteColorPicker = document.getElementById("paletteColorPicker");
+  const paletteTypeOptions = document.getElementById("paletteTypeOptions");
+  const paletteTypeResolvedLabel = document.getElementById("paletteTypeResolvedLabel");
   const paletteImageInput = document.getElementById("paletteImageInput");
   const paletteImageDropzonePanel = document.getElementById("paletteImageDropzonePanel");
   const paletteImageDropzone = document.getElementById("paletteImageDropzone");
@@ -73,8 +81,16 @@
     historyContainer,
     paletteBaseControlGroup,
     paletteBaseModeSelect,
+    colorBasePanel,
     temperatureBasePanel,
     imageBasePanel,
+    paletteColorSwatchBtn,
+    paletteColorSwatchFill,
+    paletteColorTextInput,
+    paletteColorInputFeedback,
+    paletteColorPicker,
+    paletteTypeOptions,
+    paletteTypeResolvedLabel,
     paletteImageInput,
     paletteImageDropzonePanel,
     paletteImageDropzone,

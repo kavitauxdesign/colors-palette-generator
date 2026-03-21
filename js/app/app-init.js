@@ -20,6 +20,7 @@
       "js/apps/palette-generator/palette-generator-image-analysis.js",
       "js/apps/palette-generator/palette-generator-image-palette.js",
       "js/apps/palette-generator/palette-generator-temperature.js",
+      "js/apps/palette-generator/palette-generator-color-mode.js",
       "js/apps/palette-generator/palette-generator-image-ui.js",
       "js/apps/palette-generator/palette-generator-controls.js",
       "js/apps/palette-generator/palette-generator-card-helpers.js",

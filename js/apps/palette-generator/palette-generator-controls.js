@@ -61,6 +61,30 @@ function addColorsToPaletteEnd(count) {
 }
 
 async function applyPaletteSizeChange(nextSize) {
+  if (paletteBaseMode === "color") {
+    const allowedSizes = getAllowedPaletteSizesForCurrentMode();
+    const resolvedSize = getNearestAllowedPaletteSize(nextSize, allowedSizes);
+
+    if (resolvedSize !== paletteSize) {
+      setPaletteSize(resolvedSize);
+    }
+
+    if (typeof updatePaletteModeActionVisibility === "function") {
+      updatePaletteModeActionVisibility();
+    }
+
+    if (typeof updatePaletteActionButtonsAvailability === "function") {
+      updatePaletteActionButtonsAvailability();
+    }
+
+    if (typeof updateRegenerateButtonsAvailability === "function") {
+      updateRegenerateButtonsAvailability();
+    }
+
+    await generatePalette();
+    return;
+  }
+
   const currentCount = getColorCards().length;
   const difference = nextSize - currentCount;
 
@@ -199,4 +223,3 @@ if (generateBtn) {
     void generatePalette();
   });
 }
-

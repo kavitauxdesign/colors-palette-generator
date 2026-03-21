@@ -25,6 +25,9 @@
 
     setPaletteSize(paletteSize);
     setTemperatureSelection(temperature);
+    if (typeof syncColorModeBaseControls === "function") {
+      syncColorModeBaseControls();
+    }
     void generatePalette();
     updateAddColorButtonState();
   }
@@ -36,6 +39,8 @@
         palette: [...currentPalette],
         paletteSize,
         baseMode: paletteBaseMode,
+        baseColor: selectedPaletteBaseColor,
+        colorPaletteType: selectedColorPaletteType,
         temperature: { ...temperature },
       };
     },
