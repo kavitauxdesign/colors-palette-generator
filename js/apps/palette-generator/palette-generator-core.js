@@ -19,8 +19,8 @@ let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
 let isPaletteAdjustPanelOpen = false;
 const imagePanelTransitionMs = 320;
-const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml"]);
-const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg"];
+const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml", "image/webp"]);
+const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg", ".webp"];
 const IMAGE_EXTRACTION_ERROR_MESSAGE =
   "No se ha podido extraer colores. Has de intentar subir otra imagen.";
 const IMAGE_PALETTE_VARIANT_PROFILES = [
@@ -32,11 +32,13 @@ const IMAGE_PALETTE_VARIANT_PROFILES = [
   { hueShift: 16, saturationShift: -4, lightnessShift: -10, stagger: [0, 12, -10, 6] },
 ];
 const IMAGE_INSPIRATION_VARIANT_PROFILES = [
-  { hueShift: 4, saturationShift: 4, lightnessShift: 4, accentHueShift: 8, accentBoost: 10, neutralLift: 5 },
-  { hueShift: -6, saturationShift: 2, lightnessShift: -3, accentHueShift: -8, accentBoost: 12, neutralLift: 2 },
-  { hueShift: 8, saturationShift: -4, lightnessShift: 7, accentHueShift: 10, accentBoost: 8, neutralLift: 7 },
-  { hueShift: -9, saturationShift: 6, lightnessShift: 2, accentHueShift: -10, accentBoost: 13, neutralLift: 3 },
-  { hueShift: 3, saturationShift: -2, lightnessShift: -6, accentHueShift: 7, accentBoost: 7, neutralLift: -1 },
+  { hueShift: 10, saturationShift: 10, lightnessShift: 8, accentHueShift: 22, accentBoost: 18, neutralLift: 8 },
+  { hueShift: -14, saturationShift: 6, lightnessShift: -6, accentHueShift: -24, accentBoost: 20, neutralLift: 3 },
+  { hueShift: 18, saturationShift: -8, lightnessShift: 10, accentHueShift: 28, accentBoost: 16, neutralLift: 10 },
+  { hueShift: -20, saturationShift: 12, lightnessShift: 4, accentHueShift: -26, accentBoost: 22, neutralLift: 4 },
+  { hueShift: 8, saturationShift: -6, lightnessShift: -10, accentHueShift: 18, accentBoost: 14, neutralLift: -2 },
+  { hueShift: 24, saturationShift: 4, lightnessShift: -4, accentHueShift: 34, accentBoost: 24, neutralLift: 6 },
+  { hueShift: -26, saturationShift: -2, lightnessShift: 12, accentHueShift: -32, accentBoost: 18, neutralLift: 11 },
 ];
 const MAX_RECENT_INSPIRED_PALETTES = 8;
 
@@ -281,6 +283,26 @@ function getPaletteSimilarityMetrics(nextPalette, referencePalette) {
   };
 }
 
+function getPalettePositionalSimilarityMetrics(nextPalette, referencePalette) {
+  const nextColors = normalizePaletteHexCollection(nextPalette);
+  const referenceColors = normalizePaletteHexCollection(referencePalette);
+  const comparableCount = Math.min(nextColors.length, referenceColors.length);
+  let samePositionCount = 0;
+
+  for (let index = 0; index < comparableCount; index += 1) {
+    if (nextColors[index] === referenceColors[index]) {
+      samePositionCount += 1;
+    }
+  }
+
+  return {
+    samePositionCount,
+    comparableCount,
+    nextCount: nextColors.length,
+    referenceCount: referenceColors.length,
+  };
+}
+
 function arePalettesTooSimilar(nextPalette, referencePalette) {
   const similarityMetrics = getPaletteSimilarityMetrics(nextPalette, referencePalette);
   return (
@@ -314,6 +336,29 @@ function getComparablePaletteSlice(colors, pinnedEntries = getPinnedPaletteEntri
   }
 
   return normalizedColors.filter((color, index) => !pinnedIndexes.has(index));
+}
+
+function getComparableMergedPaletteSlice(colors, pinnedEntries = getPinnedPaletteEntriesSnapshot()) {
+  return getComparablePaletteSlice(
+    mergePaletteWithPinnedColors(colors, pinnedEntries),
+    pinnedEntries
+  );
+}
+
+function isBetterPaletteFallbackCandidate(nextCandidate, currentFallbackCandidate) {
+  if (!currentFallbackCandidate) {
+    return true;
+  }
+
+  if (nextCandidate.samePositionCount !== currentFallbackCandidate.samePositionCount) {
+    return nextCandidate.samePositionCount < currentFallbackCandidate.samePositionCount;
+  }
+
+  if (nextCandidate.isTooSimilar !== currentFallbackCandidate.isTooSimilar) {
+    return !nextCandidate.isTooSimilar;
+  }
+
+  return nextCandidate.score > currentFallbackCandidate.score;
 }
 
 function getMutablePaletteSlotCount(totalCount = paletteSize, pinnedEntries = getPinnedPaletteEntriesSnapshot()) {

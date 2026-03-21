@@ -522,8 +522,8 @@
 
 .color-pin-btn {
   position: absolute;
-  right: 8px;
-  bottom: 2px;
+  left: calc(100% - 14px);
+  top: calc(100% - 10px);
   z-index: 3;
   width: 15px;
   height: 15px;
@@ -537,20 +537,23 @@
   opacity: 0;
   transition:
     opacity var(--duration-fast) ease,
-    color var(--duration-fast) ease,
-    transform var(--duration-fast) ease;
+    color var(--duration-fast) ease;
+  transform: translate(-50%, -50%);
+}
+
+.color-pin-btn.is-pinned {
+  opacity: 1;
 }
 
 .color-card:hover .color-pin-btn,
-.color-pin-btn:focus-visible,
-.color-pin-btn.is-pinned {
+.color-card:focus-within .color-pin-btn,
+.color-pin-btn:focus-visible {
   opacity: 1;
 }
 
 .color-pin-btn:hover,
 .color-pin-btn:focus-visible {
   color: var(--pin-color-outline);
-  transform: translateY(-1px);
 }
 
 .color-pin-btn.is-pinned {
@@ -562,11 +565,84 @@
   width: 15px;
   height: 15px;
   display: block;
+  color: #d1d1d1;
+  transition: opacity var(--duration-fast) ease;
 }
 
-.color-pin-btn .tooltip {
-  bottom: calc(100% + 10px);
-  font-size: var(--PX-12);
+.color-card:hover .color-pin-btn .pin-icon-wrap,
+.color-card:focus-within .color-pin-btn .pin-icon-wrap,
+.color-pin-btn:focus-visible .pin-icon-wrap {
+  opacity: 0;
+}
+
+.color-pin-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pin-overlay-color, #FFFFFF);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) ease;
+}
+
+.color-pin-overlay-content {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-pin-overlay-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.color-pin-overlay .pin-overlay-icon-state {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+
+.color-pin-overlay .pin-overlay-icon-state.is-visible {
+  opacity: 0.5;
+}
+
+.color-pin-overlay .pin-overlay-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  filter:
+    drop-shadow(0 1px 1px var(--pin-overlay-shadow-color, rgba(0, 0, 0, 0.35)))
+    drop-shadow(0 0 1px var(--pin-overlay-shadow-color, rgba(0, 0, 0, 0.35)));
+}
+
+.color-pin-overlay-icon-wrap:hover .pin-overlay-icon-state-outline,
+.color-pin-overlay-icon-wrap:focus-visible .pin-overlay-icon-state-outline {
+  opacity: 0;
+}
+
+.color-pin-overlay-icon-wrap:hover .pin-overlay-icon-state-filled,
+.color-pin-overlay-icon-wrap:focus-visible .pin-overlay-icon-state-filled {
+  opacity: 0.5;
+}
+
+.color-card:hover .color-pin-overlay,
+.color-card:focus-within .color-pin-overlay,
+.color-pin-btn:focus-visible + .color-pin-overlay {
+  opacity: 1;
 }
 
 .card-edit-input {

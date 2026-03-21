@@ -1,56 +1,127 @@
-function getImageBasedCandidateColor(existingColors = new Set(), adjacentBaseNames = []) {
+function getImageBasedCandidateColor(
+  existingColors = new Set(),
+  adjacentBaseNames = [],
+  options = {}
+) {
   const imageClusters = getCachedImageColorClusters();
   if (imageClusters.length === 0) {
     return null;
   }
 
+  const excludedColors = options.excludedColors instanceof Set
+    ? options.excludedColors
+    : new Set();
+  const variantSeed = Number.isFinite(options.variantSeed)
+    ? Math.max(0, options.variantSeed)
+    : Math.max(0, imagePaletteVariantIndex + 1);
+  const maxVariantSweeps = Number.isFinite(options.maxVariantSweeps)
+    ? Math.max(1, options.maxVariantSweeps)
+    : Math.max(8, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
   let bestCandidate = null;
   let bestConflictCount = Infinity;
   let bestPriorityScore = -Infinity;
 
-  imageClusters.forEach((cluster, clusterIndex) => {
-    const candidate = getAdjustedPaletteColor(cluster.hex, clusterIndex);
+  for (let variantOffset = 0; variantOffset < maxVariantSweeps; variantOffset += 1) {
+    imageClusters.forEach((cluster, clusterIndex) => {
+      const candidate = getImagePaletteVariantHex(
+        cluster,
+        clusterIndex,
+        variantSeed + variantOffset
+      );
 
-    if (existingColors.has(candidate)) {
-      return;
-    }
+      if (
+        !candidate ||
+        existingColors.has(candidate) ||
+        excludedColors.has(candidate) ||
+        isDisallowedColor(candidate)
+      ) {
+        return;
+      }
 
-    const candidateBaseName = typeof getNearestColorName === "function"
-      ? getNearestColorName(candidate)
-      : "";
-    const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
-      return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
-    }, 0);
-    const priorityScore = getImageClusterPriorityScore(cluster, imageClusters);
+      const candidateBaseName = typeof getNearestColorName === "function"
+        ? getNearestColorName(candidate)
+        : "";
+      const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
+        return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
+      }, 0);
+      const priorityScore =
+        getImageClusterPriorityScore(cluster, imageClusters) - variantOffset * 0.04;
 
-    if (conflictCount === 0) {
-      if (priorityScore > bestPriorityScore) {
+      if (conflictCount === 0) {
+        if (priorityScore > bestPriorityScore) {
+          bestCandidate = candidate;
+          bestConflictCount = 0;
+          bestPriorityScore = priorityScore;
+        }
+        return;
+      }
+
+      if (
+        conflictCount < bestConflictCount ||
+        (conflictCount === bestConflictCount && priorityScore > bestPriorityScore)
+      ) {
         bestCandidate = candidate;
-        bestConflictCount = 0;
+        bestConflictCount = conflictCount;
         bestPriorityScore = priorityScore;
       }
-      return;
-    }
+    });
 
-    if (
-      conflictCount < bestConflictCount ||
-      (conflictCount === bestConflictCount && priorityScore > bestPriorityScore)
-    ) {
-      bestCandidate = candidate;
-      bestConflictCount = conflictCount;
-      bestPriorityScore = priorityScore;
+    if (bestCandidate && bestConflictCount === 0) {
+      break;
     }
-  });
+  }
 
   return bestCandidate;
 }
 
-function getImageRegenerationColorForCard(card, existingColors = new Set()) {
+function getImageRegenerationColorForCard(card, existingColors = new Set(), options = {}) {
   const adjacentBaseNames = typeof getAdjacentBaseColorNames === "function"
     ? getAdjacentBaseColorNames(card)
     : [];
+  const currentHex = normalizeHexColor(
+    card?.querySelector(".color-label")?.textContent?.trim() || ""
+  );
+  const cardIndex = Number.parseInt(card?.dataset?.index || "-1", 10);
+  const excludedColors = options.excludedColors instanceof Set
+    ? new Set(options.excludedColors)
+    : new Set();
 
-  return getImageBasedCandidateColor(existingColors, adjacentBaseNames);
+  if (isValidPaletteHex(currentHex)) {
+    excludedColors.add(currentHex);
+  }
+
+  const variantSeedBase = Number.isFinite(options.variantSeed)
+    ? Math.max(0, options.variantSeed)
+    : imagePaletteVariantIndex + 1;
+  const variantSeedOffset = Number.isFinite(options.variantSeedOffset)
+    ? options.variantSeedOffset
+    : 0;
+  const variantSeed =
+    variantSeedBase +
+    variantSeedOffset +
+    (Number.isFinite(cardIndex) && cardIndex >= 0 ? cardIndex * 2 : 0);
+  const maxVariantSweeps = Number.isFinite(options.maxVariantSweeps)
+    ? Math.max(1, options.maxVariantSweeps)
+    : Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6);
+  const candidate = getImageBasedCandidateColor(existingColors, adjacentBaseNames, {
+    excludedColors,
+    variantSeed,
+    maxVariantSweeps,
+  });
+
+  const fallbackCandidate = candidate || getAlternativeImagePaletteColor(
+    existingColors,
+    excludedColors,
+    variantSeed +
+      (Number.isFinite(cardIndex) && cardIndex >= 0 ? cardIndex : 0),
+    maxVariantSweeps
+  );
+
+  if (fallbackCandidate) {
+    imagePaletteVariantIndex += 1;
+  }
+
+  return fallbackCandidate;
 }
 
 function buildImagePaletteCandidate(selectedClusters, targetCount, variantIndex) {
@@ -80,6 +151,80 @@ async function buildImageBasedPalette(targetCount) {
   const result = await buildImageBasedPaletteCandidate(targetCount);
   imagePaletteVariantIndex = result.variantIndex;
   return result.palette;
+}
+
+function getAlternativeImagePaletteColor(
+  existingColors = new Set(),
+  excludedColors = new Set(),
+  variantSeed = 0,
+  maxVariantSweeps = Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
+) {
+  const clusters = getCachedImageColorClusters();
+  if (!Array.isArray(clusters) || clusters.length === 0) {
+    return null;
+  }
+
+  for (let variantOffset = 0; variantOffset < maxVariantSweeps; variantOffset += 1) {
+    for (let clusterIndex = 0; clusterIndex < clusters.length; clusterIndex += 1) {
+      const cluster = clusters[clusterIndex];
+      const candidate = getImagePaletteVariantHex(
+        cluster,
+        clusterIndex,
+        variantSeed + variantOffset
+      );
+
+      if (
+        !candidate ||
+        existingColors.has(candidate) ||
+        excludedColors.has(candidate) ||
+        isDisallowedColor(candidate)
+      ) {
+        continue;
+      }
+
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function ensureMutableImagePaletteSlotsChange(
+  candidatePalette,
+  referencePalette,
+  pinnedEntries = getPinnedPaletteEntriesSnapshot(),
+  variantSeed = 0
+) {
+  const mergedPalette = mergePaletteWithPinnedColors(candidatePalette, pinnedEntries);
+  const normalizedReferencePalette = normalizePaletteHexCollection(referencePalette);
+  const pinnedIndexSet = getPinnedPaletteIndexSet(pinnedEntries);
+  const nextPalette = [...mergedPalette];
+
+  nextPalette.forEach((color, index) => {
+    if (pinnedIndexSet.has(index)) {
+      return;
+    }
+
+    const referenceColor = normalizedReferencePalette[index];
+    if (!referenceColor || referenceColor !== color) {
+      return;
+    }
+
+    const existingColors = new Set(
+      nextPalette.filter((entry, entryIndex) => entryIndex !== index)
+    );
+    const alternative = getAlternativeImagePaletteColor(
+      existingColors,
+      new Set([color]),
+      variantSeed + index * 3
+    );
+
+    if (alternative) {
+      nextPalette[index] = alternative;
+    }
+  });
+
+  return nextPalette;
 }
 
 async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
@@ -117,6 +262,7 @@ async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
     : Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
   let fallbackPalette = [];
   let fallbackVariantIndex = variantStartIndex;
+  let fallbackSamePositionCount = Infinity;
 
   for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
     const variantIndex = variantStartIndex + attempt;
@@ -126,18 +272,40 @@ async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
       targetCount,
       variantIndex
     );
-    const candidateComparablePalette = getComparablePaletteSlice(candidatePalette, pinnedEntries);
+    const referenceSourcePalette =
+      options.referencePalette ??
+      (paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette);
+    const repairedPalette = ensureMutableImagePaletteSlotsChange(
+      candidatePalette,
+      referenceSourcePalette,
+      pinnedEntries,
+      variantIndex
+    );
+    const candidateComparablePalette = getComparablePaletteSlice(
+      repairedPalette,
+      pinnedEntries
+    );
+    const positionalSimilarityMetrics = getPalettePositionalSimilarityMetrics(
+      candidateComparablePalette,
+      referencePalette
+    );
 
     if (candidatePalette.length === 0) {
       continue;
     }
 
-    fallbackPalette = candidatePalette;
-    fallbackVariantIndex = variantIndex;
+    if (positionalSimilarityMetrics.samePositionCount < fallbackSamePositionCount) {
+      fallbackPalette = repairedPalette;
+      fallbackVariantIndex = variantIndex;
+      fallbackSamePositionCount = positionalSimilarityMetrics.samePositionCount;
+    }
 
-    if (!arePalettesTooSimilar(candidateComparablePalette, referencePalette)) {
+    if (
+      positionalSimilarityMetrics.samePositionCount === 0 &&
+      !arePalettesTooSimilar(candidateComparablePalette, referencePalette)
+    ) {
       return {
-        palette: candidatePalette,
+        palette: repairedPalette,
         variantIndex,
       };
     }
@@ -154,6 +322,7 @@ function getImageInspirationAtmosphere(clusters) {
     return {
       averageSaturation: 56,
       averageLightness: 54,
+      averageHue: 35,
       maxWeight: 1,
       maxSaturation: 72,
       lightnessSpread: 0.3,
@@ -166,6 +335,14 @@ function getImageInspirationAtmosphere(clusters) {
     ...clusters.map((cluster) => Math.max(cluster.weight || 0, 1)),
     1
   );
+  const hueVector = clusters.reduce((sum, cluster) => {
+    const weight = Math.max(cluster.weight || 0, 1);
+    const hueRadians = ((cluster.hsl?.h ?? 0) / 180) * Math.PI;
+    return {
+      x: sum.x + Math.cos(hueRadians) * weight,
+      y: sum.y + Math.sin(hueRadians) * weight,
+    };
+  }, { x: 0, y: 0 });
   const maxSaturation = Math.max(
     ...clusters.map((cluster) => clampControlValue(cluster.hsl?.s ?? 0, 0, 100)),
     0
@@ -185,10 +362,14 @@ function getImageInspirationAtmosphere(clusters) {
     const hueRadians = (hue / 180) * Math.PI;
     return sum + Math.cos(hueRadians) * weight;
   }, 0) / totalWeight;
+  const averageHue = (
+    (Math.atan2(hueVector.y, hueVector.x) * 180) / Math.PI + 360
+  ) % 360;
 
   return {
     averageSaturation,
     averageLightness,
+    averageHue,
     maxWeight,
     maxSaturation,
     lightnessSpread:
@@ -236,90 +417,205 @@ function getInspiredClusterRole(seedIndex, targetCount) {
   return "support";
 }
 
+function getShortestHueDelta(fromHue, toHue) {
+  return ((toHue - fromHue + 540) % 360) - 180;
+}
+
+function shiftHueTowards(fromHue, toHue, ratio) {
+  return (fromHue + getShortestHueDelta(fromHue, toHue) * ratio + 360) % 360;
+}
+
+function getPaletteAtmosphereMetrics(colors) {
+  const normalizedColors = normalizePaletteHexCollection(colors);
+  if (normalizedColors.length === 0) {
+    return {
+      averageHue: 35,
+      averageSaturation: 56,
+      averageLightness: 54,
+      warmthBias: 0,
+      lightnessSpread: 0.3,
+    };
+  }
+
+  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  const hueVector = paletteHsl.reduce((sum, color) => {
+    const hueRadians = (color.h / 180) * Math.PI;
+    return {
+      x: sum.x + Math.cos(hueRadians),
+      y: sum.y + Math.sin(hueRadians),
+    };
+  }, { x: 0, y: 0 });
+  const lightnessValues = paletteHsl.map((color) => color.l);
+  const averageSaturation =
+    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+  const averageLightness =
+    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+  const warmthBias =
+    paletteHsl.reduce((sum, color) => {
+      const hueRadians = (color.h / 180) * Math.PI;
+      return sum + Math.cos(hueRadians);
+    }, 0) / paletteHsl.length;
+
+  return {
+    averageHue: (
+      (Math.atan2(hueVector.y, hueVector.x) * 180) / Math.PI + 360
+    ) % 360,
+    averageSaturation,
+    averageLightness,
+    warmthBias,
+    lightnessSpread:
+      (Math.max(...lightnessValues) - Math.min(...lightnessValues)) / 100,
+  };
+}
+
+function getAtmosphereAlignmentScore(candidateMetrics, referenceMetrics) {
+  const saturationAlignment = 1 - Math.min(
+    Math.abs(candidateMetrics.averageSaturation - referenceMetrics.averageSaturation) / 30,
+    1
+  );
+  const lightnessAlignment = 1 - Math.min(
+    Math.abs(candidateMetrics.averageLightness - referenceMetrics.averageLightness) / 24,
+    1
+  );
+  const warmthAlignment = 1 - Math.min(
+    Math.abs(candidateMetrics.warmthBias - referenceMetrics.warmthBias) / 1.2,
+    1
+  );
+  const spreadAlignment = 1 - Math.min(
+    Math.abs(candidateMetrics.lightnessSpread - referenceMetrics.lightnessSpread) / 0.3,
+    1
+  );
+
+  return (
+    saturationAlignment * 0.3 +
+    lightnessAlignment * 0.35 +
+    warmthAlignment * 0.25 +
+    spreadAlignment * 0.1
+  );
+}
+
 function getInspiredImageVariantHex(cluster, role, clusterIndex, variantIndex, atmosphere) {
   const profile =
     IMAGE_INSPIRATION_VARIANT_PROFILES[
       Math.abs(variantIndex) % IMAGE_INSPIRATION_VARIANT_PROFILES.length
     ];
   const direction = (clusterIndex + variantIndex) % 2 === 0 ? 1 : -1;
+  const variantCycle = Math.floor(
+    Math.abs(variantIndex) / IMAGE_INSPIRATION_VARIANT_PROFILES.length
+  );
   const hsl = cluster.hsl;
   const weightRatio = clampControlValue(
     Math.max(cluster.weight || 0, 1) / Math.max(atmosphere.maxWeight || 1, 1),
     0,
     1
   );
-  const warmthAdjustment = atmosphere.warmthBias * 4.5;
-  let hue = hsl.h;
+  const atmosphereHue = Number.isFinite(atmosphere.averageHue)
+    ? atmosphere.averageHue
+    : hsl.h;
+  const warmthAdjustment = atmosphere.warmthBias * 9;
+  const orbitOffset =
+    (variantCycle % 3 - 1) * (role === "accent" ? 18 : role === "dominant" ? 10 : 14);
+  let hue = shiftHueTowards(
+    hsl.h,
+    atmosphereHue,
+    role === "dominant" ? 0.42 : role === "accent" ? 0.22 : 0.3
+  );
   let saturation = hsl.s;
   let lightness = hsl.l;
 
   if (role === "dominant") {
-    hue += profile.hueShift * 0.45 * direction + warmthAdjustment * 0.35;
+    hue += profile.hueShift * 0.95 * direction + orbitOffset * 0.45 + warmthAdjustment * 0.4;
     saturation = blendControlValue(
       hsl.s,
-      clampControlValue(atmosphere.averageSaturation + 6 + profile.saturationShift, 22, 64),
-      0.3
-    ) - weightRatio * 3;
+      clampControlValue(
+        atmosphere.averageSaturation + 4 + profile.saturationShift - weightRatio * 4,
+        20,
+        68
+      ),
+      0.58
+    );
     lightness = blendControlValue(
       hsl.l,
-      clampControlValue(atmosphere.averageLightness + profile.neutralLift, 30, 70),
-      0.34
+      clampControlValue(
+        atmosphere.averageLightness + profile.neutralLift + orbitOffset * 0.18,
+        28,
+        72
+      ),
+      0.62
     );
   } else if (role === "accent") {
-    hue += profile.accentHueShift * 0.8 * direction + warmthAdjustment * 0.18;
+    hue += profile.accentHueShift * 1.15 * direction + orbitOffset + warmthAdjustment * 0.24;
     saturation = blendControlValue(
       hsl.s,
       clampControlValue(
         Math.max(
           atmosphere.averageSaturation + profile.accentBoost,
-          atmosphere.maxSaturation * 0.58
+          atmosphere.maxSaturation * 0.7
         ),
-        38,
-        72
+        40,
+        84
       ),
-      0.44
+      0.72
     );
     lightness = blendControlValue(
       hsl.l,
       clampControlValue(
-        atmosphere.averageLightness + direction * 8 * (0.4 + atmosphere.lightnessSpread),
-        28,
-        76
+        atmosphere.averageLightness +
+          profile.lightnessShift +
+          direction * 12 * (0.5 + atmosphere.lightnessSpread) +
+          orbitOffset * 0.3,
+        24,
+        80
       ),
-      0.26
+      0.64
     );
   } else {
-    hue += profile.hueShift * direction + direction * 3 + warmthAdjustment * 0.22;
+    hue +=
+      profile.hueShift * 1.1 * direction +
+      direction * 8 +
+      orbitOffset * 0.75 +
+      warmthAdjustment * 0.28;
     saturation = blendControlValue(
       hsl.s,
-      clampControlValue(atmosphere.averageSaturation + 8 + profile.saturationShift, 26, 72),
-      0.38
+      clampControlValue(
+        atmosphere.averageSaturation + 8 + profile.saturationShift,
+        24,
+        78
+      ),
+      0.66
     );
     lightness = blendControlValue(
       hsl.l,
       clampControlValue(
-        atmosphere.averageLightness + profile.lightnessShift + direction * 4 * (0.45 + atmosphere.lightnessSpread),
-        28,
-        76
+        atmosphere.averageLightness +
+          profile.lightnessShift +
+          direction * 7 * (0.45 + atmosphere.lightnessSpread) +
+          orbitOffset * 0.22,
+        24,
+        78
       ),
-      0.32
+      0.6
     );
   }
 
   hue = (hue + 360) % 360;
-  saturation = clampControlValue(saturation, role === "accent" ? 36 : 22, role === "dominant" ? 64 : 76);
-  lightness = clampControlValue(lightness, 24, role === "accent" ? 78 : 74);
+  saturation = clampControlValue(
+    saturation,
+    role === "accent" ? 42 : 24,
+    role === "dominant" ? 68 : 82
+  );
+  lightness = clampControlValue(lightness, 22, role === "accent" ? 82 : 78);
 
   let candidate = controlsNormalizeHexColor(
     controlsHslToHex(hue, saturation, lightness)
   );
 
-  if (candidate === cluster.hex) {
+  if (candidate === cluster.hex || isPaletteColorTooClose(candidate, [cluster.hex], 18)) {
     candidate = controlsNormalizeHexColor(
       controlsHslToHex(
-        (hue + direction * 4 + 360) % 360,
-        clampControlValue(saturation + (role === "accent" ? 8 : 4), 0, 100),
-        clampControlValue(lightness + direction * 5, 12, 88)
+        (hue + direction * (role === "accent" ? 18 : 12) + orbitOffset + 360) % 360,
+        clampControlValue(saturation + (role === "accent" ? 10 : 6), 0, 100),
+        clampControlValue(lightness + direction * (role === "accent" ? 8 : 6), 12, 88)
       )
     );
   }
@@ -394,9 +690,34 @@ function buildInspiredPaletteFromClusters(selectedClusters, targetCount, variant
   );
 }
 
-function validateInspiredPaletteCandidate(candidatePalette, extractedPalette, clusters) {
+function validateInspiredPaletteCandidate(candidatePalette, extractedPalette, clusters, atmosphere) {
   const normalizedCandidate = normalizePaletteHexCollection(candidatePalette);
   const uniqueCount = new Set(normalizedCandidate).size;
+  const extractedAtmosphere = getPaletteAtmosphereMetrics(extractedPalette);
+  const candidateAtmosphere = getPaletteAtmosphereMetrics(normalizedCandidate);
+  const targetAtmosphere = {
+    averageHue: atmosphere?.averageHue ?? extractedAtmosphere.averageHue,
+    averageSaturation: blendControlValue(
+      extractedAtmosphere.averageSaturation,
+      atmosphere?.averageSaturation ?? extractedAtmosphere.averageSaturation,
+      0.5
+    ),
+    averageLightness: blendControlValue(
+      extractedAtmosphere.averageLightness,
+      atmosphere?.averageLightness ?? extractedAtmosphere.averageLightness,
+      0.5
+    ),
+    warmthBias: blendControlValue(
+      extractedAtmosphere.warmthBias,
+      atmosphere?.warmthBias ?? extractedAtmosphere.warmthBias,
+      0.5
+    ),
+    lightnessSpread: blendControlValue(
+      extractedAtmosphere.lightnessSpread,
+      atmosphere?.lightnessSpread ?? extractedAtmosphere.lightnessSpread,
+      0.5
+    ),
+  };
   const similarityToExtraction = getPaletteSimilarityMetrics(
     normalizedCandidate,
     extractedPalette
@@ -421,18 +742,26 @@ function validateInspiredPaletteCandidate(candidatePalette, extractedPalette, cl
         nearestClusterDistances.length
       : 0;
   const inspirationDistanceScore = clampControlValue(
-    1 - Math.abs(averageNearestClusterDistance - 28) / 42,
+    1 - Math.abs(averageNearestClusterDistance - 58) / 34,
     0,
     1
   );
+  const atmosphereAlignmentScore = getAtmosphereAlignmentScore(
+    candidateAtmosphere,
+    targetAtmosphere
+  );
+  const sharedColorRatioToExtraction =
+    similarityToExtraction.sharedColorCount / Math.max(normalizedCandidate.length, 1);
 
   return {
     hasRepeatedColors: uniqueCount !== normalizedCandidate.length,
     isExactExtractionCopy: similarityToExtraction.exactMatch,
     similarityToExtraction,
+    sharedColorRatioToExtraction,
     averageNearestClusterDistance,
     inspirationDistanceScore,
-    isCoherentWithImage: inspirationDistanceScore >= 0.24,
+    atmosphereAlignmentScore,
+    isCoherentWithImage: atmosphereAlignmentScore >= 0.42,
   };
 }
 
@@ -488,8 +817,8 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
     getComparablePaletteSlice(options.referencePalette ?? currentPalette, pinnedEntries)
   );
   const recentInspiredReferences = Array.isArray(options.recentPalettes)
-    ? options.recentPalettes.map((palette) => getComparablePaletteSlice(palette, pinnedEntries))
-    : recentInspiredPalettes.map((palette) => getComparablePaletteSlice(palette, pinnedEntries));
+    ? options.recentPalettes.map((palette) => getComparableMergedPaletteSlice(palette, pinnedEntries))
+    : recentInspiredPalettes.map((palette) => getComparableMergedPaletteSlice(palette, pinnedEntries));
   const startVariantIndex = Number.isFinite(options.startVariantIndex)
     ? Math.max(0, options.startVariantIndex)
     : imageInspirationVariantIndex + 1;
@@ -520,7 +849,11 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
       atmosphere
     );
     const orderedPalette = orderPaletteHexColorsByHarmony(candidatePalette);
-    const comparableOrderedPalette = getComparablePaletteSlice(orderedPalette, pinnedEntries);
+    const mergedOrderedPalette = mergePaletteWithPinnedColors(orderedPalette, pinnedEntries);
+    const comparableOrderedPalette = getComparablePaletteSlice(
+      mergedOrderedPalette,
+      pinnedEntries
+    );
 
     if (orderedPalette.length === 0) {
       continue;
@@ -529,7 +862,8 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
     const validation = validateInspiredPaletteCandidate(
       orderedPalette,
       extractedReferencePalette,
-      clusters
+      clusters,
+      atmosphere
     );
     const isTooSimilarToRecentInspired = isPaletteTooSimilarToRecentInspiredPalettes(
       comparableOrderedPalette,
@@ -538,22 +872,25 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
     const similarityToCurrent =
       getPaletteSimilarityMetrics(comparableOrderedPalette, referencePalette).sharedColorCount /
       Math.max(comparableOrderedPalette.length, 1);
-    const eleganceScore = scorePaletteElegance(orderedPalette);
+    const eleganceScore = scorePaletteElegance(mergedOrderedPalette);
     const score =
-      scorePaletteHarmony(orderedPalette) +
-      eleganceScore * 1.35 +
-      validation.inspirationDistanceScore * 1.15 +
-      (validation.isCoherentWithImage ? 0.35 : 0) -
-      similarityToCurrent * 0.7 -
+      scorePaletteHarmony(mergedOrderedPalette) +
+      eleganceScore * 1.2 +
+      validation.atmosphereAlignmentScore * 1.8 +
+      validation.inspirationDistanceScore * 1.45 +
+      (validation.isCoherentWithImage ? 0.45 : 0) -
+      similarityToCurrent * 1.05 -
+      validation.sharedColorRatioToExtraction * 1.2 -
       (isTooSimilarToRecentInspired ? 1.1 : 0) -
       (validation.isExactExtractionCopy ? 1.4 : 0) -
       (validation.hasRepeatedColors ? 3 : 0);
     const candidate = {
       palette: orderedPalette,
+      mergedPalette: mergedOrderedPalette,
       variantIndex,
       validation,
       isTooSimilarToRecentInspired,
-      settings: derivePaletteAdjustmentSettingsFromColors(orderedPalette),
+      settings: derivePaletteAdjustmentSettingsFromColors(mergedOrderedPalette),
       score,
     };
 
@@ -572,6 +909,8 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
       !validation.hasRepeatedColors &&
       !validation.isExactExtractionCopy &&
       !isTooSimilarToRecentInspired &&
+      validation.averageNearestClusterDistance >= 34 &&
+      validation.atmosphereAlignmentScore >= 0.42 &&
       !arePalettesTooSimilar(comparableOrderedPalette, referencePalette) &&
       (!bestCandidate || candidate.score > bestCandidate.score)
     ) {

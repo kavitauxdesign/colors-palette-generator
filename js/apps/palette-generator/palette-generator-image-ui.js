@@ -303,6 +303,9 @@ function updatePaletteInspirationButtonAvailability(availableImageColors = null)
 
   const pinnedEntries = getPinnedPaletteEntriesSnapshot();
   const mutableSlotCount = getMutablePaletteSlotCount(paletteSize, pinnedEntries);
+  const requiresMoreFreeSlotsForInspiration = hasInsufficientFreeSlotsForImageInspiration(
+    mutableSlotCount
+  );
 
   if (paletteBaseMode !== "image") {
     paletteInspirationBtn.hidden = true;
@@ -317,7 +320,11 @@ function updatePaletteInspirationButtonAvailability(availableImageColors = null)
   const availableCount = Number.isFinite(availableImageColors)
     ? availableImageColors
     : getCachedImageColorClusters().length;
-  const hasExtractedColors = hasImageSource && availableCount > 0 && mutableSlotCount > 0;
+  const hasExtractedColors =
+    hasImageSource &&
+    availableCount > 0 &&
+    mutableSlotCount > 0 &&
+    !requiresMoreFreeSlotsForInspiration;
 
   paletteInspirationBtn.hidden = !hasImageSource;
   paletteInspirationBtn.disabled = !hasExtractedColors;
@@ -328,8 +335,80 @@ function updatePaletteInspirationButtonAvailability(availableImageColors = null)
       ? "Generar una paleta inspirada en la imagen"
       : mutableSlotCount <= 0
         ? "Todos los colores están fijados"
+      : requiresMoreFreeSlotsForInspiration
+        ? "Desfija más colores para usar Inspiración en toda la paleta"
         : "Sube una imagen válida para activar el modo inspiración"
   );
+}
+
+function hasInsufficientFreeSlotsForImageInspiration(
+  mutableSlotCount = getMutablePaletteSlotCount(paletteSize, getPinnedPaletteEntriesSnapshot())
+) {
+  return mutableSlotCount < 2 || mutableSlotCount < Math.ceil(paletteSize / 2);
+}
+
+function regeneratePinnedPaletteSlots() {
+  if (
+    typeof getCurrentPaletteCardEntries !== "function" ||
+    typeof getRegeneratedColorForCard !== "function"
+  ) {
+    return false;
+  }
+
+  const cardEntries = getCurrentPaletteCardEntries();
+  const mutableEntries = cardEntries.filter((entry) => !entry.pinned);
+
+  if (mutableEntries.length === 0) {
+    return false;
+  }
+
+  const nextColors = cardEntries.map((entry) => normalizeHexColor(entry.hex));
+  let hasChanged = false;
+
+  mutableEntries.forEach((entry) => {
+    let candidate = null;
+    const excludedColors = new Set([normalizeHexColor(entry.hex)]);
+    const maxAttempts =
+      paletteBaseMode === "image"
+        ? Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 2)
+        : 1;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      candidate = getRegeneratedColorForCard(entry.card, new Set(nextColors), {
+        excludedColors,
+        variantSeedOffset:
+          paletteBaseMode === "image"
+            ? attempt * Math.max(1, IMAGE_PALETTE_VARIANT_PROFILES.length)
+            : 0,
+        maxVariantSweeps:
+          paletteBaseMode === "image"
+            ? Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
+            : undefined,
+      });
+
+      if (candidate && candidate !== entry.hex && !excludedColors.has(candidate)) {
+        break;
+      }
+
+      if (candidate) {
+        excludedColors.add(normalizeHexColor(candidate));
+      }
+    }
+
+    if (!candidate || candidate === entry.hex) {
+      return;
+    }
+
+    setCardColor(entry.card, candidate);
+    nextColors[entry.index] = normalizeHexColor(candidate);
+    hasChanged = true;
+  });
+
+  if (hasChanged) {
+    persistCurrentPaletteSnapshot();
+  }
+
+  return hasChanged;
 }
 
 async function syncImagePaletteFromSource(options = {}) {
@@ -501,7 +580,7 @@ function openPaletteImageDropzone() {
 
 function handlePaletteImageFile(file) {
   if (!isAcceptedPaletteImageFile(file)) {
-    alert("Solo se permiten imágenes JPG, PNG o SVG.");
+    alert("Solo se permiten imágenes JPG, PNG, SVG o WEBP.");
     return;
   }
 
@@ -564,6 +643,14 @@ if (paletteRegenerateBtn) {
       return;
     }
 
+    const hasPinnedEntries = getPinnedPaletteEntriesSnapshot().length > 0;
+    if (hasPinnedEntries) {
+      const hasChanged = regeneratePinnedPaletteSlots();
+      if (hasChanged || paletteBaseMode === "image") {
+        return;
+      }
+    }
+
     if (paletteBaseMode === "image") {
       void syncImagePaletteFromSource({ advanceVariant: true });
       return;
@@ -575,7 +662,14 @@ if (paletteRegenerateBtn) {
 
 if (paletteInspirationBtn) {
   paletteInspirationBtn.addEventListener("click", () => {
+    updatePaletteInspirationButtonAvailability();
+
     if (paletteInspirationBtn.disabled || paletteInspirationBtn.classList.contains("is-disabled")) {
+      return;
+    }
+
+    if (hasInsufficientFreeSlotsForImageInspiration()) {
+      updatePaletteInspirationButtonAvailability();
       return;
     }
 
