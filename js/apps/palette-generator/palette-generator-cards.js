@@ -98,9 +98,9 @@ function getAdjacentBaseColorNames(card) {
     .map((hex) => getNearestColorName(hex));
 }
 
-function getRegeneratedColorForCard(card, existingColors) {
+function getRegeneratedColorForCard(card, existingColors, options = {}) {
   if (paletteBaseMode === "image" && typeof getImageRegenerationColorForCard === "function") {
-    return getImageRegenerationColorForCard(card, existingColors);
+    return getImageRegenerationColorForCard(card, existingColors, options);
   }
 
   const maxCandidateSearches = 18;

@@ -283,6 +283,26 @@ function getPaletteSimilarityMetrics(nextPalette, referencePalette) {
   };
 }
 
+function getPalettePositionalSimilarityMetrics(nextPalette, referencePalette) {
+  const nextColors = normalizePaletteHexCollection(nextPalette);
+  const referenceColors = normalizePaletteHexCollection(referencePalette);
+  const comparableCount = Math.min(nextColors.length, referenceColors.length);
+  let samePositionCount = 0;
+
+  for (let index = 0; index < comparableCount; index += 1) {
+    if (nextColors[index] === referenceColors[index]) {
+      samePositionCount += 1;
+    }
+  }
+
+  return {
+    samePositionCount,
+    comparableCount,
+    nextCount: nextColors.length,
+    referenceCount: referenceColors.length,
+  };
+}
+
 function arePalettesTooSimilar(nextPalette, referencePalette) {
   const similarityMetrics = getPaletteSimilarityMetrics(nextPalette, referencePalette);
   return (
@@ -316,6 +336,29 @@ function getComparablePaletteSlice(colors, pinnedEntries = getPinnedPaletteEntri
   }
 
   return normalizedColors.filter((color, index) => !pinnedIndexes.has(index));
+}
+
+function getComparableMergedPaletteSlice(colors, pinnedEntries = getPinnedPaletteEntriesSnapshot()) {
+  return getComparablePaletteSlice(
+    mergePaletteWithPinnedColors(colors, pinnedEntries),
+    pinnedEntries
+  );
+}
+
+function isBetterPaletteFallbackCandidate(nextCandidate, currentFallbackCandidate) {
+  if (!currentFallbackCandidate) {
+    return true;
+  }
+
+  if (nextCandidate.samePositionCount !== currentFallbackCandidate.samePositionCount) {
+    return nextCandidate.samePositionCount < currentFallbackCandidate.samePositionCount;
+  }
+
+  if (nextCandidate.isTooSimilar !== currentFallbackCandidate.isTooSimilar) {
+    return !nextCandidate.isTooSimilar;
+  }
+
+  return nextCandidate.score > currentFallbackCandidate.score;
 }
 
 function getMutablePaletteSlotCount(totalCount = paletteSize, pinnedEntries = getPinnedPaletteEntriesSnapshot()) {

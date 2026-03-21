@@ -1,56 +1,127 @@
-function getImageBasedCandidateColor(existingColors = new Set(), adjacentBaseNames = []) {
+function getImageBasedCandidateColor(
+  existingColors = new Set(),
+  adjacentBaseNames = [],
+  options = {}
+) {
   const imageClusters = getCachedImageColorClusters();
   if (imageClusters.length === 0) {
     return null;
   }
 
+  const excludedColors = options.excludedColors instanceof Set
+    ? options.excludedColors
+    : new Set();
+  const variantSeed = Number.isFinite(options.variantSeed)
+    ? Math.max(0, options.variantSeed)
+    : Math.max(0, imagePaletteVariantIndex + 1);
+  const maxVariantSweeps = Number.isFinite(options.maxVariantSweeps)
+    ? Math.max(1, options.maxVariantSweeps)
+    : Math.max(8, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
   let bestCandidate = null;
   let bestConflictCount = Infinity;
   let bestPriorityScore = -Infinity;
 
-  imageClusters.forEach((cluster, clusterIndex) => {
-    const candidate = getAdjustedPaletteColor(cluster.hex, clusterIndex);
+  for (let variantOffset = 0; variantOffset < maxVariantSweeps; variantOffset += 1) {
+    imageClusters.forEach((cluster, clusterIndex) => {
+      const candidate = getImagePaletteVariantHex(
+        cluster,
+        clusterIndex,
+        variantSeed + variantOffset
+      );
 
-    if (existingColors.has(candidate)) {
-      return;
-    }
+      if (
+        !candidate ||
+        existingColors.has(candidate) ||
+        excludedColors.has(candidate) ||
+        isDisallowedColor(candidate)
+      ) {
+        return;
+      }
 
-    const candidateBaseName = typeof getNearestColorName === "function"
-      ? getNearestColorName(candidate)
-      : "";
-    const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
-      return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
-    }, 0);
-    const priorityScore = getImageClusterPriorityScore(cluster, imageClusters);
+      const candidateBaseName = typeof getNearestColorName === "function"
+        ? getNearestColorName(candidate)
+        : "";
+      const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
+        return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
+      }, 0);
+      const priorityScore =
+        getImageClusterPriorityScore(cluster, imageClusters) - variantOffset * 0.04;
 
-    if (conflictCount === 0) {
-      if (priorityScore > bestPriorityScore) {
+      if (conflictCount === 0) {
+        if (priorityScore > bestPriorityScore) {
+          bestCandidate = candidate;
+          bestConflictCount = 0;
+          bestPriorityScore = priorityScore;
+        }
+        return;
+      }
+
+      if (
+        conflictCount < bestConflictCount ||
+        (conflictCount === bestConflictCount && priorityScore > bestPriorityScore)
+      ) {
         bestCandidate = candidate;
-        bestConflictCount = 0;
+        bestConflictCount = conflictCount;
         bestPriorityScore = priorityScore;
       }
-      return;
-    }
+    });
 
-    if (
-      conflictCount < bestConflictCount ||
-      (conflictCount === bestConflictCount && priorityScore > bestPriorityScore)
-    ) {
-      bestCandidate = candidate;
-      bestConflictCount = conflictCount;
-      bestPriorityScore = priorityScore;
+    if (bestCandidate && bestConflictCount === 0) {
+      break;
     }
-  });
+  }
 
   return bestCandidate;
 }
 
-function getImageRegenerationColorForCard(card, existingColors = new Set()) {
+function getImageRegenerationColorForCard(card, existingColors = new Set(), options = {}) {
   const adjacentBaseNames = typeof getAdjacentBaseColorNames === "function"
     ? getAdjacentBaseColorNames(card)
     : [];
+  const currentHex = normalizeHexColor(
+    card?.querySelector(".color-label")?.textContent?.trim() || ""
+  );
+  const cardIndex = Number.parseInt(card?.dataset?.index || "-1", 10);
+  const excludedColors = options.excludedColors instanceof Set
+    ? new Set(options.excludedColors)
+    : new Set();
 
-  return getImageBasedCandidateColor(existingColors, adjacentBaseNames);
+  if (isValidPaletteHex(currentHex)) {
+    excludedColors.add(currentHex);
+  }
+
+  const variantSeedBase = Number.isFinite(options.variantSeed)
+    ? Math.max(0, options.variantSeed)
+    : imagePaletteVariantIndex + 1;
+  const variantSeedOffset = Number.isFinite(options.variantSeedOffset)
+    ? options.variantSeedOffset
+    : 0;
+  const variantSeed =
+    variantSeedBase +
+    variantSeedOffset +
+    (Number.isFinite(cardIndex) && cardIndex >= 0 ? cardIndex * 2 : 0);
+  const maxVariantSweeps = Number.isFinite(options.maxVariantSweeps)
+    ? Math.max(1, options.maxVariantSweeps)
+    : Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6);
+  const candidate = getImageBasedCandidateColor(existingColors, adjacentBaseNames, {
+    excludedColors,
+    variantSeed,
+    maxVariantSweeps,
+  });
+
+  const fallbackCandidate = candidate || getAlternativeImagePaletteColor(
+    existingColors,
+    excludedColors,
+    variantSeed +
+      (Number.isFinite(cardIndex) && cardIndex >= 0 ? cardIndex : 0),
+    maxVariantSweeps
+  );
+
+  if (fallbackCandidate) {
+    imagePaletteVariantIndex += 1;
+  }
+
+  return fallbackCandidate;
 }
 
 function buildImagePaletteCandidate(selectedClusters, targetCount, variantIndex) {
@@ -80,6 +151,80 @@ async function buildImageBasedPalette(targetCount) {
   const result = await buildImageBasedPaletteCandidate(targetCount);
   imagePaletteVariantIndex = result.variantIndex;
   return result.palette;
+}
+
+function getAlternativeImagePaletteColor(
+  existingColors = new Set(),
+  excludedColors = new Set(),
+  variantSeed = 0,
+  maxVariantSweeps = Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
+) {
+  const clusters = getCachedImageColorClusters();
+  if (!Array.isArray(clusters) || clusters.length === 0) {
+    return null;
+  }
+
+  for (let variantOffset = 0; variantOffset < maxVariantSweeps; variantOffset += 1) {
+    for (let clusterIndex = 0; clusterIndex < clusters.length; clusterIndex += 1) {
+      const cluster = clusters[clusterIndex];
+      const candidate = getImagePaletteVariantHex(
+        cluster,
+        clusterIndex,
+        variantSeed + variantOffset
+      );
+
+      if (
+        !candidate ||
+        existingColors.has(candidate) ||
+        excludedColors.has(candidate) ||
+        isDisallowedColor(candidate)
+      ) {
+        continue;
+      }
+
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function ensureMutableImagePaletteSlotsChange(
+  candidatePalette,
+  referencePalette,
+  pinnedEntries = getPinnedPaletteEntriesSnapshot(),
+  variantSeed = 0
+) {
+  const mergedPalette = mergePaletteWithPinnedColors(candidatePalette, pinnedEntries);
+  const normalizedReferencePalette = normalizePaletteHexCollection(referencePalette);
+  const pinnedIndexSet = getPinnedPaletteIndexSet(pinnedEntries);
+  const nextPalette = [...mergedPalette];
+
+  nextPalette.forEach((color, index) => {
+    if (pinnedIndexSet.has(index)) {
+      return;
+    }
+
+    const referenceColor = normalizedReferencePalette[index];
+    if (!referenceColor || referenceColor !== color) {
+      return;
+    }
+
+    const existingColors = new Set(
+      nextPalette.filter((entry, entryIndex) => entryIndex !== index)
+    );
+    const alternative = getAlternativeImagePaletteColor(
+      existingColors,
+      new Set([color]),
+      variantSeed + index * 3
+    );
+
+    if (alternative) {
+      nextPalette[index] = alternative;
+    }
+  });
+
+  return nextPalette;
 }
 
 async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
@@ -117,6 +262,7 @@ async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
     : Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
   let fallbackPalette = [];
   let fallbackVariantIndex = variantStartIndex;
+  let fallbackSamePositionCount = Infinity;
 
   for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
     const variantIndex = variantStartIndex + attempt;
@@ -126,18 +272,40 @@ async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
       targetCount,
       variantIndex
     );
-    const candidateComparablePalette = getComparablePaletteSlice(candidatePalette, pinnedEntries);
+    const referenceSourcePalette =
+      options.referencePalette ??
+      (paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette);
+    const repairedPalette = ensureMutableImagePaletteSlotsChange(
+      candidatePalette,
+      referenceSourcePalette,
+      pinnedEntries,
+      variantIndex
+    );
+    const candidateComparablePalette = getComparablePaletteSlice(
+      repairedPalette,
+      pinnedEntries
+    );
+    const positionalSimilarityMetrics = getPalettePositionalSimilarityMetrics(
+      candidateComparablePalette,
+      referencePalette
+    );
 
     if (candidatePalette.length === 0) {
       continue;
     }
 
-    fallbackPalette = candidatePalette;
-    fallbackVariantIndex = variantIndex;
+    if (positionalSimilarityMetrics.samePositionCount < fallbackSamePositionCount) {
+      fallbackPalette = repairedPalette;
+      fallbackVariantIndex = variantIndex;
+      fallbackSamePositionCount = positionalSimilarityMetrics.samePositionCount;
+    }
 
-    if (!arePalettesTooSimilar(candidateComparablePalette, referencePalette)) {
+    if (
+      positionalSimilarityMetrics.samePositionCount === 0 &&
+      !arePalettesTooSimilar(candidateComparablePalette, referencePalette)
+    ) {
       return {
-        palette: candidatePalette,
+        palette: repairedPalette,
         variantIndex,
       };
     }
@@ -649,8 +817,8 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
     getComparablePaletteSlice(options.referencePalette ?? currentPalette, pinnedEntries)
   );
   const recentInspiredReferences = Array.isArray(options.recentPalettes)
-    ? options.recentPalettes.map((palette) => getComparablePaletteSlice(palette, pinnedEntries))
-    : recentInspiredPalettes.map((palette) => getComparablePaletteSlice(palette, pinnedEntries));
+    ? options.recentPalettes.map((palette) => getComparableMergedPaletteSlice(palette, pinnedEntries))
+    : recentInspiredPalettes.map((palette) => getComparableMergedPaletteSlice(palette, pinnedEntries));
   const startVariantIndex = Number.isFinite(options.startVariantIndex)
     ? Math.max(0, options.startVariantIndex)
     : imageInspirationVariantIndex + 1;
@@ -681,7 +849,11 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
       atmosphere
     );
     const orderedPalette = orderPaletteHexColorsByHarmony(candidatePalette);
-    const comparableOrderedPalette = getComparablePaletteSlice(orderedPalette, pinnedEntries);
+    const mergedOrderedPalette = mergePaletteWithPinnedColors(orderedPalette, pinnedEntries);
+    const comparableOrderedPalette = getComparablePaletteSlice(
+      mergedOrderedPalette,
+      pinnedEntries
+    );
 
     if (orderedPalette.length === 0) {
       continue;
@@ -700,9 +872,9 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
     const similarityToCurrent =
       getPaletteSimilarityMetrics(comparableOrderedPalette, referencePalette).sharedColorCount /
       Math.max(comparableOrderedPalette.length, 1);
-    const eleganceScore = scorePaletteElegance(orderedPalette);
+    const eleganceScore = scorePaletteElegance(mergedOrderedPalette);
     const score =
-      scorePaletteHarmony(orderedPalette) +
+      scorePaletteHarmony(mergedOrderedPalette) +
       eleganceScore * 1.2 +
       validation.atmosphereAlignmentScore * 1.8 +
       validation.inspirationDistanceScore * 1.45 +
@@ -714,10 +886,11 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
       (validation.hasRepeatedColors ? 3 : 0);
     const candidate = {
       palette: orderedPalette,
+      mergedPalette: mergedOrderedPalette,
       variantIndex,
       validation,
       isTooSimilarToRecentInspired,
-      settings: derivePaletteAdjustmentSettingsFromColors(orderedPalette),
+      settings: derivePaletteAdjustmentSettingsFromColors(mergedOrderedPalette),
       score,
     };
 

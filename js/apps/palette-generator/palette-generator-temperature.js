@@ -56,8 +56,15 @@ function createTemperatureCandidate(settings, options = {}) {
       candidateResult.palette,
       settings
     );
-    const comparableRenderedPalette = getComparablePaletteSlice(renderedPalette, pinnedEntries);
+    const comparableRenderedPalette = getComparableMergedPaletteSlice(
+      renderedPalette,
+      pinnedEntries
+    );
     const similarityMetrics = getPaletteSimilarityMetrics(comparableRenderedPalette, referencePalette);
+    const positionalSimilarityMetrics = getPalettePositionalSimilarityMetrics(
+      comparableRenderedPalette,
+      referencePalette
+    );
     const similarityPenalty =
       similarityMetrics.sharedColorCount / Math.max(comparableRenderedPalette.length, 1);
     const candidate = {
@@ -65,14 +72,16 @@ function createTemperatureCandidate(settings, options = {}) {
       renderedPalette,
       usedAlternativePalette: candidateResult.usedAlternativePalette,
       score: scorePaletteHarmony(renderedPalette) - similarityPenalty * 0.85,
+      samePositionCount: positionalSimilarityMetrics.samePositionCount,
       isTooSimilar: arePalettesTooSimilar(comparableRenderedPalette, referencePalette),
     };
 
-    if (!bestFallbackCandidate || candidate.score > bestFallbackCandidate.score) {
+    if (isBetterPaletteFallbackCandidate(candidate, bestFallbackCandidate)) {
       bestFallbackCandidate = candidate;
     }
 
     if (
+      candidate.samePositionCount === 0 &&
       !candidate.isTooSimilar &&
       (!bestDistinctCandidate || candidate.score > bestDistinctCandidate.score)
     ) {
@@ -167,6 +176,71 @@ async function surpriseTemperaturePalette() {
   });
 }
 
+function surprisePinnedTemperaturePaletteSlots() {
+  if (
+    typeof getCurrentPaletteCardEntries !== "function" ||
+    typeof getRegeneratedColorForCard !== "function"
+  ) {
+    return false;
+  }
+
+  const cardEntries = getCurrentPaletteCardEntries();
+  const mutableEntries = cardEntries.filter((entry) => !entry.pinned);
+
+  if (mutableEntries.length === 0) {
+    return false;
+  }
+
+  setTemperatureSelection(getRandomTemperatureSelection());
+  setPaletteAdjustmentControls({
+    brightness: getRandomSteppedValue(0, 100, 5),
+    saturation: getRandomSteppedValue(0, 100, 5),
+  });
+
+  const nextColors = cardEntries.map((entry) => normalizeHexColor(entry.hex));
+  let hasChanged = false;
+
+  mutableEntries.forEach((entry) => {
+    const candidate = getRegeneratedColorForCard(entry.card, new Set(nextColors));
+
+    if (!candidate || candidate === entry.hex) {
+      return;
+    }
+
+    setCardColor(entry.card, candidate);
+    nextColors[entry.index] = normalizeHexColor(candidate);
+    hasChanged = true;
+  });
+
+  if (hasChanged) {
+    persistCurrentPaletteSnapshot();
+  }
+
+  return hasChanged;
+}
+
+function surprisePinnedImagePaletteSlots() {
+  if (
+    typeof regeneratePinnedPaletteSlots !== "function" ||
+    !uploadedBaseImage?.dataUrl
+  ) {
+    return false;
+  }
+
+  const nextPriorityPreference = Math.random() < 0.5;
+  prioritizeImageDominantColors = nextPriorityPreference;
+  if (paletteImageDominantToggle) {
+    paletteImageDominantToggle.checked = nextPriorityPreference;
+  }
+
+  setPaletteAdjustmentControls({
+    brightness: getRandomSteppedValue(0, 100, 5),
+    saturation: getRandomSteppedValue(0, 100, 5),
+  });
+
+  return regeneratePinnedPaletteSlots();
+}
+
 async function surpriseImagePalette() {
   if (!uploadedBaseImage?.dataUrl) {
     return;
@@ -207,7 +281,10 @@ async function surpriseImagePalette() {
       candidateResult.palette,
       candidateSettings
     );
-    const comparableRenderedPalette = getComparablePaletteSlice(renderedPalette, pinnedEntries);
+    const comparableRenderedPalette = getComparableMergedPaletteSlice(
+      renderedPalette,
+      pinnedEntries
+    );
     const similarityMetrics = getPaletteSimilarityMetrics(comparableRenderedPalette, referencePalette);
     const similarityPenalty =
       similarityMetrics.sharedColorCount / Math.max(comparableRenderedPalette.length, 1);
@@ -278,6 +355,17 @@ function setupSurpriseButton() {
 
   surpriseBtn.addEventListener("click", () => {
     if (surpriseBtn.disabled) {
+      return;
+    }
+
+    if (paletteBaseMode === "temperature" && getPinnedPaletteEntriesSnapshot().length > 0) {
+      if (surprisePinnedTemperaturePaletteSlots()) {
+        return;
+      }
+    }
+
+    if (paletteBaseMode === "image" && getPinnedPaletteEntriesSnapshot().length > 0) {
+      surprisePinnedImagePaletteSlots();
       return;
     }
 

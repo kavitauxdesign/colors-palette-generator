@@ -84,6 +84,9 @@ function syncCurrentPaletteFromDom() {
   });
   refreshColorCardNames();
   updateRegenerateButtonsAvailability();
+  if (typeof updatePaletteActionButtonsAvailability === "function") {
+    updatePaletteActionButtonsAvailability();
+  }
   updateAddColorButtonState();
 }
 
