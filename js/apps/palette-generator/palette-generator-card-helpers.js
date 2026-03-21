@@ -124,7 +124,10 @@ function getPinnedPaletteIndexes() {
 
 function setCardColor(card, color) {
   const normalizedColor = normalizeHexColor(color);
+  const overlayStyle = getAccessibleOverlayIconStyle(normalizedColor);
   card.style.background = normalizedColor;
+  card.style.setProperty("--pin-overlay-color", overlayStyle.color);
+  card.style.setProperty("--pin-overlay-shadow-color", overlayStyle.shadowColor);
   card.dataset.regenerateLocked = "false";
 
   const colorName = card.querySelector(".color-name");
@@ -234,6 +237,19 @@ function getReadableTooltipTextColor(backgroundHex) {
   const { r, g, b } = hexToRgb(backgroundHex);
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   return yiq >= 140 ? "#000000" : "#FFFFFF";
+}
+
+function getAccessibleOverlayIconStyle(backgroundHex) {
+  const normalized = normalizeHexColor(backgroundHex);
+  const accessibleStyle = getAccessibleColorNameStyle(normalized);
+  const bgLuminance = getRelativeLuminanceFromHex(normalized);
+
+  return {
+    color: accessibleStyle.textColor,
+    shadowColor: bgLuminance < 0.42
+      ? "rgba(0, 0, 0, 0.42)"
+      : "rgba(255, 255, 255, 0.45)",
+  };
 }
 
 function isDisallowedColor(color) {
@@ -388,6 +404,34 @@ function getPinButtonIconMarkup(isPinned) {
   `;
 }
 
+function getPinOverlayIconMarkup(isPinned) {
+  if (isPinned) {
+    return `
+      <span class="pin-overlay-icon-state pin-overlay-icon-state-filled is-visible">
+        ${getPinButtonIconMarkup(true).replace(
+          'class="pin-icon"',
+          'class="pin-icon pin-overlay-icon"'
+        )}
+      </span>
+    `;
+  }
+
+  return `
+    <span class="pin-overlay-icon-state pin-overlay-icon-state-outline is-visible">
+      ${getPinButtonIconMarkup(false).replace(
+        'class="pin-icon"',
+        'class="pin-icon pin-overlay-icon"'
+      )}
+    </span>
+    <span class="pin-overlay-icon-state pin-overlay-icon-state-filled">
+      ${getPinButtonIconMarkup(true).replace(
+        'class="pin-icon"',
+        'class="pin-icon pin-overlay-icon"'
+      )}
+    </span>
+  `;
+}
+
 function createCardPinButton() {
   const button = document.createElement("button");
   button.type = "button";
@@ -397,11 +441,6 @@ function createCardPinButton() {
   const iconWrap = document.createElement("span");
   iconWrap.className = "pin-icon-wrap";
   button.appendChild(iconWrap);
-
-  const tooltip = document.createElement("div");
-  tooltip.className = "tooltip";
-  tooltip.textContent = "Fijar color";
-  button.appendChild(tooltip);
 
   return button;
 }

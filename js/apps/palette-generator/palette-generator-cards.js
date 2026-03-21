@@ -18,15 +18,28 @@ function updateCardPinButtonState(card) {
   const isPinned = isCardPinned(card);
   const nextTooltip = isPinned ? "Desfijar color" : "Fijar color";
   const iconWrap = pinBtn.querySelector(".pin-icon-wrap");
+  const pinOverlayIconWrap = card?.querySelector(".color-pin-overlay-icon-wrap");
 
   pinBtn.classList.toggle("is-pinned", isPinned);
   pinBtn.setAttribute("aria-label", nextTooltip);
   pinBtn.setAttribute("aria-pressed", isPinned ? "true" : "false");
-  setActionButtonTooltipText(pinBtn, nextTooltip);
 
   if (iconWrap) {
     iconWrap.innerHTML = getPinButtonIconMarkup(isPinned);
   }
+
+  if (pinOverlayIconWrap) {
+    pinOverlayIconWrap.innerHTML = getPinOverlayIconMarkup(isPinned);
+  }
+}
+
+function toggleCardPinnedState(card) {
+  if (!card) {
+    return;
+  }
+
+  setCardPinnedState(card, !isCardPinned(card));
+  persistCurrentPaletteSnapshot();
 }
 
 function setCardPinnedState(card, isPinned) {
@@ -200,6 +213,14 @@ function attachCardActions(card) {
   const copyBtn = createCardActionButton("copy", CARD_COPY_TOOLTIP_DEFAULT);
   const deleteBtn = createCardActionButton("delete", "Eliminar color");
   const pinBtn = createCardPinButton();
+  const pinOverlay = document.createElement("div");
+  pinOverlay.className = "color-pin-overlay";
+  const pinOverlayContent = document.createElement("div");
+  pinOverlayContent.className = "color-pin-overlay-content";
+  const pinOverlayIconWrap = document.createElement("span");
+  pinOverlayIconWrap.className = "color-pin-overlay-icon-wrap";
+  pinOverlayContent.appendChild(pinOverlayIconWrap);
+  pinOverlay.appendChild(pinOverlayContent);
 
   let cardCopyFeedbackTimeout = null;
   // Regenerate this card while keeping colors unique
@@ -288,8 +309,18 @@ function attachCardActions(card) {
 
   pinBtn.addEventListener("click", (event) => {
     event.stopPropagation();
-    setCardPinnedState(card, !isCardPinned(card));
-    persistCurrentPaletteSnapshot();
+    toggleCardPinnedState(card);
+  });
+
+  card.addEventListener("click", (event) => {
+    if (
+      event.target.closest(".color-action-btn") ||
+      event.target.closest(".color-pin-btn")
+    ) {
+      return;
+    }
+
+    toggleCardPinnedState(card);
   });
 
   actions.appendChild(regenerateBtn);
@@ -299,6 +330,7 @@ function attachCardActions(card) {
 
   card.appendChild(actions);
   card.appendChild(pinBtn);
+  card.appendChild(pinOverlay);
   updateCardPinButtonState(card);
 }
 // Live update card color while picker is open
