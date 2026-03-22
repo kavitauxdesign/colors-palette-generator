@@ -28,6 +28,9 @@ function setPaletteImageExtractionFeedback(isVisible, message = IMAGE_EXTRACTION
   if (isVisible) {
     getColorCards().forEach((card) => card.remove());
     currentPalette = [];
+    syncPaletteGeneratorStoreCurrentPalette([], {
+      scope: "image-extraction-feedback",
+    });
     capturePaletteAdjustmentBase([]);
   }
 
@@ -119,6 +122,11 @@ if (brightnessInput) {
   brightnessInput.addEventListener("input", () => {
     updateBrightnessProgress();
     syncTemperatureControlsState();
+    syncPaletteGeneratorStoreAdjustments({
+      brightness: Number(brightnessInput.value),
+    }, {
+      scope: "brightness-input",
+    });
     applyCurrentPaletteAdjustments();
   });
   brightnessInput.addEventListener("change", () => {
@@ -135,6 +143,11 @@ if (saturationInput) {
   saturationInput.addEventListener("input", () => {
     updateSaturationProgress();
     syncTemperatureControlsState();
+    syncPaletteGeneratorStoreAdjustments({
+      saturation: Number(saturationInput.value),
+    }, {
+      scope: "saturation-input",
+    });
     applyCurrentPaletteAdjustments();
   });
   saturationInput.addEventListener("change", () => {
@@ -474,6 +487,16 @@ async function syncImagePaletteFromSource(options = {}) {
       imagePaletteVariantIndex += 1;
     }
 
+    syncPaletteGeneratorStoreState(
+      {
+        imagePaletteVariantIndex,
+        imageInspirationVariantIndex,
+      },
+      {
+        scope: "image-variants",
+      }
+    );
+
     await refreshImageDerivedControls();
     if (!(paletteImageExtractionAlert?.hidden ?? true)) {
       return;
@@ -543,6 +566,15 @@ function setPaletteBaseMode(nextMode) {
   } else {
     paletteBaseMode = "color";
   }
+
+  syncPaletteGeneratorStoreState(
+    {
+      paletteBaseMode,
+    },
+    {
+      scope: "palette-base-mode",
+    }
+  );
 
   if (paletteBaseMode !== "image") {
     setPaletteImageExtractionFeedback(false);
@@ -644,6 +676,9 @@ function setPaletteBaseMode(nextMode) {
       typeof colorPaletteVariantIndex !== "undefined"
     ) {
       colorPaletteVariantIndex = 0;
+      syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+        scope: "color-variant",
+      });
       shouldRefreshMonochromaticPalette = true;
     }
 
@@ -786,6 +821,14 @@ function handlePaletteImageFile(file) {
       dataUrl: String(reader.result || ""),
       analysisCache: null,
     };
+    syncPaletteGeneratorStoreState(
+      {
+        uploadedBaseImage,
+      },
+      {
+        scope: "uploaded-image",
+      }
+    );
     isReplaceImagePending = false;
     isPaletteImageDropzoneVisible = false;
     setPaletteImageExtractionFeedback(false);
@@ -822,6 +865,14 @@ if (paletteImageDominantToggle) {
   paletteImageDominantToggle.checked = prioritizeImageDominantColors;
   paletteImageDominantToggle.addEventListener("change", () => {
     prioritizeImageDominantColors = !!paletteImageDominantToggle.checked;
+    syncPaletteGeneratorStoreState(
+      {
+        prioritizeImageDominantColors,
+      },
+      {
+        scope: "image-dominant-toggle",
+      }
+    );
 
     if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
       return;

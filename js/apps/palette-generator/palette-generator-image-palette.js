@@ -150,6 +150,14 @@ function buildImagePaletteCandidate(selectedClusters, targetCount, variantIndex)
 async function buildImageBasedPalette(targetCount) {
   const result = await buildImageBasedPaletteCandidate(targetCount);
   imagePaletteVariantIndex = result.variantIndex;
+  syncPaletteGeneratorStoreState(
+    {
+      imagePaletteVariantIndex,
+    },
+    {
+      scope: "image-palette-variant",
+    }
+  );
   return result.palette;
 }
 

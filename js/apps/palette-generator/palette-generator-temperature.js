@@ -232,6 +232,14 @@ function surprisePinnedImagePaletteSlots() {
   if (paletteImageDominantToggle) {
     paletteImageDominantToggle.checked = nextPriorityPreference;
   }
+  syncPaletteGeneratorStoreState(
+    {
+      prioritizeImageDominantColors,
+    },
+    {
+      scope: "image-dominant-toggle",
+    }
+  );
 
   setPaletteAdjustmentControls({
     brightness: getRandomSteppedValue(0, 100, 5),
@@ -322,8 +330,24 @@ async function surpriseImagePalette() {
     if (paletteImageDominantToggle) {
       paletteImageDominantToggle.checked = bestCandidate.prioritizeDominant;
     }
+    syncPaletteGeneratorStoreState(
+      {
+        prioritizeImageDominantColors,
+      },
+      {
+        scope: "image-dominant-toggle",
+      }
+    );
     setPaletteAdjustmentControls(bestCandidate.settings);
     imagePaletteVariantIndex = bestCandidate.variantIndex;
+    syncPaletteGeneratorStoreState(
+      {
+        imagePaletteVariantIndex,
+      },
+      {
+        scope: "image-palette-variant",
+      }
+    );
     commitGeneratedPalette(bestCandidate.palette, {
       previousPalette: currentPalette,
     });
@@ -350,6 +374,14 @@ async function applyInspiredImagePalette() {
     }
 
     imageInspirationVariantIndex = result.variantIndex + 1;
+    syncPaletteGeneratorStoreState(
+      {
+        imageInspirationVariantIndex,
+      },
+      {
+        scope: "image-inspiration-variant",
+      }
+    );
     rememberInspiredPalette(result.palette);
     setPaletteAdjustmentControls(result.settings);
     commitGeneratedPalette(result.palette, {

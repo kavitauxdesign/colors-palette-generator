@@ -2,6 +2,14 @@
 
 function setPaletteSize(size) {
   paletteSize = size;
+  syncPaletteGeneratorStoreState(
+    {
+      paletteSize,
+    },
+    {
+      scope: "palette-size",
+    }
+  );
   sizeButtons.forEach((button) => {
     button.classList.toggle("active", Number.parseInt(button.dataset.size, 10) === size);
   });
@@ -112,6 +120,9 @@ async function applyPaletteSizeChange(nextSize) {
 
       if (effectiveType === "monochromatic" || effectiveType === "complementary") {
         colorPaletteVariantIndex = 0;
+        syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+          scope: "color-variant",
+        });
       }
 
       if (typeof commitGeneratedPalette === "function") {
@@ -194,6 +205,18 @@ function setTemperatureSelection(nextSelection) {
   } else {
     temperature = { warm: warmSelected, cool: coolSelected };
   }
+
+  syncPaletteGeneratorStoreState(
+    {
+      temperature: {
+        warm: !!temperature.warm,
+        cool: !!temperature.cool,
+      },
+    },
+    {
+      scope: "temperature-selection",
+    }
+  );
 
   syncTemperatureControlsState();
 }

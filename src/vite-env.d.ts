@@ -19,6 +19,7 @@ declare global {
     HexToFilterCore?: any;
     HexToFilterApp?: any;
     PaletteGeneratorApp?: any;
+    PaletteGeneratorStore?: any;
     Color?: any;
     copyTextToClipboard?: (text: string) => Promise<void>;
   }

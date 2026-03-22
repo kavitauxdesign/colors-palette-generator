@@ -38,6 +38,9 @@ function syncCurrentPaletteFromDom() {
   });
 
   currentPalette = getCurrentPaletteHexValues();
+  syncPaletteGeneratorStoreCurrentPalette(currentPalette, {
+    scope: "current-palette",
+  });
   sharedColors?.setPalette(currentPalette, {
     source: "palette-generator",
   });

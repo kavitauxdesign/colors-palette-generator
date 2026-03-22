@@ -94,6 +94,10 @@ function applyGeneratorSettings(settings, fallbackSize) {
     updateSaturationProgress();
     syncTemperatureControlsState();
   }
+
+  syncPaletteGeneratorStoreWithLegacyState({}, {
+    scope: "history-apply-settings",
+  });
 }
 
 function saveHistory(colors, metadata = {}) {
@@ -118,6 +122,9 @@ function saveHistory(colors, metadata = {}) {
     settings: captureCurrentGeneratorSettings(),
   });
   paletteHistoryIndex = paletteHistory.length - 1;
+  syncPaletteGeneratorStoreHistoryState({
+    scope: "history-save",
+  });
 
   renderHistory();
   updateHistoryNavigationButtons();
@@ -309,6 +316,9 @@ function loadPaletteVersionInGenerator(historyEntry, options = {}) {
   if (Number.isFinite(options.historyIndex)) {
     paletteHistoryIndex = options.historyIndex;
   }
+  syncPaletteGeneratorStoreHistoryState({
+    scope: "history-load",
+  });
   updateHistoryNavigationButtons();
   // Scroll up so user can see the loaded palette
   if (options.shouldScroll !== false) {

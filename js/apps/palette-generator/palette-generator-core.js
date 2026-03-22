@@ -114,6 +114,15 @@ function updateUploadedImageAnalysisCache(cachePatch) {
     ...(uploadedBaseImage.analysisCache || {}),
     ...cachePatch,
   };
+
+  syncPaletteGeneratorStoreState(
+    {
+      uploadedBaseImage,
+    },
+    {
+      scope: "uploaded-image-cache",
+    }
+  );
 }
 
 function updateRangeControl(input, valueLabel, lowIcon, highIcon) {
@@ -686,6 +695,9 @@ function setPaletteAdjustmentControls(settings) {
   }
 
   syncTemperatureControlsState();
+  syncPaletteGeneratorStoreAdjustments(settings, {
+    scope: "adjustments-controls",
+  });
 }
 
 function getPinnedPaletteEntriesSnapshot() {
@@ -929,6 +941,9 @@ async function generatePalette(options = {}) {
       nextPalette = candidate.palette;
       effectiveColorPaletteType = candidate.effectiveType;
       colorPaletteVariantIndex = candidate.variantIndex;
+      syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+        scope: "color-variant",
+      });
     } else {
       const temperatureResult = buildTemperaturePaletteForSettings(paletteSize);
       nextPalette = temperatureResult.palette;

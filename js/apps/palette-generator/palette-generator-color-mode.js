@@ -31,7 +31,15 @@ const TETRAD_VARIANT_PROFILES = Object.freeze([
 ]);
 
 let colorModeParserElement = null;
-let colorPaletteVariantIndex = 0;
+const paletteGeneratorStoreSnapshotForColorMode = window.PaletteGeneratorStore?.getState?.() || null;
+let colorPaletteVariantIndex = Number.isFinite(
+  paletteGeneratorStoreSnapshotForColorMode?.colorPaletteVariantIndex
+)
+  ? paletteGeneratorStoreSnapshotForColorMode.colorPaletteVariantIndex
+  : 0;
+syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+  scope: "color-variant",
+});
 
 function normalizeMonochromaticGenerationMode(mode) {
   return MONOCHROMATIC_GENERATION_MODES.has(mode)
@@ -58,6 +66,14 @@ function syncMonochromaticModeControlState() {
     selectedMonochromaticGenerationMode
   );
   selectedMonochromaticGenerationMode = resolvedMode;
+  syncPaletteGeneratorStoreState(
+    {
+      selectedMonochromaticGenerationMode,
+    },
+    {
+      scope: "monochromatic-mode",
+    }
+  );
 
   if (monochromaticModeSelect) {
     monochromaticModeSelect.value = resolvedMode;
@@ -73,6 +89,14 @@ function syncAnalogousSeparationControlState() {
     selectedAnalogousSeparationMode
   );
   selectedAnalogousSeparationMode = resolvedMode;
+  syncPaletteGeneratorStoreState(
+    {
+      selectedAnalogousSeparationMode,
+    },
+    {
+      scope: "analogous-separation",
+    }
+  );
 
   if (analogousSeparationSelect) {
     analogousSeparationSelect.value = resolvedMode;
@@ -174,6 +198,14 @@ function applyPaletteBaseColorInputState(parsedColor, options = {}) {
   }
 
   selectedPaletteBaseColor = parsedColor.hex;
+  syncPaletteGeneratorStoreState(
+    {
+      selectedPaletteBaseColor,
+    },
+    {
+      scope: "base-color",
+    }
+  );
 
   if (paletteColorTextInput && options.syncTextInput !== false) {
     paletteColorTextInput.value = parsedColor.inputValue;
@@ -334,6 +366,15 @@ function syncPaletteTypeOptionStates() {
 
   const resolvedType = getEffectiveColorPaletteType();
   resolvedAutomaticColorPaletteType = resolvedType;
+  syncPaletteGeneratorStoreState(
+    {
+      selectedColorPaletteType,
+      resolvedAutomaticColorPaletteType,
+    },
+    {
+      scope: "palette-type",
+    }
+  );
 
   if (paletteTypeResolvedLabel) {
     const shouldShowResolvedType = selectedColorPaletteType === "automatic";
@@ -392,6 +433,15 @@ function setSelectedColorPaletteType(nextType, options = {}) {
     : getNearestAllowedPaletteSize(paletteSize, allowedSizes);
   const didSizeChange = nextSize !== paletteSize;
   setPaletteSize(nextSize);
+  syncPaletteGeneratorStoreState(
+    {
+      selectedColorPaletteType,
+      paletteSize,
+    },
+    {
+      scope: "palette-type",
+    }
+  );
 
   if (typeof updatePaletteSizeButtonsAvailability === "function") {
     updatePaletteSizeButtonsAvailability();
@@ -461,6 +511,14 @@ function setSelectedPaletteBaseColor(nextValue, options = {}) {
 
 function setSelectedMonochromaticGenerationMode(nextMode, options = {}) {
   selectedMonochromaticGenerationMode = normalizeMonochromaticGenerationMode(nextMode);
+  syncPaletteGeneratorStoreState(
+    {
+      selectedMonochromaticGenerationMode,
+    },
+    {
+      scope: "monochromatic-mode",
+    }
+  );
   syncMonochromaticModeControlState();
 
   if (
@@ -475,6 +533,14 @@ function setSelectedMonochromaticGenerationMode(nextMode, options = {}) {
 
 function setSelectedAnalogousSeparationMode(nextMode, options = {}) {
   selectedAnalogousSeparationMode = normalizeAnalogousSeparationMode(nextMode);
+  syncPaletteGeneratorStoreState(
+    {
+      selectedAnalogousSeparationMode,
+    },
+    {
+      scope: "analogous-separation",
+    }
+  );
   syncAnalogousSeparationControlState();
 
   if (
@@ -1789,6 +1855,9 @@ function getColorModeRegenerationColorForCard(card, existingColors = new Set()) 
       !existingColors.has(nextColor)
     ) {
       colorPaletteVariantIndex = candidate.variantIndex;
+      syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+        scope: "color-variant",
+      });
       return nextColor;
     }
   }
