@@ -5,6 +5,10 @@ function captureCurrentGeneratorSettings() {
   return {
     paletteSize,
     baseMode: paletteBaseMode,
+    baseColor: selectedPaletteBaseColor,
+    colorPaletteType: selectedColorPaletteType,
+    monochromaticGenerationMode: selectedMonochromaticGenerationMode,
+    analogousSeparationMode: selectedAnalogousSeparationMode,
     prioritizeImageDominantColors,
     temperature: {
       warm: !!temperature.warm,
@@ -51,6 +55,32 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (settings?.temperature) {
     setTemperatureSelection(settings.temperature);
+  }
+
+  if (typeof settings?.baseColor === "string") {
+    setSelectedPaletteBaseColor(settings.baseColor, {
+      syncTextInput: true,
+      generate: false,
+      publish: false,
+    });
+  }
+
+  if (typeof settings?.colorPaletteType === "string") {
+    setSelectedColorPaletteType(settings.colorPaletteType, {
+      generate: false,
+    });
+  }
+
+  if (typeof settings?.monochromaticGenerationMode === "string") {
+    setSelectedMonochromaticGenerationMode(settings.monochromaticGenerationMode, {
+      generate: false,
+    });
+  }
+
+  if (typeof settings?.analogousSeparationMode === "string") {
+    setSelectedAnalogousSeparationMode(settings.analogousSeparationMode, {
+      generate: false,
+    });
   }
 
   if (brightnessInput && Number.isFinite(settings?.brightness)) {

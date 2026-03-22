@@ -33,8 +33,121 @@ function updateCardPinButtonState(card) {
   }
 }
 
+function isLockedColorModeBaseCard(card) {
+  if (paletteBaseMode !== "color") {
+    return false;
+  }
+
+  const cards = Array.from(getColorCards());
+  const baseCardIndex =
+    typeof getColorModeBaseCardIndex === "function"
+      ? getColorModeBaseCardIndex(cards.length)
+      : 0;
+
+  return cards.indexOf(card) === baseCardIndex;
+}
+
+function isCardPinningAvailable() {
+  if (paletteBaseMode === "color") {
+    return false;
+  }
+
+  return true;
+}
+
+function isLockedComplementaryRoleCard(card) {
+  if (
+    paletteBaseMode !== "color" ||
+    !card ||
+    (typeof isExplicitComplementaryColorModeSelected === "function" &&
+      !isExplicitComplementaryColorModeSelected())
+  ) {
+    return false;
+  }
+
+  const cards = Array.from(getColorCards());
+  const complementaryCardIndex =
+    typeof getComplementaryRoleCardIndex === "function"
+      ? getComplementaryRoleCardIndex(cards.length)
+      : -1;
+
+  return cards.indexOf(card) === complementaryCardIndex;
+}
+
+function shouldShowLockedColorModeBasePin(card) {
+  return (
+    !!card &&
+    paletteBaseMode === "color" &&
+    isLockedColorModeBaseCard(card)
+  );
+}
+
+function shouldShowLockedComplementaryPin(card) {
+  return isLockedComplementaryRoleCard(card);
+}
+
+function clearUnavailablePinnedCards() {
+  if (isCardPinningAvailable()) {
+    return false;
+  }
+
+  let hasChanged = false;
+  Array.from(getColorCards()).forEach((card) => {
+    const shouldPreserveReadonlyFixedPin =
+      shouldShowLockedColorModeBasePin(card) ||
+      shouldShowLockedComplementaryPin(card);
+
+    if (shouldPreserveReadonlyFixedPin || !isCardPinned(card)) {
+      return;
+    }
+
+    setCardPinnedState(card, false);
+    hasChanged = true;
+  });
+
+  return hasChanged;
+}
+
+function updateColorModeCardActionVisibility() {
+  Array.from(getColorCards()).forEach((card) => {
+    const editBtn = card.querySelector(".action-edit");
+    const pinBtn = card.querySelector(".color-pin-btn");
+    const pinOverlay = card.querySelector(".color-pin-overlay");
+    const shouldShowReadonlyFixedPin =
+      shouldShowLockedColorModeBasePin(card) ||
+      shouldShowLockedComplementaryPin(card);
+    if (editBtn) {
+      editBtn.classList.toggle(
+        "is-hidden",
+        isLockedColorModeBaseCard(card) || isLockedComplementaryRoleCard(card)
+      );
+    }
+    if (pinBtn) {
+      pinBtn.classList.toggle("is-hidden", !isCardPinningAvailable() || shouldShowReadonlyFixedPin);
+    }
+    if (pinOverlay) {
+      pinOverlay.classList.toggle(
+        "is-hidden",
+        !isCardPinningAvailable() && !shouldShowReadonlyFixedPin
+      );
+      pinOverlay.classList.toggle("is-always-visible", shouldShowReadonlyFixedPin);
+      pinOverlay.classList.toggle("is-corner", shouldShowReadonlyFixedPin);
+      pinOverlay.classList.toggle("is-readonly", shouldShowReadonlyFixedPin);
+      pinOverlay.classList.toggle("is-fixed-role", shouldShowReadonlyFixedPin);
+    }
+  });
+}
+
 function toggleCardPinnedState(card) {
   if (!card) {
+    return;
+  }
+
+  if (
+    isLockedColorModeBaseCard(card) ||
+    isLockedComplementaryRoleCard(card) ||
+    !isCardPinningAvailable()
+  ) {
     return;
   }
 
@@ -47,8 +160,13 @@ function setCardPinnedState(card, isPinned) {
     return;
   }
 
-  card.dataset.pinned = isPinned ? "true" : "false";
-  card.classList.toggle("is-pinned", !!isPinned);
+  const resolvedPinnedState = isLockedColorModeBaseCard(card)
+    ? true
+    : isLockedComplementaryRoleCard(card)
+      ? true
+    : (isCardPinningAvailable() && !!isPinned);
+  card.dataset.pinned = resolvedPinnedState ? "true" : "false";
+  card.classList.toggle("is-pinned", resolvedPinnedState);
   updateCardPinButtonState(card);
 }
 
@@ -78,12 +196,25 @@ function refreshDeleteButtonsVisibility() {
     if (!deleteBtn) {
       return;
     }
-    deleteBtn.classList.toggle("is-hidden", !canDelete);
+    const shouldHideDelete =
+      !canDelete ||
+      isLockedColorModeBaseCard(card) ||
+      isLockedComplementaryRoleCard(card);
+    deleteBtn.classList.toggle("is-hidden", shouldHideDelete);
   });
 }
 // Enable or disable add button by card limit
 function updateAddColorButtonState() {
   if (!addColorBtn || !addColorLabel) {
+    return;
+  }
+
+  const shouldHideAddColor = paletteBaseMode === "color";
+  if (addColorElement) {
+    addColorElement.hidden = shouldHideAddColor;
+  }
+
+  if (shouldHideAddColor) {
     return;
   }
 
@@ -112,6 +243,10 @@ function getAdjacentBaseColorNames(card) {
 }
 
 function getRegeneratedColorForCard(card, existingColors, options = {}) {
+  if (paletteBaseMode === "color" && typeof getColorModeRegenerationColorForCard === "function") {
+    return getColorModeRegenerationColorForCard(card, existingColors, options);
+  }
+
   if (paletteBaseMode === "image" && typeof getImageRegenerationColorForCard === "function") {
     return getImageRegenerationColorForCard(card, existingColors, options);
   }
@@ -169,10 +304,53 @@ function getAddedColorForCurrentMode(existingColors) {
 
 function updateRegenerateButtonsAvailability() {
   const cards = Array.from(getColorCards());
+  const shouldHideRegenerateButtons =
+    (
+      typeof isColorModeMonochromaticScaleActive === "function" &&
+      isColorModeMonochromaticScaleActive()
+    ) ||
+    (
+      paletteBaseMode === "color" &&
+      ["complementary", "analogous", "triad"].includes(selectedColorPaletteType)
+    );
 
   cards.forEach((card) => {
     const regenerateBtn = card.querySelector(".action-regenerate");
     if (!regenerateBtn) {
+      return;
+    }
+
+    const shouldHideRegenerateButton =
+      shouldHideRegenerateButtons ||
+      isLockedColorModeBaseCard(card) ||
+      isLockedComplementaryRoleCard(card);
+
+    regenerateBtn.classList.toggle("is-hidden", shouldHideRegenerateButton);
+
+    if (isLockedColorModeBaseCard(card)) {
+      setRegenerateButtonAvailability(
+        regenerateBtn,
+        false,
+        "El color base se ajusta desde el panel de controles"
+      );
+      return;
+    }
+
+    if (isLockedComplementaryRoleCard(card)) {
+      setRegenerateButtonAvailability(
+        regenerateBtn,
+        false,
+        "El complementario se ajusta automáticamente desde el color base"
+      );
+      return;
+    }
+
+    if (shouldHideRegenerateButtons) {
+      setRegenerateButtonAvailability(
+        regenerateBtn,
+        false,
+        "Ajusta el color base o Brillo/Saturación"
+      );
       return;
     }
 
@@ -227,6 +405,10 @@ function attachCardActions(card) {
   regenerateBtn.addEventListener("click", (event) => {
     event.stopPropagation();
 
+    if (isLockedColorModeBaseCard(card)) {
+      return;
+    }
+
     if (regenerateBtn.classList.contains("is-disabled")) {
       return;
     }
@@ -245,6 +427,11 @@ function attachCardActions(card) {
 
   editBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+
+    if (isLockedColorModeBaseCard(card)) {
+      return;
+    }
+
     const currentHex = normalizeHexColor(
       card.querySelector(".color-label")?.textContent?.trim() || "#000000",
     );
@@ -297,6 +484,10 @@ function attachCardActions(card) {
 
   deleteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    if (isLockedColorModeBaseCard(card)) {
+      return;
+    }
+
     const totalCards = getColorCards().length;
     if (totalCards <= 1) {
       return;
@@ -396,18 +587,28 @@ function createColorCard(color, options = {}) {
   const card = document.createElement("div");
   card.className = "color-card";
   card.dataset.pinned = "false";
+  card.dataset.readonlyFixedPin = "false";
 
   const colorName = document.createElement("div");
   colorName.className = "color-name";
+  const colorBaseIndicator = document.createElement("div");
+  colorBaseIndicator.className = "color-base-indicator";
+  colorBaseIndicator.textContent = "Color base";
+  const complementaryIndicator = document.createElement("div");
+  complementaryIndicator.className = "color-complementary-indicator";
+  complementaryIndicator.textContent = "Complementario";
 
   const label = document.createElement("div");
   label.className = "color-label";
 
   attachCardActions(card);
+  card.appendChild(colorBaseIndicator);
+  card.appendChild(complementaryIndicator);
   card.appendChild(colorName);
   card.appendChild(label);
   setCardColor(card, color);
   setCardPinnedState(card, !!options.pinned);
+  updateColorModeCardActionVisibility();
 
   if (addColorElement) {
     paletteContainer.insertBefore(card, addColorElement);

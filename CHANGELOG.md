@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.3.0 (beta) - 2026-03-22
+
+### Highlights
+- Expanded `Color mode` into explicit harmony workflows with dedicated behavior for `Monochromatic`, `Complementary`, `Analogous`, `Triad`, and `Tetrad`.
+- Made `Monochromatic` the default color harmony and removed the old automatic palette-type selection from the main UI.
+- Added richer role-based behavior for `Color base` and `Complementary`, including fixed read-only pins and harmony-aware ordering.
+
+### Palette generator improvements
+- Added monochromatic submodes for `Automatic`, `Shades`, and `Tints`, with size presets of `6`, `9`, and `12`.
+- Added explicit `Complementary` layouts for `2` and `6` colors, including lighter and darker companion steps around the base and complementary colors.
+- Added `Analogous` separation controls with `Soft`, `Medium`, and `Intense` angle presets.
+- Reworked `Triad` and `Tetrad` generation so they are built from explicit harmony logic tied to the selected base color instead of generic fallback variation rules.
+- Improved color-size switching so palette changes in `Color mode` rebuild the harmony from the current base color.
+
+### UX and interface updates
+- Replaced palette-type radio controls with dropdowns and simplified mode-specific controls so each harmony only shows relevant options.
+- Hid unsupported actions in harmony-driven color palettes, including manual pinning, irrelevant regenerate actions, and unnecessary intensity controls in monochromatic mode.
+- Added a palette-only loading overlay with a soft blur and spinner while automatic palette recalculations are running.
+- Unified the default shared starter colors between `Palette Generator` and `HEX to CSS filter`.
+
+### Fixes and maintenance
+- Fixed several edge cases where color roles or pinned-state rules leaked across modes or palette sizes.
+- Stabilized complementary palette behavior when moving between `2` and `6` colors and when adjusting the base color live.
+- Improved slider behavior in harmony modes so brightness and saturation updates respect fixed role colors and regenerate derived colors more predictably.
+
 ## 2.2.0 - 2026-03-20
 
 ### Highlights

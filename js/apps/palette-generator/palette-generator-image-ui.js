@@ -155,6 +155,13 @@ if (paletteAdjustBtn) {
 
 function updatePaletteModeActionVisibility() {
   const isImageMode = paletteBaseMode === "image";
+  const isColorMode = paletteBaseMode === "color";
+  const isHiddenRegenerateColorMode =
+    isColorMode &&
+    ["complementary", "analogous", "triad"].includes(selectedColorPaletteType);
+  const isMonochromaticColorScale =
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive();
   const hasImageSource = !!uploadedBaseImage?.dataUrl;
 
   if (paletteGenerationButtons) {
@@ -162,17 +169,25 @@ function updatePaletteModeActionVisibility() {
   }
 
   if (paletteRegenerateBtn) {
-    const shouldShowRegenerate = !isImageMode || hasImageSource;
+    const shouldShowRegenerate = isColorMode
+      ? !isMonochromaticColorScale && !isHiddenRegenerateColorMode
+      : (!isImageMode || hasImageSource);
     paletteRegenerateBtn.hidden = !shouldShowRegenerate;
   }
 
   if (surpriseBtn) {
-    const shouldShowSurprise = !isImageMode || hasImageSource;
+    const shouldShowSurprise =
+      !isColorMode &&
+      (!isImageMode || hasImageSource);
     surpriseBtn.hidden = !shouldShowSurprise;
   }
 
   if (paletteInspirationBtn) {
     paletteInspirationBtn.hidden = !(isImageMode && hasImageSource);
+  }
+
+  if (paletteIntensityControlGroup) {
+    paletteIntensityControlGroup.hidden = isMonochromaticColorScale;
   }
 }
 
@@ -215,6 +230,32 @@ function updatePaletteRegenerateButtonAvailability(availableImageColors = null) 
 
   const pinnedEntries = getPinnedPaletteEntriesSnapshot();
   const mutableSlotCount = getMutablePaletteSlotCount(paletteSize, pinnedEntries);
+
+  if (paletteBaseMode === "color") {
+    if (
+      typeof isColorModeMonochromaticScaleActive === "function" &&
+      isColorModeMonochromaticScaleActive()
+    ) {
+      paletteRegenerateBtn.disabled = true;
+      paletteRegenerateBtn.classList.add("is-disabled");
+      paletteRegenerateBtn.setAttribute("aria-disabled", "true");
+      setPaletteRegenerateButtonTooltip("Ajusta el color base o Brillo/Saturación");
+      return;
+    }
+
+    const isDisabled = mutableSlotCount <= 0 || !hasValidSelectedPaletteBaseColor();
+    paletteRegenerateBtn.disabled = isDisabled;
+    paletteRegenerateBtn.classList.toggle("is-disabled", isDisabled);
+    paletteRegenerateBtn.setAttribute("aria-disabled", isDisabled ? "true" : "false");
+    setPaletteRegenerateButtonTooltip(
+      !hasValidSelectedPaletteBaseColor()
+        ? "Introduce un color base válido"
+        : mutableSlotCount <= 0
+          ? "Todos los colores están fijados"
+          : "Generar paleta"
+    );
+    return;
+  }
 
   if (paletteBaseMode !== "image") {
     const isDisabled = mutableSlotCount <= 0;
@@ -259,6 +300,14 @@ function updatePaletteRegenerateButtonAvailability(availableImageColors = null) 
 
 function updatePaletteSurpriseButtonAvailability(availableImageColors = null) {
   if (!surpriseBtn) {
+    return;
+  }
+
+  if (paletteBaseMode === "color") {
+    surpriseBtn.disabled = true;
+    surpriseBtn.classList.add("is-disabled");
+    surpriseBtn.setAttribute("aria-disabled", "true");
+    setPaletteSurpriseButtonTooltip("Modo no disponible en Color");
     return;
   }
 
@@ -369,7 +418,7 @@ function regeneratePinnedPaletteSlots() {
     let candidate = null;
     const excludedColors = new Set([normalizeHexColor(entry.hex)]);
     const maxAttempts =
-      paletteBaseMode === "image"
+      paletteBaseMode === "image" || paletteBaseMode === "color"
         ? Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 2)
         : 1;
 
@@ -377,11 +426,11 @@ function regeneratePinnedPaletteSlots() {
       candidate = getRegeneratedColorForCard(entry.card, new Set(nextColors), {
         excludedColors,
         variantSeedOffset:
-          paletteBaseMode === "image"
+          paletteBaseMode === "image" || paletteBaseMode === "color"
             ? attempt * Math.max(1, IMAGE_PALETTE_VARIANT_PROFILES.length)
             : 0,
         maxVariantSweeps:
-          paletteBaseMode === "image"
+          paletteBaseMode === "image" || paletteBaseMode === "color"
             ? Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
             : undefined,
       });
@@ -412,29 +461,43 @@ function regeneratePinnedPaletteSlots() {
 }
 
 async function syncImagePaletteFromSource(options = {}) {
-  if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
-    return;
+  const runSync = async () => {
+    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+      return;
+    }
+
+    if (options.resetVariant) {
+      imagePaletteVariantIndex = 0;
+      imageInspirationVariantIndex = 0;
+      clearRecentInspiredPalettes();
+    } else if (options.advanceVariant) {
+      imagePaletteVariantIndex += 1;
+    }
+
+    await refreshImageDerivedControls();
+    if (!(paletteImageExtractionAlert?.hidden ?? true)) {
+      return;
+    }
+
+    await generatePalette();
+  };
+
+  if (typeof withPaletteLoadingOverlay === "function") {
+    return withPaletteLoadingOverlay(runSync);
   }
 
-  if (options.resetVariant) {
-    imagePaletteVariantIndex = 0;
-    imageInspirationVariantIndex = 0;
-    clearRecentInspiredPalettes();
-  } else if (options.advanceVariant) {
-    imagePaletteVariantIndex += 1;
-  }
-
-  await refreshImageDerivedControls();
-  if (!(paletteImageExtractionAlert?.hidden ?? true)) {
-    return;
-  }
-
-  await generatePalette();
+  return runSync();
 }
 // PALETTE BASE
 
 function setPaletteBaseMode(nextMode) {
-  paletteBaseMode = nextMode === "image" ? "image" : "temperature";
+  if (nextMode === "image") {
+    paletteBaseMode = "image";
+  } else if (nextMode === "temperature") {
+    paletteBaseMode = "temperature";
+  } else {
+    paletteBaseMode = "color";
+  }
 
   if (paletteBaseMode !== "image") {
     setPaletteImageExtractionFeedback(false);
@@ -442,6 +505,12 @@ function setPaletteBaseMode(nextMode) {
 
   if (paletteBaseModeSelect) {
     paletteBaseModeSelect.value = paletteBaseMode;
+  }
+
+  if (colorBasePanel) {
+    const showColorPanel = paletteBaseMode === "color";
+    colorBasePanel.classList.toggle("active", showColorPanel);
+    colorBasePanel.hidden = !showColorPanel;
   }
 
   if (temperatureBasePanel) {
@@ -456,6 +525,10 @@ function setPaletteBaseMode(nextMode) {
     imageBasePanel.hidden = !showImagePanel;
   }
 
+  if (typeof syncCurrentPaletteFromDom === "function") {
+    syncCurrentPaletteFromDom();
+  }
+
   updatePaletteModeActionVisibility();
   updatePaletteActionButtonsAvailability();
   updatePaletteStickyState();
@@ -464,12 +537,24 @@ function setPaletteBaseMode(nextMode) {
   if (typeof updateRegenerateButtonsAvailability === "function") {
     updateRegenerateButtonsAvailability();
   }
+  if (typeof updateColorModeCardActionVisibility === "function") {
+    updateColorModeCardActionVisibility();
+  }
   if (typeof updateAddColorButtonState === "function") {
     updateAddColorButtonState();
   }
 
   if (paletteBaseMode === "image" && uploadedBaseImage?.dataUrl) {
     void refreshImageDerivedControls();
+    return;
+  }
+
+  if (paletteBaseMode === "color") {
+    if (typeof clearUnavailablePinnedCards === "function") {
+      clearUnavailablePinnedCards();
+    }
+    syncColorModeBaseControls();
+    syncColorModeSizeSelection();
   }
 }
 
@@ -656,6 +741,11 @@ if (paletteRegenerateBtn) {
       return;
     }
 
+    if (paletteBaseMode === "color") {
+      void generatePalette();
+      return;
+    }
+
     void regenerateTemperaturePaletteKeepingPreferences();
   });
 }
@@ -721,17 +811,29 @@ if (controlsPanel && paletteSection) {
   window.addEventListener("resize", updatePaletteStickyState, { passive: true });
 }
 function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
+  const allowedColorModeSizes = getAllowedPaletteSizesForCurrentMode();
   const availableCount = Number.isFinite(availableImageColors)
     ? availableImageColors
     : getCachedImageColorClusters().length;
 
   sizeButtons.forEach((button) => {
     const buttonSize = Number.parseInt(button.dataset.size, 10);
-    const shouldDisable =
+    const shouldDisableByImage =
       paletteBaseMode === "image" &&
       !!uploadedBaseImage?.dataUrl &&
       Number.isFinite(buttonSize) &&
       buttonSize > availableCount;
+    const shouldShowForMode =
+      paletteBaseMode === "color"
+        ? Number.isFinite(buttonSize) && allowedColorModeSizes.includes(buttonSize)
+        : buttonSize !== 2 && buttonSize !== 4;
+    const shouldDisableByColorMode =
+      paletteBaseMode === "color" &&
+      Number.isFinite(buttonSize) &&
+      !allowedColorModeSizes.includes(buttonSize);
+    const shouldDisable = shouldDisableByImage || shouldDisableByColorMode;
+
+    button.hidden = !shouldShowForMode;
 
     button.classList.toggle("is-disabled", shouldDisable);
     button.setAttribute("aria-disabled", shouldDisable ? "true" : "false");
@@ -739,10 +841,31 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
 }
 
 async function refreshImageDerivedControls() {
-  if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
-    setPaletteImageExtractionFeedback(false);
-    updatePaletteSizeButtonsAvailability();
-    updatePaletteActionButtonsAvailability();
+  const runRefresh = async () => {
+    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+      setPaletteImageExtractionFeedback(false);
+      updatePaletteSizeButtonsAvailability();
+      updatePaletteActionButtonsAvailability();
+
+      if (typeof updateRegenerateButtonsAvailability === "function") {
+        updateRegenerateButtonsAvailability();
+      }
+      if (typeof updateAddColorButtonState === "function") {
+        updateAddColorButtonState();
+      }
+      return;
+    }
+
+    const clusters = await getImageColorClusters();
+    const hasExtractedColors = clusters.length > 0;
+
+    setPaletteImageExtractionFeedback(!hasExtractedColors);
+    if (!hasExtractedColors) {
+      revealPaletteImageDropzoneForRetry();
+    }
+
+    updatePaletteSizeButtonsAvailability(clusters.length);
+    updatePaletteActionButtonsAvailability(clusters.length);
 
     if (typeof updateRegenerateButtonsAvailability === "function") {
       updateRegenerateButtonsAvailability();
@@ -750,24 +873,11 @@ async function refreshImageDerivedControls() {
     if (typeof updateAddColorButtonState === "function") {
       updateAddColorButtonState();
     }
-    return;
+  };
+
+  if (typeof withPaletteLoadingOverlay === "function") {
+    return withPaletteLoadingOverlay(runRefresh);
   }
 
-  const clusters = await getImageColorClusters();
-  const hasExtractedColors = clusters.length > 0;
-
-  setPaletteImageExtractionFeedback(!hasExtractedColors);
-  if (!hasExtractedColors) {
-    revealPaletteImageDropzoneForRetry();
-  }
-
-  updatePaletteSizeButtonsAvailability(clusters.length);
-  updatePaletteActionButtonsAvailability(clusters.length);
-
-  if (typeof updateRegenerateButtonsAvailability === "function") {
-    updateRegenerateButtonsAvailability();
-  }
-  if (typeof updateAddColorButtonState === "function") {
-    updateAddColorButtonState();
-  }
+  return runRefresh();
 }

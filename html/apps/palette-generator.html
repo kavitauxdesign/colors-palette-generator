@@ -18,11 +18,8 @@
           </button>
         </div>
         <p class="description app-view-description">
-          <b>Generación de paletas</b> en distintos modos (<i>Temperatura e Imagen</i>), con opciones para regenerar,
-          explorar variaciones o inspirarse a partir de una imagen.&#x2728;
-          <br />
-          También permite ir fijando colores para construir una paleta propia poco a poco, mientras cada resultado se
-          guarda automáticamente en el historial que aparece más abajo.
+          <b>Generación de paletas</b> en distintos modos (Color, Temperatura e Imagen), con exploración de variaciones o inspiración a partir de una imagen.✨
+          Posibilidad de fijar colores para construir una paleta propia poco a poco, con guardado automático de cada resultado en el historial.
         </p>
       </div>
     </header>
@@ -34,12 +31,70 @@
 
           <div class="base-selector">
             <select id="paletteBaseModeSelect" class="base-mode-select">
-              <option value="temperature" selected>Temperatura</option>
+              <option value="color" selected>Color</option>
+              <option value="temperature">Temperatura</option>
               <option value="image">Imagen</option>
             </select>
           </div>
 
-          <div id="temperatureBasePanel" class="base-panel active">
+          <div id="colorBasePanel" class="base-panel active">
+            <div class="palette-color-card">
+              <div class="palette-color-input-shell">
+                <button id="paletteColorSwatchBtn" class="palette-color-swatch" type="button"
+                  aria-label="Seleccionar color base">
+                  <span id="paletteColorSwatchFill" class="palette-color-swatch-fill"></span>
+                </button>
+
+                <div class="palette-color-form">
+                  <label for="paletteColorTextInput" class="palette-color-label">Color base</label>
+                  <input id="paletteColorTextInput" class="palette-color-text-input" type="text"
+                    placeholder="HEX, rgb, hsl..." value="#9ebb89" />
+                  <p id="paletteColorInputFeedback" class="palette-color-feedback" aria-live="polite"></p>
+                </div>
+              </div>
+
+              <input id="paletteColorPicker" class="palette-color-picker" type="color" value="#9ebb89"
+                aria-hidden="true" tabindex="-1" />
+            </div>
+
+            <div class="palette-type-group">
+              <span class="palette-type-label">Tipo de paleta</span>
+              <div class="palette-submode-select-shell">
+                <select id="paletteTypeOptions" class="palette-submode-select" aria-label="Tipo de paleta">
+                  <option value="monochromatic" selected>Monocromática</option>
+                  <option value="complementary">Complementaria</option>
+                  <option value="analogous">Análoga</option>
+                  <option value="triad">Triada</option>
+                  <option value="tetrad">Tétrada</option>
+                </select>
+              </div>
+              <p id="paletteTypeResolvedLabel" class="palette-type-resolved-label" hidden></p>
+
+              <div id="monochromaticModeControl" class="palette-submode-group" hidden>
+                <label for="monochromaticModeSelect" class="palette-submode-label">Modo monocromático</label>
+                <div class="palette-submode-select-shell">
+                  <select id="monochromaticModeSelect" class="palette-submode-select">
+                    <option value="automatic" selected>Automático</option>
+                    <option value="shades">Shades (hacia oscuro)</option>
+                    <option value="tints">Tintes (hacia claro)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="analogousSeparationControl" class="palette-submode-group" hidden>
+                <label for="analogousSeparationSelect" class="palette-submode-label">Separación análoga</label>
+                <div class="palette-submode-select-shell">
+                  <select id="analogousSeparationSelect" class="palette-submode-select">
+                    <option value="soft">Suave</option>
+                    <option value="medium" selected>Medio</option>
+                    <option value="intense">Intenso</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="temperatureBasePanel" class="base-panel">
             <button id="warmBtn" class="temp active" type="button">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -115,13 +170,16 @@
           <h4>(2) Cantidad de colores:</h4>
 
           <div class="palette-size">
-            <button class="size active" type="button" data-size="3">3</button>
+            <button class="size" type="button" data-size="2" hidden>2</button>
+            <button class="size" type="button" data-size="3">3</button>
+            <button class="size" type="button" data-size="4" hidden>4</button>
             <button class="size" type="button" data-size="6">6</button>
-            <button class="size" type="button" data-size="9">9</button>
+            <button class="size active" type="button" data-size="9">9</button>
+            <button class="size" type="button" data-size="12">12</button>
           </div>
         </div>
 
-        <div class="control-group">
+        <div id="paletteIntensityControlGroup" class="control-group">
           <h4>(3) Intensidad:</h4>
 
           <div id="brightnessControlGroup" class="control-group palette-adjust-control control-group-spaced">
@@ -242,23 +300,29 @@
           </div>
         </div>
 
-        <div id="palette" class="palette">
-          <div class="add-color">
-            <div class="add-color-card" id="addColorBtn">
-              <svg class="plus-icon" viewBox="0 0 24 24">
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-              </svg>
+        <div id="paletteViewport" class="palette-viewport">
+          <div id="palette" class="palette">
+            <div class="add-color">
+              <div class="add-color-card" id="addColorBtn">
+                <svg class="plus-icon" viewBox="0 0 24 24">
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
 
-              <span>Añadir color</span>
+                <span>Añadir color</span>
 
-              <input type="color" class="color-picker" id="colorPicker" value="#323232" />
+                <input type="color" class="color-picker" id="colorPicker" value="#323232" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div id="paletteImageExtractionAlert" class="palette-alert palette-alert-warning" role="alert" hidden>
-          No se ha podido extraer colores. Has de intentar subir otra imagen.
+          <div id="paletteImageExtractionAlert" class="palette-alert palette-alert-warning" role="alert" hidden>
+            No se ha podido extraer colores. Has de intentar subir otra imagen.
+          </div>
+
+          <div id="paletteLoadingOverlay" class="palette-loading-overlay" aria-hidden="true" hidden>
+            <div class="palette-loading-spinner" aria-hidden="true"></div>
+          </div>
         </div>
       </section>
     </div>

@@ -7,8 +7,20 @@
   const historyContainer = document.getElementById("history");
   const paletteBaseControlGroup = document.getElementById("paletteBaseControlGroup");
   const paletteBaseModeSelect = document.getElementById("paletteBaseModeSelect");
+  const colorBasePanel = document.getElementById("colorBasePanel");
   const temperatureBasePanel = document.getElementById("temperatureBasePanel");
   const imageBasePanel = document.getElementById("imageBasePanel");
+  const paletteColorSwatchBtn = document.getElementById("paletteColorSwatchBtn");
+  const paletteColorSwatchFill = document.getElementById("paletteColorSwatchFill");
+  const paletteColorTextInput = document.getElementById("paletteColorTextInput");
+  const paletteColorInputFeedback = document.getElementById("paletteColorInputFeedback");
+  const paletteColorPicker = document.getElementById("paletteColorPicker");
+  const paletteTypeOptions = document.getElementById("paletteTypeOptions");
+  const paletteTypeResolvedLabel = document.getElementById("paletteTypeResolvedLabel");
+  const monochromaticModeControl = document.getElementById("monochromaticModeControl");
+  const monochromaticModeSelect = document.getElementById("monochromaticModeSelect");
+  const analogousSeparationControl = document.getElementById("analogousSeparationControl");
+  const analogousSeparationSelect = document.getElementById("analogousSeparationSelect");
   const paletteImageInput = document.getElementById("paletteImageInput");
   const paletteImageDropzonePanel = document.getElementById("paletteImageDropzonePanel");
   const paletteImageDropzone = document.getElementById("paletteImageDropzone");
@@ -17,6 +29,7 @@
   const paletteImageName = document.getElementById("paletteImageName");
   const paletteImageDominantToggle = document.getElementById("paletteImageDominantToggle");
   const paletteImageReplaceBtn = document.getElementById("paletteImageReplaceBtn");
+  const paletteIntensityControlGroup = document.getElementById("paletteIntensityControlGroup");
   const brightnessControlGroup = document.getElementById("brightnessControlGroup");
   const brightnessInput = document.getElementById("brightness");
   const saturationInput = document.getElementById("saturation");
@@ -25,6 +38,8 @@
   const paletteAdjustPanel = document.getElementById("paletteAdjustPanel");
   const paletteUndoBtn = document.getElementById("paletteUndoBtn");
   const paletteRedoBtn = document.getElementById("paletteRedoBtn");
+  const paletteViewport = document.getElementById("paletteViewport");
+  const paletteLoadingOverlay = document.getElementById("paletteLoadingOverlay");
   const paletteImageExtractionAlert = document.getElementById("paletteImageExtractionAlert");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker");
@@ -73,8 +88,20 @@
     historyContainer,
     paletteBaseControlGroup,
     paletteBaseModeSelect,
+    colorBasePanel,
     temperatureBasePanel,
     imageBasePanel,
+    paletteColorSwatchBtn,
+    paletteColorSwatchFill,
+    paletteColorTextInput,
+    paletteColorInputFeedback,
+    paletteColorPicker,
+    paletteTypeOptions,
+    paletteTypeResolvedLabel,
+    monochromaticModeControl,
+    monochromaticModeSelect,
+    analogousSeparationControl,
+    analogousSeparationSelect,
     paletteImageInput,
     paletteImageDropzonePanel,
     paletteImageDropzone,
@@ -83,6 +110,7 @@
     paletteImageName,
     paletteImageDominantToggle,
     paletteImageReplaceBtn,
+    paletteIntensityControlGroup,
     brightnessControlGroup,
     brightnessInput,
     saturationInput,
@@ -91,6 +119,8 @@
     paletteAdjustPanel,
     paletteUndoBtn,
     paletteRedoBtn,
+    paletteViewport,
+    paletteLoadingOverlay,
     paletteImageExtractionAlert,
     addColorBtn,
     colorPicker,

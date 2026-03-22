@@ -1,20 +1,27 @@
 // Palette generator card naming and palette copy helpers.
 
+const colorUtilsForNames = window.AppColorUtils || {};
+const getColorDistanceForNames =
+  typeof colorUtilsForNames.getColorDistance === "function"
+    ? colorUtilsForNames.getColorDistance
+    : () => Infinity;
+
 function getNearestColorName(hex) {
   if (normalizeHexColor(hex) === "#FFFFFF") {
     return "Pure white";
   }
 
-  const target = hexToRgb(hex);
   let closestName = "Unknown";
   let minDistance = Infinity;
 
-  COLOR_NAME_REFERENCES_RGB.forEach((entry) => {
-    const candidate = entry.rgb;
-    const distance =
-      (target.r - candidate.r) ** 2 +
-      (target.g - candidate.g) ** 2 +
-      (target.b - candidate.b) ** 2;
+  COLOR_NAME_REFERENCES_COLOR.forEach((entry) => {
+    if (!entry.color) {
+      return;
+    }
+
+    const distance = getColorDistanceForNames(hex, entry.color, {
+      method: "deltae2000",
+    });
 
     if (distance < minDistance) {
       minDistance = distance;
@@ -82,14 +89,60 @@ function refreshColorCardNames() {
 
   cards.forEach((card, index) => {
     const colorName = card.querySelector(".color-name");
+    const colorBaseIndicator = card.querySelector(".color-base-indicator");
+    const complementaryIndicator = card.querySelector(".color-complementary-indicator");
     if (!colorName) {
       return;
     }
 
     const hex = hexValues[index];
     const displayName = displayNames[index] || getNearestColorName(hex);
+    const baseCardIndex =
+      typeof getColorModeBaseCardIndex === "function"
+        ? getColorModeBaseCardIndex(cards.length)
+        : 0;
+    const complementaryCardIndex =
+      typeof getComplementaryRoleCardIndex === "function"
+        ? getComplementaryRoleCardIndex(cards.length)
+        : -1;
+    const isBaseColorCard = paletteBaseMode === "color" && index === baseCardIndex;
+    const isComplementaryColorCard =
+      (typeof isExplicitComplementaryColorModeSelected === "function" &&
+        isExplicitComplementaryColorModeSelected()) &&
+      index === complementaryCardIndex;
+    const shouldShowReadonlyFixedPin =
+      isBaseColorCard ||
+      (
+        typeof isExplicitComplementaryColorModeSelected === "function" &&
+        isExplicitComplementaryColorModeSelected() &&
+        (isBaseColorCard || isComplementaryColorCard)
+      );
+    const hadReadonlyFixedPin = card.dataset.readonlyFixedPin === "true";
+
+    card.classList.toggle("is-base-color", isBaseColorCard);
+    card.classList.toggle("is-complementary-color", isComplementaryColorCard);
+
+    if (hadReadonlyFixedPin && !shouldShowReadonlyFixedPin && !isBaseColorCard) {
+      setCardPinnedState(card, false);
+    }
+
+    card.dataset.readonlyFixedPin = shouldShowReadonlyFixedPin ? "true" : "false";
+
+    if ((isBaseColorCard || shouldShowReadonlyFixedPin) && !isCardPinned(card)) {
+      setCardPinnedState(card, true);
+    }
     colorName.textContent = displayName;
     applyAccessibleColorNameStyle(colorName, hex);
+
+    if (colorBaseIndicator) {
+      colorBaseIndicator.hidden = !isBaseColorCard;
+      applyAccessibleColorNameStyle(colorBaseIndicator, hex);
+    }
+
+    if (complementaryIndicator) {
+      complementaryIndicator.hidden = !isComplementaryColorCard;
+      applyAccessibleColorNameStyle(complementaryIndicator, hex);
+    }
   });
 }
 

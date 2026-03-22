@@ -3,36 +3,23 @@
   const hexToFilterCore = window.HexToFilterCore || {};
   const Color = hexToFilterCore.Color;
   const Solver = hexToFilterCore.Solver;
-  const rgbStringToHex = hexToFilterCore.rgbStringToHex;
   const normalizeHexInputValue = hexToFilterCore.normalizeHexInputValue;
   const getLossMessage = hexToFilterCore.getLossMessage;
-  const DEFAULT_TARGET_COLORS = [
-    "#9EBB89",
-    "#6EC5CE",
-    "#E7AA6E",
-    "#B1BDCD",
-    "#6BBDB6",
-    "#B88965",
-    "#DCC9B3",
-    "#A8AA98",
-    "#6B8F71",
-    "#29A9CA",
-    "#B86346",
-    "#5BAB9C",
-  ];
+  const appColorUtils = window.AppColorUtils || {};
+  const parseCssColor = appColorUtils.parseCssColor;
+  const getReadableTextColor = appColorUtils.getReadableTextColor;
+  const appConstants = window.AppConstants || {};
+  const DEFAULT_TARGET_COLORS = Array.isArray(appConstants.DEFAULT_TARGET_COLORS)
+    ? appConstants.DEFAULT_TARGET_COLORS
+    : ["#9EBB89"];
+  const DEFAULT_TARGET_COLOR =
+    window.AppSharedColors?.getDefaultActiveColor?.() ||
+    window.AppSharedColors?.getState?.().activeColor ||
+    appConstants.DEFAULT_COLOR_BASE ||
+    DEFAULT_TARGET_COLORS[0];
 
   let isHexToFilterInitialized = false;
   let applyExternalTargetColor = () => false;
-
-  function createParserElement() {
-    const parserElement = document.createElement("div");
-    parserElement.style.position = "absolute";
-    parserElement.style.opacity = "0";
-    parserElement.style.pointerEvents = "none";
-    parserElement.style.inset = "-9999px auto auto -9999px";
-    document.body.appendChild(parserElement);
-    return parserElement;
-  }
 
   function resolveHexToFilterElements(root) {
     const elements = {
@@ -67,11 +54,6 @@
     return elements;
   }
 
-  function pickRandomDefaultTargetColor() {
-    const randomIndex = Math.floor(Math.random() * DEFAULT_TARGET_COLORS.length);
-    return DEFAULT_TARGET_COLORS[randomIndex];
-  }
-
   async function fallbackCopyText(text) {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
@@ -97,9 +79,10 @@
     if (
       typeof Color !== "function" ||
       typeof Solver !== "function" ||
-      typeof rgbStringToHex !== "function" ||
       typeof normalizeHexInputValue !== "function" ||
-      typeof getLossMessage !== "function"
+      typeof getLossMessage !== "function" ||
+      typeof parseCssColor !== "function" ||
+      typeof getReadableTextColor !== "function"
     ) {
       console.error("HEX to Filter initialization failed: core helpers are missing.");
       return;
@@ -116,8 +99,6 @@
     }
 
     isHexToFilterInitialized = true;
-
-    const parserElement = createParserElement();
     const copyToClipboard = window.AppClipboard?.writeText || fallbackCopyText;
     const copyTooltipDefaultText =
       elements.copyTooltip?.textContent ?? "Copiar CSS a portapapeles";
@@ -132,40 +113,15 @@
         return null;
       }
 
-      parserElement.style.color = "";
-      parserElement.style.color = normalizedInputValue;
-
-      if (!parserElement.style.color) {
-        return null;
-      }
-
-      const computedColor = window.getComputedStyle(parserElement).color;
-      const hexColor = rgbStringToHex(computedColor);
-      if (!hexColor) {
-        return null;
-      }
-
-      const rgbMatch = computedColor.match(/rgba?\(([^)]+)\)/i);
-      if (!rgbMatch) {
-        return null;
-      }
-
-      const rgbChannels = rgbMatch[1]
-        .split(",")
-        .slice(0, 3)
-        .map((channel) => Number.parseFloat(channel.trim()));
-
-      if (
-        rgbChannels.length !== 3 ||
-        rgbChannels.some((channel) => !Number.isFinite(channel))
-      ) {
+      const parsedColor = parseCssColor(normalizedInputValue);
+      if (!parsedColor) {
         return null;
       }
 
       return {
-        hex: hexColor,
-        css: computedColor,
-        rgb: rgbChannels,
+        hex: parsedColor.hex,
+        css: parsedColor.css,
+        rgb: parsedColor.rgb,
         inputValue: normalizedInputValue,
       };
     }
@@ -198,9 +154,8 @@
         return "var(--on-accent)";
       }
 
-      const [r, g, b] = normalizedColor.rgb;
-      const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-      return yiq >= 140 ? "var(--primary)" : "var(--on-accent)";
+      const readableTextColor = getReadableTextColor(normalizedColor.hex);
+      return readableTextColor === "#000000" ? "var(--primary)" : "var(--on-accent)";
     }
 
     function setCopyFeedback() {
@@ -348,12 +303,12 @@
       }
     });
 
-    const initialTargetColor = pickRandomDefaultTargetColor();
+    const initialTargetColor = DEFAULT_TARGET_COLOR;
     elements.textInput.value = initialTargetColor;
     elements.colorPicker.value = initialTargetColor;
 
     const initialColor =
-      normalizeCssColor(elements.textInput.value) || normalizeCssColor("#00A4D6");
+      normalizeCssColor(elements.textInput.value) || normalizeCssColor(DEFAULT_TARGET_COLOR);
     if (initialColor) {
       computeBestFilter({
         normalizedColor: initialColor,

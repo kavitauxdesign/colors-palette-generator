@@ -7,8 +7,20 @@ const {
   historyContainer,
   paletteBaseControlGroup,
   paletteBaseModeSelect,
+  colorBasePanel,
   temperatureBasePanel,
   imageBasePanel,
+  paletteColorSwatchBtn,
+  paletteColorSwatchFill,
+  paletteColorTextInput,
+  paletteColorInputFeedback,
+  paletteColorPicker,
+  paletteTypeOptions,
+  paletteTypeResolvedLabel,
+  monochromaticModeControl,
+  monochromaticModeSelect,
+  analogousSeparationControl,
+  analogousSeparationSelect,
   paletteImageInput,
   paletteImageDropzonePanel,
   paletteImageDropzone,
@@ -17,6 +29,7 @@ const {
   paletteImageName,
   paletteImageDominantToggle,
   paletteImageReplaceBtn,
+  paletteIntensityControlGroup,
   brightnessControlGroup,
   brightnessInput,
   saturationInput,
@@ -25,6 +38,8 @@ const {
   paletteAdjustPanel,
   paletteUndoBtn,
   paletteRedoBtn,
+  paletteViewport,
+  paletteLoadingOverlay,
   paletteImageExtractionAlert,
   addColorBtn,
   addColorElement,
@@ -58,7 +73,12 @@ const {
   HISTORY_COPY_TOOLTIP_DEFAULT,
   ADD_DISABLED_LABEL,
   DEFAULT_PALETTE_SIZE,
+  DEFAULT_PALETTE_BASE_MODE,
   DEFAULT_TEMPERATURE,
+  DEFAULT_COLOR_BASE,
+  DEFAULT_COLOR_PALETTE_TYPE,
+  DEFAULT_MONOCHROMATIC_GENERATION_MODE,
+  DEFAULT_ANALOGOUS_SEPARATION_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_SATURATION,
   LOW_SATURATION_FALLBACK_THRESHOLD,
@@ -66,25 +86,10 @@ const {
 } = window.AppConstants;
 
 const colorUtilsForState = window.AppColorUtils || {};
-const stateHexToRgb =
-  typeof colorUtilsForState.hexToRgb === "function"
-    ? colorUtilsForState.hexToRgb
-    : function fallbackHexToRgb(hex) {
-  const normalized = String(hex ?? "").trim().toUpperCase().replace("#", "");
-  const value =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((char) => char + char)
-          .join("")
-      : normalized;
-
-  return {
-    r: parseInt(value.slice(0, 2), 16),
-    g: parseInt(value.slice(2, 4), 16),
-    b: parseInt(value.slice(4, 6), 16),
-  };
-  };
+const stateCreateColor =
+  typeof colorUtilsForState.createColor === "function"
+    ? colorUtilsForState.createColor
+    : () => null;
 
 const COLOR_NAME_REFERENCES = Array.isArray(window.AppColorNames)
   ? window.AppColorNames
@@ -94,12 +99,20 @@ const COLOR_NAME_REFERENCES = Array.isArray(window.AppColorNames)
 let paletteSize = DEFAULT_PALETTE_SIZE;
 let paletteHistory = [];
 let paletteHistoryIndex = -1;
-let paletteBaseMode = "temperature";
+let paletteBaseMode = DEFAULT_PALETTE_BASE_MODE;
 let uploadedBaseImage = null;
 let prioritizeImageDominantColors = paletteImageDominantToggle?.checked ?? true;
 let imagePaletteVariantIndex = 0;
 let imageInspirationVariantIndex = 0;
 let recentInspiredPalettes = [];
+let selectedPaletteBaseColor =
+  window.AppSharedColors?.getDefaultActiveColor?.() ||
+  window.AppSharedColors?.getState?.().activeColor ||
+  DEFAULT_COLOR_BASE;
+let selectedColorPaletteType = DEFAULT_COLOR_PALETTE_TYPE;
+let selectedMonochromaticGenerationMode = DEFAULT_MONOCHROMATIC_GENERATION_MODE;
+let selectedAnalogousSeparationMode = DEFAULT_ANALOGOUS_SEPARATION_MODE;
+let resolvedAutomaticColorPaletteType = "triad";
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,
   cool: !!DEFAULT_TEMPERATURE.cool,
@@ -119,8 +132,7 @@ let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;
 let activeEditOriginalColor = "#000000";
 
-// Build RGB lookup once for faster color name search
-const COLOR_NAME_REFERENCES_RGB = COLOR_NAME_REFERENCES.map((entry) => ({
+const COLOR_NAME_REFERENCES_COLOR = COLOR_NAME_REFERENCES.map((entry) => ({
   ...entry,
-  rgb: stateHexToRgb(entry.hex),
+  color: stateCreateColor(entry.hex),
 }));

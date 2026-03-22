@@ -1,6 +1,6 @@
-# Classic·HEX — Version 2.2.0
+# Classic·HEX — Version 2.3.0 (beta)
 
-A small suite of color tools built with Vanilla JavaScript. The current release includes a palette generator and a `HEX to CSS filter` converter, both mounted as mini-apps inside a shared front-end shell.
+A small suite of color tools built with Vanilla JavaScript. The current beta release includes a palette generator and a `HEX to CSS filter` converter, both mounted as mini-apps inside a shared front-end shell.
 
 ---
 
@@ -19,7 +19,7 @@ A small suite of color tools built with Vanilla JavaScript. The current release 
 
 # Live Version
 
-Live version:
+Current public beta:
 
 ```text
 https://kavita.es/classic-hex
@@ -43,16 +43,20 @@ Both views live inside the same page and share a small shell for navigation, scr
 The application allows users to:
 
 - switch between mini-apps from a shared header navigation
-- generate palettes from `Temperature mode` or `Image mode`
+- generate palettes from `Color mode`, `Temperature mode`, or `Image mode`
+- build explicit color harmonies from a base color using `Monochromatic`, `Complementary`, `Analogous`, `Triad`, or `Tetrad`
+- tune monochromatic generation with `Automatic`, `Shades`, or `Tints`
+- change analogous separation with `Soft`, `Medium`, or `Intense` angle presets
 - choose warm, cool, or mixed temperature behavior
 - adjust brightness and saturation
-- define the number of colors in the palette
+- define the number of colors from the presets allowed by the active mode
 - upload an image and extract a palette from it
 - prioritize dominant colors or accent colors in image mode
 - use `Inspiration mode` to build a refined palette inspired by the uploaded image
 - regenerate the full palette or a single color
 - use `Surprise me` to explore more adventurous palette variations
-- pin individual colors so regeneration keeps them fixed
+- keep `Color base` fixed in all color-based harmonies and keep `Complementary` fixed in complementary palettes
+- pin individual colors manually in non-color palette workflows so regeneration keeps them fixed
 - edit colors manually
 - copy individual HEX values or the full palette
 - use `Undo / Redo`
@@ -264,7 +268,38 @@ The generator uses a small set of main parameters.
 
 ### Number of Colors
 
-Users can select the palette size from the available UI presets, and additional colors can also be added manually to the palette until the configured maximum is reached.
+Users can select the palette size from the UI presets allowed by the active generation mode.
+
+In `Color mode`, each harmony exposes only the sizes that make sense for that harmony.
+
+In `Temperature` and `Image` workflows, additional colors can still be added manually until the configured maximum is reached.
+
+---
+
+### Color Mode
+
+Color mode treats the selected input color as the main anchor for the palette.
+
+The available harmony types are:
+
+- `Monochromatic`
+- `Complementary`
+- `Analogous`
+- `Triad`
+- `Tetrad`
+
+These harmonies are not just visual labels.
+
+Each one has its own generation logic, size presets, and role ordering.
+
+For example:
+
+- `Monochromatic` keeps the base color first and expands toward lighter or darker steps
+- `Complementary` keeps both `Color base` and `Complementary` fixed as read-only role cards
+- `Analogous` keeps the base color centered and lets the user control hue separation
+- `Triad` and `Tetrad` are generated from explicit hue relationships tied to the base color
+
+When the base color input changes, the active harmony updates immediately.
 
 ---
 
@@ -286,7 +321,7 @@ The option `both` simply means that the generator is free to choose colors from 
 
 Brightness and saturation are controlled with range sliders.
 
-These controls are shared across the palette workflow and can influence temperature-based palettes, image-derived palettes, and inspired image palettes.
+These controls are shared across the palette workflow and can influence temperature-based palettes, image-derived palettes, inspired image palettes, and the derived role colors inside explicit color harmonies.
 
 The goal is to keep the output flexible while still biasing the generated colors toward usable design ranges.
 
@@ -332,7 +367,11 @@ Each card allows the user to:
 - regenerate the color
 - edit the color manually
 - delete the color
-- pin the color so global regenerations keep it fixed
+- pin the color so global regenerations keep it fixed when manual pinning is available
+
+In color-based harmonies, role cards can also become fixed in a read-only way.
+
+`Color base` is always fixed in `Color mode`, and `Complementary` is also fixed in explicit complementary palettes.
 
 The color names are included partly as a small homage to Pantone-style color cards.
 

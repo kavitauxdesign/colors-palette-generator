@@ -390,10 +390,8 @@ function orderPaletteHexColorsByHarmony(colors) {
 }
 
 function isPaletteColorTooClose(candidateColor, palette, minimumDistance = 24) {
-  const candidateRgb = controlsHexToRgb(candidateColor);
   return palette.some((existingColor) => {
-    const existingRgb = controlsHexToRgb(existingColor);
-    return getRgbDistanceBetween(candidateRgb, existingRgb) < minimumDistance;
+    return getRgbDistanceBetween(candidateColor, existingColor) < minimumDistance;
   });
 }
 
@@ -724,10 +722,9 @@ function validateInspiredPaletteCandidate(candidatePalette, extractedPalette, cl
   );
 
   const nearestClusterDistances = normalizedCandidate.map((color) => {
-    const colorRgb = controlsHexToRgb(color);
     return Math.min(
       ...clusters.map((cluster) =>
-        getRgbDistanceBetween(colorRgb, {
+        getRgbDistanceBetween(color, {
           r: cluster.r,
           g: cluster.g,
           b: cluster.b,

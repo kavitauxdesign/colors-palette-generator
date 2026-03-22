@@ -343,26 +343,6 @@
     }
   }
 
-  function rgbStringToHex(rgbString) {
-    const match = rgbString.match(/rgba?\(([^)]+)\)/i);
-    if (!match) {
-      return null;
-    }
-
-    const channels = match[1]
-      .split(",")
-      .slice(0, 3)
-      .map((value) => Number.parseFloat(value.trim()));
-
-    if (channels.length !== 3 || channels.some((channel) => !Number.isFinite(channel))) {
-      return null;
-    }
-
-    return `#${channels
-      .map((channel) => Math.max(0, Math.min(255, Math.round(channel))).toString(16).padStart(2, "0"))
-      .join("")}`.toUpperCase();
-  }
-
   function normalizeHexInputValue(value) {
     const rawValue = String(value ?? "").trim();
     if (/^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(rawValue)) {
@@ -390,7 +370,6 @@
   window.HexToFilterCore = {
     Color,
     Solver,
-    rgbStringToHex,
     normalizeHexInputValue,
     getLossMessage,
   };
