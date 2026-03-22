@@ -9,6 +9,7 @@ A small suite of color tools built with Vanilla JavaScript. The current beta rel
 - [Live Version](#live-version)
 - [Mini-apps](#mini-apps)
 - [Features](#features)
+- [Development](#development)
 - [Visual Design](#visual-design)
 - [Implementation](#implementation)
 - [Application Logic](#application-logic)
@@ -65,6 +66,34 @@ The application allows users to:
 - preview the original target color and the filtered SVG result side by side
 - copy the final CSS filter code
 - reuse the latest active palette color inside the filter tool through shared color state
+
+---
+
+# Development
+
+Run the project locally with Vite:
+
+```bash
+npm run dev
+```
+
+Create a production build:
+
+```bash
+npm run build
+```
+
+Preview the production build locally:
+
+```bash
+npm run preview
+```
+
+The production output is generated in:
+
+```text
+dist/
+```
 
 ---
 
