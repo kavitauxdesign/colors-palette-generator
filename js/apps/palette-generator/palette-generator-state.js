@@ -17,6 +17,8 @@ const {
   paletteColorPicker,
   paletteTypeOptions,
   paletteTypeResolvedLabel,
+  monochromaticModeControl,
+  monochromaticModeSelect,
   paletteImageInput,
   paletteImageDropzonePanel,
   paletteImageDropzone,
@@ -25,6 +27,7 @@ const {
   paletteImageName,
   paletteImageDominantToggle,
   paletteImageReplaceBtn,
+  paletteIntensityControlGroup,
   brightnessControlGroup,
   brightnessInput,
   saturationInput,
@@ -70,6 +73,7 @@ const {
   DEFAULT_TEMPERATURE,
   DEFAULT_COLOR_BASE,
   DEFAULT_COLOR_PALETTE_TYPE,
+  DEFAULT_MONOCHROMATIC_GENERATION_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_SATURATION,
   LOW_SATURATION_FALLBACK_THRESHOLD,
@@ -98,6 +102,7 @@ let imageInspirationVariantIndex = 0;
 let recentInspiredPalettes = [];
 let selectedPaletteBaseColor = DEFAULT_COLOR_BASE;
 let selectedColorPaletteType = DEFAULT_COLOR_PALETTE_TYPE;
+let selectedMonochromaticGenerationMode = DEFAULT_MONOCHROMATIC_GENERATION_MODE;
 let resolvedAutomaticColorPaletteType = "triad";
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,

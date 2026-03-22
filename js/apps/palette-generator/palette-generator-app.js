@@ -41,6 +41,7 @@
         baseMode: paletteBaseMode,
         baseColor: selectedPaletteBaseColor,
         colorPaletteType: selectedColorPaletteType,
+        monochromaticGenerationMode: selectedMonochromaticGenerationMode,
         temperature: { ...temperature },
       };
     },

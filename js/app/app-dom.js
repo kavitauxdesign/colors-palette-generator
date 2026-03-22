@@ -17,6 +17,8 @@
   const paletteColorPicker = document.getElementById("paletteColorPicker");
   const paletteTypeOptions = document.getElementById("paletteTypeOptions");
   const paletteTypeResolvedLabel = document.getElementById("paletteTypeResolvedLabel");
+  const monochromaticModeControl = document.getElementById("monochromaticModeControl");
+  const monochromaticModeSelect = document.getElementById("monochromaticModeSelect");
   const paletteImageInput = document.getElementById("paletteImageInput");
   const paletteImageDropzonePanel = document.getElementById("paletteImageDropzonePanel");
   const paletteImageDropzone = document.getElementById("paletteImageDropzone");
@@ -25,6 +27,7 @@
   const paletteImageName = document.getElementById("paletteImageName");
   const paletteImageDominantToggle = document.getElementById("paletteImageDominantToggle");
   const paletteImageReplaceBtn = document.getElementById("paletteImageReplaceBtn");
+  const paletteIntensityControlGroup = document.getElementById("paletteIntensityControlGroup");
   const brightnessControlGroup = document.getElementById("brightnessControlGroup");
   const brightnessInput = document.getElementById("brightness");
   const saturationInput = document.getElementById("saturation");
@@ -91,6 +94,8 @@
     paletteColorPicker,
     paletteTypeOptions,
     paletteTypeResolvedLabel,
+    monochromaticModeControl,
+    monochromaticModeSelect,
     paletteImageInput,
     paletteImageDropzonePanel,
     paletteImageDropzone,
@@ -99,6 +104,7 @@
     paletteImageName,
     paletteImageDominantToggle,
     paletteImageReplaceBtn,
+    paletteIntensityControlGroup,
     brightnessControlGroup,
     brightnessInput,
     saturationInput,

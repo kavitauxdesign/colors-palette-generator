@@ -1,7 +1,7 @@
 /* Palette generator mini-app styles. */
 
 .control-group-spaced {
-  margin-bottom: var(--PX-16);
+  margin-bottom: var(--PX-16)!important;
 }
 
 .range-input--brightness {
@@ -159,7 +159,6 @@
 }
 
 .palette-color-text-input {
-  width: 100%;
   min-height: 44px;
   padding: 0 var(--PX-14);
   border: 1px solid rgba(89, 77, 77, 0.14);
@@ -206,6 +205,71 @@
   display: flex;
   flex-direction: column;
   gap: var(--PX-8);
+}
+
+.palette-submode-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--PX-6);
+  margin-top: var(--PX-4);
+}
+
+.palette-submode-group[hidden] {
+  display: none !important;
+}
+
+.palette-submode-label {
+  font-size: var(--PX-14);
+  font-weight: 600;
+  color: rgba(69, 69, 69, 0.82);
+}
+
+.palette-submode-select-shell {
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+.palette-submode-select-shell::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--PX-16);
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid rgba(69, 69, 69, 0.6);
+  border-bottom: 1.5px solid rgba(69, 69, 69, 0.6);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.palette-submode-select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 42px 0 var(--PX-14);
+  border: 1px solid rgba(89, 77, 77, 0.14);
+  border-radius: var(--PX-14);
+  background: rgba(255, 255, 255, 0.9);
+  color: rgba(69, 69, 69, 0.9);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+
+.palette-submode-select:hover {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(145, 111, 83, 0.24);
+}
+
+.palette-submode-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(145, 111, 83, 0.1);
 }
 
 .palette-type-options {
@@ -686,6 +750,11 @@
   display: none;
 }
 
+.color-pin-btn.is-hidden,
+.color-pin-overlay.is-hidden {
+  display: none;
+}
+
 .color-pin-btn {
   position: absolute;
   left: calc(100% - 14px);
@@ -752,6 +821,25 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--duration-fast) ease;
+}
+
+.color-pin-overlay.is-always-visible {
+  opacity: 1;
+}
+
+.color-pin-overlay.is-corner {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 10px;
+}
+
+.color-pin-overlay.is-readonly .color-pin-overlay-icon-wrap {
+  pointer-events: none;
+  cursor: default;
+}
+
+.color-pin-overlay.is-readonly .pin-overlay-icon-state.is-visible {
+  opacity: 0.72;
 }
 
 .color-pin-overlay-content {

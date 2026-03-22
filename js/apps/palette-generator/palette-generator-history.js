@@ -7,6 +7,7 @@ function captureCurrentGeneratorSettings() {
     baseMode: paletteBaseMode,
     baseColor: selectedPaletteBaseColor,
     colorPaletteType: selectedColorPaletteType,
+    monochromaticGenerationMode: selectedMonochromaticGenerationMode,
     prioritizeImageDominantColors,
     temperature: {
       warm: !!temperature.warm,
@@ -65,6 +66,12 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (typeof settings?.colorPaletteType === "string") {
     setSelectedColorPaletteType(settings.colorPaletteType, {
+      generate: false,
+    });
+  }
+
+  if (typeof settings?.monochromaticGenerationMode === "string") {
+    setSelectedMonochromaticGenerationMode(settings.monochromaticGenerationMode, {
       generate: false,
     });
   }

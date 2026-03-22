@@ -550,6 +550,13 @@ function getPinnedPaletteEntriesSnapshot() {
     return [];
   }
 
+  if (
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive()
+  ) {
+    return [];
+  }
+
   return getCurrentPaletteCardEntries()
     .filter((entry) => {
       if (!entry.pinned) {

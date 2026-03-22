@@ -479,6 +479,7 @@ button[hidden] {
 .range-labels,
 .brightness-labels,
 .saturation-labels {
+  height: 50px;
   display: flex;
   gap: var(--PX-14);
   align-items: center;

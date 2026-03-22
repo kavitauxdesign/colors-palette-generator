@@ -2,15 +2,41 @@
 
 const COLOR_MODE_PALETTE_SIZES = Object.freeze({
   automatic: [2, 3, 4, 6, 9],
-  monochromatic: [2, 3, 4, 6, 9],
+  monochromatic: [6, 9, 12],
   complementary: [2, 3, 6, 9],
   analogous: [2, 3, 6, 9],
   triad: [3, 6, 9],
   tetrad: [4],
 });
+const MONOCHROMATIC_GENERATION_MODES = new Set(["automatic", "shades", "tints"]);
 
 let colorModeParserElement = null;
 let colorPaletteVariantIndex = 0;
+
+function normalizeMonochromaticGenerationMode(mode) {
+  return MONOCHROMATIC_GENERATION_MODES.has(mode)
+    ? mode
+    : DEFAULT_MONOCHROMATIC_GENERATION_MODE;
+}
+
+function shouldShowMonochromaticModeControl() {
+  return paletteBaseMode === "color" && selectedColorPaletteType === "monochromatic";
+}
+
+function syncMonochromaticModeControlState() {
+  const resolvedMode = normalizeMonochromaticGenerationMode(
+    selectedMonochromaticGenerationMode
+  );
+  selectedMonochromaticGenerationMode = resolvedMode;
+
+  if (monochromaticModeSelect) {
+    monochromaticModeSelect.value = resolvedMode;
+  }
+
+  if (monochromaticModeControl) {
+    monochromaticModeControl.hidden = !shouldShowMonochromaticModeControl();
+  }
+}
 
 function ensureColorModeParserElement() {
   if (colorModeParserElement) {
@@ -158,6 +184,15 @@ function getAllowedPaletteSizesForType(type) {
   return COLOR_MODE_PALETTE_SIZES[type] || COLOR_MODE_PALETTE_SIZES.automatic;
 }
 
+function getDefaultPaletteSizeForType(type) {
+  if (type === "monochromatic") {
+    return 9;
+  }
+
+  const allowedSizes = getAllowedPaletteSizesForType(type);
+  return allowedSizes[0];
+}
+
 function resolveAutomaticColorPaletteType(targetCount = paletteSize) {
   if (targetCount === 2) {
     return "complementary";
@@ -224,18 +259,27 @@ function getNearestAllowedPaletteSize(nextSize, allowedSizes = getAllowedPalette
     })[0];
 }
 
+function resolvePaletteSizeForType(type, nextSize) {
+  const allowedSizes = getAllowedPaletteSizesForType(type);
+
+  if (allowedSizes.includes(nextSize)) {
+    return nextSize;
+  }
+
+  const defaultSize = getDefaultPaletteSizeForType(type);
+  if (allowedSizes.includes(defaultSize)) {
+    return defaultSize;
+  }
+
+  return getNearestAllowedPaletteSize(nextSize, allowedSizes);
+}
+
 function syncPaletteTypeOptionStates() {
-  if (!paletteTypeOptions) {
+  if (!(paletteTypeOptions instanceof HTMLSelectElement)) {
     return;
   }
 
-  const radios = Array.from(paletteTypeOptions.querySelectorAll('input[name="paletteType"]'));
-  radios.forEach((radio) => {
-    const option = radio.closest(".palette-type-option");
-    const isActive = radio.value === selectedColorPaletteType;
-    radio.checked = isActive;
-    option?.classList.toggle("is-active", isActive);
-  });
+  paletteTypeOptions.value = selectedColorPaletteType;
 
   const resolvedType = getEffectiveColorPaletteType();
   resolvedAutomaticColorPaletteType = resolvedType;
@@ -275,6 +319,7 @@ function syncColorModeBaseControls() {
   }
 
   syncPaletteTypeOptionStates();
+  syncMonochromaticModeControlState();
 }
 
 function setSelectedColorPaletteType(nextType, options = {}) {
@@ -282,9 +327,16 @@ function setSelectedColorPaletteType(nextType, options = {}) {
     ? nextType
     : DEFAULT_COLOR_PALETTE_TYPE;
   syncPaletteTypeOptionStates();
+  syncMonochromaticModeControlState();
+
+  if (typeof clearUnavailablePinnedCards === "function") {
+    clearUnavailablePinnedCards();
+  }
 
   const allowedSizes = getAllowedPaletteSizesForCurrentMode();
-  const nextSize = getNearestAllowedPaletteSize(paletteSize, allowedSizes);
+  const nextSize = selectedColorPaletteType === "monochromatic"
+    ? resolvePaletteSizeForType(selectedColorPaletteType, paletteSize)
+    : getNearestAllowedPaletteSize(paletteSize, allowedSizes);
   const didSizeChange = nextSize !== paletteSize;
   setPaletteSize(nextSize);
 
@@ -354,6 +406,20 @@ function setSelectedPaletteBaseColor(nextValue, options = {}) {
   return true;
 }
 
+function setSelectedMonochromaticGenerationMode(nextMode, options = {}) {
+  selectedMonochromaticGenerationMode = normalizeMonochromaticGenerationMode(nextMode);
+  syncMonochromaticModeControlState();
+
+  if (
+    options.generate !== false &&
+    paletteBaseMode === "color" &&
+    selectedColorPaletteType === "monochromatic" &&
+    currentPalette.length > 0
+  ) {
+    void generatePalette();
+  }
+}
+
 function getColorModeAnchorOffsets(type, targetCount, variantIndex) {
   const direction = variantIndex % 2 === 0 ? 1 : -1;
 
@@ -420,77 +486,260 @@ function getMonochromaticScalePerceivedLightness(hex) {
     : controlsHexToHsl(hex).l;
 }
 
-function getMonochromaticScaleDirection(baseColor) {
+function resolveAutomaticMonochromaticScaleDirection(baseColor) {
   const baseLightness = Number.isFinite(baseColor?.hsl?.l)
     ? baseColor.hsl.l
     : 50;
   const perceivedLightness = typeof baseColor?.hex === "string"
     ? getMonochromaticScalePerceivedLightness(baseColor.hex)
     : baseLightness;
-  const resolvedLightness = blendControlValue(baseLightness, perceivedLightness, 0.6);
+  const resolvedLightness = blendControlValue(baseLightness, perceivedLightness, 0.68);
 
-  return resolvedLightness < 54 ? "light" : "dark";
+  return resolvedLightness >= 72 ? "dark" : "light";
 }
 
-function getMonochromaticScaleTarget(baseHsl, settings, direction) {
-  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+function getMonochromaticScaleDirection(baseColor) {
+  const mode = normalizeMonochromaticGenerationMode(selectedMonochromaticGenerationMode);
 
-  if (direction === "light") {
-    const darkerTintLightness = clampControlValue(baseHsl.l + 12, 58, 82);
-    const brighterTintLightness = 98;
-    const darkerTintSaturation = clampControlValue(
-      Math.max(16, baseHsl.s * 0.32) + (settings.saturation - 50) * 0.08,
-      10,
-      32
-    );
-    const brighterTintSaturation = clampControlValue(
-      5 + settings.saturation * 0.08,
-      4,
-      16
-    );
-
-    return {
-      lightness: clampControlValue(
-        blendControlValue(darkerTintLightness, brighterTintLightness, brightnessRatio),
-        Math.max(baseHsl.l + 6, 48),
-        brighterTintLightness
-      ),
-      saturation: clampControlValue(
-        blendControlValue(darkerTintSaturation, brighterTintSaturation, brightnessRatio),
-        4,
-        32
-      ),
-    };
+  if (mode === "shades") {
+    return "dark";
   }
 
-  const darkestShadeLightness = 2;
-  const softerShadeLightness = clampControlValue(baseHsl.l - 18, 18, 34);
-  const darkestShadeSaturation = clampControlValue(
-    Math.max(14, baseHsl.s * 0.44) + (settings.saturation - 50) * 0.12,
-    10,
-    42
-  );
-  const softerShadeSaturation = clampControlValue(
-    Math.max(9, baseHsl.s * 0.24) + (settings.saturation - 50) * 0.06,
-    8,
-    28
-  );
+  if (mode === "tints") {
+    return "light";
+  }
 
+  return resolveAutomaticMonochromaticScaleDirection(baseColor);
+}
+
+function getMonochromaticBaseOklch(baseColor) {
+  const color = baseColor?.color || window.AppColorUtils?.createColor?.(baseColor?.hex);
+  if (!color) {
+    return null;
+  }
+
+  const [lightness = 0, chroma = 0, hue = 0] = color.to("oklch").coords || [];
   return {
-    lightness: clampControlValue(
-      blendControlValue(darkestShadeLightness, softerShadeLightness, brightnessRatio),
-      darkestShadeLightness,
-      Math.max(baseHsl.l - 8, 12)
-    ),
-    saturation: clampControlValue(
-      blendControlValue(darkestShadeSaturation, softerShadeSaturation, brightnessRatio),
-      8,
-      42
-    ),
+    lightness: clampControlValue(lightness, 0, 1),
+    chroma: clampControlValue(chroma, 0, 0.4),
+    hue: Number.isFinite(hue) ? hue : 0,
   };
 }
 
-// Monochromatic palettes stay on the same hue and extend from the base color toward tints or shades.
+function getMonochromaticScaleTarget(baseColor, settings, direction) {
+  const baseOklch = getMonochromaticBaseOklch(baseColor);
+  if (!baseOklch) {
+    return null;
+  }
+
+  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+  if (direction === "light") {
+    const maximumLightness = clampControlValue(0.992 - (1 - brightnessRatio) * 0.008, 0.965, 0.995);
+    const lightnessRoom = Math.max(0.2, maximumLightness - baseOklch.lightness);
+    const targetLightness = clampControlValue(
+      baseOklch.lightness + lightnessRoom * (0.86 + brightnessRatio * 0.1),
+      Math.min(maximumLightness, baseOklch.lightness + 0.22),
+      maximumLightness
+    );
+    const chromaScale = 0.16 + clampControlValue(settings.saturation / 100, 0, 1) * 0.12;
+
+    return {
+      lightness: targetLightness,
+      chroma: clampControlValue(baseOklch.chroma * chromaScale, 0.008, 0.1),
+      hue: baseOklch.hue,
+    };
+  }
+
+  const minimumLightness = clampControlValue(0.1 + (1 - brightnessRatio) * 0.035, 0.085, 0.16);
+  const darknessRoom = Math.max(0.16, baseOklch.lightness - minimumLightness);
+  const targetLightness = clampControlValue(
+    baseOklch.lightness - darknessRoom * (0.72 + (1 - brightnessRatio) * 0.08),
+    minimumLightness,
+    Math.max(minimumLightness, baseOklch.lightness - 0.18)
+  );
+  const chromaScale = 0.6 + clampControlValue(settings.saturation / 100, 0, 1) * 0.26;
+
+  return {
+    lightness: targetLightness,
+    chroma: clampControlValue(baseOklch.chroma * chromaScale, 0.02, 0.24),
+    hue: baseOklch.hue,
+  };
+}
+
+function createMonochromaticScaleTargetHex(baseColor, settings, direction) {
+  const target = getMonochromaticScaleTarget(baseColor, settings, direction);
+  const ColorConstructor = window.AppColorUtils?.Color;
+
+  if (!target || typeof ColorConstructor !== "function") {
+    return null;
+  }
+
+  let targetColor = new ColorConstructor("oklch", [
+    target.lightness,
+    target.chroma,
+    target.hue,
+  ]);
+
+  if (typeof targetColor.toGamut === "function") {
+    targetColor = targetColor.toGamut({
+      space: "srgb",
+      method: "oklch.c",
+    });
+  }
+
+  return window.AppColorUtils?.colorToHex?.(targetColor) || null;
+}
+
+function getMonochromaticColorOklchLightness(hex) {
+  const color = window.AppColorUtils?.createColor?.(hex);
+  const [lightness = 0] = color?.to("oklch")?.coords || [];
+  return clampControlValue(lightness, 0, 1);
+}
+
+function buildMonochromaticScaleCandidates(baseHex, targetHex, stepCount) {
+  if (typeof window.AppColorUtils?.getHexColorSteps !== "function") {
+    return [];
+  }
+
+  return window.AppColorUtils.getHexColorSteps(baseHex, targetHex, stepCount, {
+    space: "oklch",
+    outputSpace: "srgb",
+  });
+}
+
+function filterDistinctMonochromaticScaleColors(baseHex, colors, desiredCount, targetCount) {
+  const palette = [];
+  const usedColors = new Set([baseHex]);
+  const strictMinimumDistance = targetCount >= 12 ? 1.9 : targetCount >= 9 ? 2.5 : 3.8;
+  const relaxedMinimumDistance = targetCount >= 12 ? 1.2 : targetCount >= 9 ? 1.6 : 2.4;
+  const strictMinimumLightnessGap = targetCount >= 12 ? 0.008 : targetCount >= 9 ? 0.012 : 0.02;
+  const relaxedMinimumLightnessGap = targetCount >= 12 ? 0.005 : targetCount >= 9 ? 0.008 : 0.014;
+
+  [true, false].forEach((useStrictThresholds) => {
+    colors.forEach((color) => {
+      if (palette.length >= desiredCount * 4 || !color) {
+        return;
+      }
+
+      const normalizedColor = controlsNormalizeHexColor(color);
+      if (
+        normalizedColor === baseHex ||
+        usedColors.has(normalizedColor) ||
+        isDisallowedColor(normalizedColor)
+      ) {
+        return;
+      }
+
+      const candidateLightness = getMonochromaticColorOklchLightness(normalizedColor);
+      const minimumDistance = useStrictThresholds
+        ? strictMinimumDistance
+        : relaxedMinimumDistance;
+      const minimumLightnessGap = useStrictThresholds
+        ? strictMinimumLightnessGap
+        : relaxedMinimumLightnessGap;
+      const hasEnoughSeparation = palette.every((existingColor) => {
+        const deltaE = window.AppColorUtils?.getColorDistance?.(normalizedColor, existingColor, {
+          method: "deltae2000",
+        });
+        const lightnessGap = Math.abs(
+          candidateLightness - getMonochromaticColorOklchLightness(existingColor)
+        );
+
+        return deltaE >= minimumDistance && lightnessGap >= minimumLightnessGap;
+      });
+
+      if (!hasEnoughSeparation) {
+        return;
+      }
+
+      usedColors.add(normalizedColor);
+      palette.push(normalizedColor);
+    });
+  });
+
+  if (palette.length < desiredCount * 2) {
+    colors.forEach((color) => {
+      if (palette.length >= desiredCount * 4 || !color) {
+        return;
+      }
+
+      const normalizedColor = controlsNormalizeHexColor(color);
+      if (
+        normalizedColor === baseHex ||
+        usedColors.has(normalizedColor) ||
+        isDisallowedColor(normalizedColor)
+      ) {
+        return;
+      }
+
+      usedColors.add(normalizedColor);
+      palette.push(normalizedColor);
+    });
+  }
+
+  return palette;
+}
+
+function selectMonochromaticScaleStops(colors, desiredCount, direction) {
+  if (colors.length <= desiredCount) {
+    return [...colors];
+  }
+
+  const selectedIndexes = new Set();
+  const maxIndex = colors.length - 1;
+  const distributionGamma = direction === "dark" ? 1.32 : 1;
+
+  for (let slotIndex = 1; slotIndex <= desiredCount; slotIndex += 1) {
+    const normalizedPosition = slotIndex / desiredCount;
+    const idealIndex = Math.round((normalizedPosition ** distributionGamma) * maxIndex);
+    let resolvedIndex = idealIndex;
+    let searchOffset = 0;
+
+    while (selectedIndexes.has(resolvedIndex) && searchOffset <= maxIndex) {
+      searchOffset += 1;
+      const forwardIndex = idealIndex + searchOffset;
+      const backwardIndex = idealIndex - searchOffset;
+
+      if (forwardIndex <= maxIndex && !selectedIndexes.has(forwardIndex)) {
+        resolvedIndex = forwardIndex;
+        break;
+      }
+
+      if (backwardIndex >= 0 && !selectedIndexes.has(backwardIndex)) {
+        resolvedIndex = backwardIndex;
+        break;
+      }
+    }
+
+    selectedIndexes.add(resolvedIndex);
+  }
+
+  return [...selectedIndexes]
+    .sort((left, right) => left - right)
+    .map((index) => colors[index])
+    .filter(Boolean);
+}
+
+function orderMonochromaticScaleColors(baseHex, colors, direction) {
+  const baseLightness = getMonochromaticColorOklchLightness(baseHex);
+
+  return [...colors].sort((leftColor, rightColor) => {
+    const leftLightness = getMonochromaticColorOklchLightness(leftColor);
+    const rightLightness = getMonochromaticColorOklchLightness(rightColor);
+    const leftDistanceFromBase = Math.abs(leftLightness - baseLightness);
+    const rightDistanceFromBase = Math.abs(rightLightness - baseLightness);
+
+    if (leftDistanceFromBase !== rightDistanceFromBase) {
+      return leftDistanceFromBase - rightDistanceFromBase;
+    }
+
+    return direction === "dark"
+      ? rightLightness - leftLightness
+      : leftLightness - rightLightness;
+  });
+}
+
+// Monochromatic palettes stay on one side of the scale and keep the base color fixed in the first slot.
 function buildMonochromaticColorModePalette(targetCount, settings, options = {}) {
   const parsedBaseColor = options.baseColor || getPaletteBaseColorSnapshot();
   if (!parsedBaseColor) {
@@ -499,55 +748,55 @@ function buildMonochromaticColorModePalette(targetCount, settings, options = {})
 
   const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
   const baseHex = parsedBaseColor.hex;
-  const baseHsl = parsedBaseColor.hsl;
   const direction = getMonochromaticScaleDirection(parsedBaseColor);
-  const target = getMonochromaticScaleTarget(baseHsl, resolvedSettings, direction);
-  const targetHex = controlsHslToHex(
-    baseHsl.h,
-    target.saturation,
-    target.lightness
+  const targetHex = createMonochromaticScaleTargetHex(
+    parsedBaseColor,
+    resolvedSettings,
+    direction
   );
 
   if (targetCount <= 1) {
     return [baseHex];
   }
 
-  const colorSteps = typeof window.AppColorUtils?.getHexColorSteps === "function"
-    ? window.AppColorUtils.getHexColorSteps(baseHex, targetHex, targetCount, {
-      space: "oklch",
-      outputSpace: "srgb",
-    })
-    : [];
-
-  if (colorSteps.length > 0) {
-    const palette = [];
-    const usedColors = new Set();
-
-    colorSteps.forEach((color) => {
-      const normalizedColor = controlsNormalizeHexColor(color);
-
-      if (normalizedColor !== baseHex && isDisallowedColor(normalizedColor)) {
-        return;
-      }
-
-      if (usedColors.has(normalizedColor)) {
-        return;
-      }
-
-      usedColors.add(normalizedColor);
-      palette.push(normalizedColor);
-    });
-
-    if (palette.length > targetCount) {
-      return palette.slice(0, targetCount);
-    }
-
-    if (palette.length === targetCount) {
-      return palette;
-    }
+  if (!targetHex || targetHex === baseHex) {
+    return [baseHex];
   }
 
-  return [baseHex];
+  const desiredCount = targetCount - 1;
+  const stepCounts = [
+    desiredCount * 2 + 4,
+    desiredCount * 4 + 6,
+    desiredCount * 6 + 8,
+  ];
+  let scaleColors = [];
+
+  stepCounts.some((stepCount) => {
+    const candidates = buildMonochromaticScaleCandidates(
+      baseHex,
+      targetHex,
+      stepCount
+    ).slice(1);
+    const distinctColors = filterDistinctMonochromaticScaleColors(
+      baseHex,
+      candidates,
+      desiredCount,
+      targetCount
+    );
+    const sampledColors = selectMonochromaticScaleStops(
+      distinctColors,
+      desiredCount,
+      direction
+    );
+
+    if (sampledColors.length > scaleColors.length) {
+      scaleColors = sampledColors;
+    }
+
+    return sampledColors.length >= desiredCount;
+  });
+
+  return [baseHex, ...orderMonochromaticScaleColors(baseHex, scaleColors, direction)];
 }
 
 function orderColorModePaletteByHarmony(colors, baseHex) {
@@ -762,7 +1011,9 @@ function getColorModeRegenerationColorForCard(card, existingColors = new Set()) 
 
 function syncColorModeSizeSelection() {
   const allowedSizes = getAllowedPaletteSizesForCurrentMode();
-  const nextSize = getNearestAllowedPaletteSize(paletteSize, allowedSizes);
+  const nextSize = selectedColorPaletteType === "monochromatic"
+    ? resolvePaletteSizeForType(selectedColorPaletteType, paletteSize)
+    : getNearestAllowedPaletteSize(paletteSize, allowedSizes);
 
   if (nextSize !== paletteSize) {
     setPaletteSize(nextSize);
@@ -810,7 +1061,7 @@ function initializeColorModeControls() {
         return;
       }
 
-      applyPaletteBaseColorInputState(parsedColor, {
+      setSelectedPaletteBaseColor(parsedColor.inputValue, {
         syncTextInput: false,
       });
       if (typeof updatePaletteActionButtonsAvailability === "function") {
@@ -825,14 +1076,15 @@ function initializeColorModeControls() {
     });
   }
 
-  if (paletteTypeOptions) {
-    paletteTypeOptions.addEventListener("change", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement) || target.name !== "paletteType") {
-        return;
-      }
+  if (paletteTypeOptions instanceof HTMLSelectElement) {
+    paletteTypeOptions.addEventListener("change", () => {
+      setSelectedColorPaletteType(paletteTypeOptions.value);
+    });
+  }
 
-      setSelectedColorPaletteType(target.value);
+  if (monochromaticModeSelect) {
+    monochromaticModeSelect.addEventListener("change", () => {
+      setSelectedMonochromaticGenerationMode(monochromaticModeSelect.value);
     });
   }
 }

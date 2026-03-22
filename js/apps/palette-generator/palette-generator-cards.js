@@ -42,11 +42,60 @@ function isLockedColorModeBaseCard(card) {
   return cards.indexOf(card) === 0;
 }
 
+function isCardPinningAvailable() {
+  return !(
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive()
+  );
+}
+
+function shouldShowLockedMonochromaticBasePin(card) {
+  return (
+    !!card &&
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive() &&
+    isLockedColorModeBaseCard(card)
+  );
+}
+
+function clearUnavailablePinnedCards() {
+  if (isCardPinningAvailable()) {
+    return false;
+  }
+
+  let hasChanged = false;
+  Array.from(getColorCards()).forEach((card) => {
+    if (isLockedColorModeBaseCard(card) || !isCardPinned(card)) {
+      return;
+    }
+
+    setCardPinnedState(card, false);
+    hasChanged = true;
+  });
+
+  return hasChanged;
+}
+
 function updateColorModeCardActionVisibility() {
   Array.from(getColorCards()).forEach((card) => {
     const editBtn = card.querySelector(".action-edit");
+    const pinBtn = card.querySelector(".color-pin-btn");
+    const pinOverlay = card.querySelector(".color-pin-overlay");
+    const shouldShowReadonlyBasePin = shouldShowLockedMonochromaticBasePin(card);
     if (editBtn) {
       editBtn.classList.toggle("is-hidden", isLockedColorModeBaseCard(card));
+    }
+    if (pinBtn) {
+      pinBtn.classList.toggle("is-hidden", !isCardPinningAvailable());
+    }
+    if (pinOverlay) {
+      pinOverlay.classList.toggle(
+        "is-hidden",
+        !isCardPinningAvailable() && !shouldShowReadonlyBasePin
+      );
+      pinOverlay.classList.toggle("is-always-visible", shouldShowReadonlyBasePin);
+      pinOverlay.classList.toggle("is-corner", shouldShowReadonlyBasePin);
+      pinOverlay.classList.toggle("is-readonly", shouldShowReadonlyBasePin);
     }
   });
 }
@@ -56,7 +105,7 @@ function toggleCardPinnedState(card) {
     return;
   }
 
-  if (isLockedColorModeBaseCard(card)) {
+  if (isLockedColorModeBaseCard(card) || !isCardPinningAvailable()) {
     return;
   }
 
@@ -69,7 +118,9 @@ function setCardPinnedState(card, isPinned) {
     return;
   }
 
-  const resolvedPinnedState = isLockedColorModeBaseCard(card) ? true : !!isPinned;
+  const resolvedPinnedState = isLockedColorModeBaseCard(card)
+    ? true
+    : (isCardPinningAvailable() && !!isPinned);
   card.dataset.pinned = resolvedPinnedState ? "true" : "false";
   card.classList.toggle("is-pinned", resolvedPinnedState);
   updateCardPinButtonState(card);

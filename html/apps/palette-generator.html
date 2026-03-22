@@ -18,11 +18,8 @@
           </button>
         </div>
         <p class="description app-view-description">
-          <b>Generación de paletas</b> en distintos modos (<i>Color, Temperatura e Imagen</i>), con opciones para
-          regenerar, explorar variaciones o inspirarse a partir de una imagen.&#x2728;
-          <br />
-          También permite ir fijando colores para construir una paleta propia poco a poco, mientras cada resultado se
-          guarda automáticamente en el historial que aparece más abajo.
+          <b>Generación de paletas</b> en distintos modos (Color, Temperatura e Imagen), con exploración de variaciones o inspiración a partir de una imagen.✨
+          Posibilidad de fijar colores para construir una paleta propia poco a poco, con guardado automático de cada resultado en el historial.
         </p>
       </div>
     </header>
@@ -62,34 +59,28 @@
 
             <div class="palette-type-group">
               <span class="palette-type-label">Tipo de paleta</span>
-              <div id="paletteTypeOptions" class="palette-type-options" role="radiogroup"
-                aria-label="Tipo de paleta">
-                <label class="palette-type-option is-active">
-                  <input type="radio" name="paletteType" value="automatic" checked />
-                  <span>Automática</span>
-                </label>
-                <label class="palette-type-option">
-                  <input type="radio" name="paletteType" value="monochromatic" />
-                  <span>Monocromática</span>
-                </label>
-                <label class="palette-type-option">
-                  <input type="radio" name="paletteType" value="complementary" />
-                  <span>Complementaria</span>
-                </label>
-                <label class="palette-type-option">
-                  <input type="radio" name="paletteType" value="analogous" />
-                  <span>Análoga</span>
-                </label>
-                <label class="palette-type-option">
-                  <input type="radio" name="paletteType" value="triad" />
-                  <span>Triada</span>
-                </label>
-                <label class="palette-type-option">
-                  <input type="radio" name="paletteType" value="tetrad" />
-                  <span>Tétrada</span>
-                </label>
+              <div class="palette-submode-select-shell">
+                <select id="paletteTypeOptions" class="palette-submode-select" aria-label="Tipo de paleta">
+                  <option value="automatic" selected>Automática</option>
+                  <option value="monochromatic">Monocromática</option>
+                  <option value="complementary">Complementaria</option>
+                  <option value="analogous">Análoga</option>
+                  <option value="triad">Triada</option>
+                  <option value="tetrad">Tétrada</option>
+                </select>
               </div>
               <p id="paletteTypeResolvedLabel" class="palette-type-resolved-label" hidden></p>
+
+              <div id="monochromaticModeControl" class="palette-submode-group" hidden>
+                <label for="monochromaticModeSelect" class="palette-submode-label">Modo monocromático</label>
+                <div class="palette-submode-select-shell">
+                  <select id="monochromaticModeSelect" class="palette-submode-select">
+                    <option value="automatic" selected>Automático</option>
+                    <option value="shades">Shades (hacia oscuro)</option>
+                    <option value="tints">Tintes (hacia claro)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -174,10 +165,11 @@
             <button class="size" type="button" data-size="4" hidden>4</button>
             <button class="size" type="button" data-size="6">6</button>
             <button class="size" type="button" data-size="9">9</button>
+            <button class="size" type="button" data-size="12">12</button>
           </div>
         </div>
 
-        <div class="control-group">
+        <div id="paletteIntensityControlGroup" class="control-group">
           <h4>(3) Intensidad:</h4>
 
           <div id="brightnessControlGroup" class="control-group palette-adjust-control control-group-spaced">

@@ -182,6 +182,10 @@ function updatePaletteModeActionVisibility() {
   if (paletteInspirationBtn) {
     paletteInspirationBtn.hidden = !(isImageMode && hasImageSource);
   }
+
+  if (paletteIntensityControlGroup) {
+    paletteIntensityControlGroup.hidden = isMonochromaticColorScale;
+  }
 }
 
 function setPaletteActionButtonTooltip(button, tooltipText) {
