@@ -232,14 +232,18 @@ function cleanImageClusterDuplicates(clusters) {
     }
 
     const hsl = controlsHexToHsl(hex);
+    const oklch = window.AppColorUtils?.hexToOklch?.(hex);
+    const chromaPercent = clampControlValue(((oklch?.c ?? 0) / 0.24) * 100, 0, 100);
+    const lightnessPercent = clampControlValue((oklch?.l ?? 0.5) * 100, 0, 100);
     deduplicatedClusters.push({
       ...cluster,
       hex,
       hsl,
+      oklch,
       relevance:
         cluster.weight *
-        (1 + hsl.s / 220) *
-        (0.92 + Math.abs(hsl.l - 50) / 180),
+        (1 + chromaPercent / 260) *
+        (0.92 + Math.abs(lightnessPercent - 58) / 190),
     });
   });
 
@@ -257,8 +261,8 @@ function getImageClusterPriorityScore(cluster, allClusters, selectedClusters = [
     1
   );
   const normalizedWeight = clampControlValue((cluster.weight || 0) / maxWeight, 0, 1);
-  const saturationFactor = clampControlValue(cluster.hsl?.s ?? 0, 0, 100) / 100;
-  const lightnessDistance = Math.min(Math.abs((cluster.hsl?.l ?? 50) - 50) / 50, 1);
+  const saturationFactor = clampControlValue(((cluster.oklch?.c ?? 0) / 0.24) * 100, 0, 100) / 100;
+  const lightnessDistance = Math.min(Math.abs((cluster.oklch?.l ?? 0.5) - 0.5) / 0.42, 1);
   const nearestDistance = selectedClusters.length > 0
     ? Math.min(
         ...selectedClusters.map((selectedCluster) =>
@@ -352,18 +356,28 @@ function getImagePaletteVariantHex(cluster, clusterIndex, variantIndex) {
     return cluster.hex;
   }
 
+  const baseOklch = cluster.oklch || window.AppColorUtils?.hexToOklch?.(cluster.hex);
+  if (!baseOklch) {
+    return cluster.hex;
+  }
+
   const direction = (clusterIndex + normalizedVariantIndex) % 2 === 0 ? 1 : -1;
   const stagger = profile.stagger[clusterIndex % profile.stagger.length] || 0;
   const hueOffset = profile.hueShift * direction + (clusterIndex % 3) * direction * 2;
-  const saturationOffset = profile.saturationShift + stagger * 0.45;
-  const lightnessOffset = profile.lightnessShift + stagger * 0.8;
+  const chromaOffset = (profile.saturationShift + stagger * 0.45) * 0.0018;
+  const lightnessOffset = (profile.lightnessShift + stagger * 0.8) * 0.006;
 
   return controlsNormalizeHexColor(
-    controlsHslToHex(
-      (cluster.hsl.h + hueOffset + 360) % 360,
-      clampControlValue(cluster.hsl.s + saturationOffset, 4, 100),
-      clampControlValue(cluster.hsl.l + lightnessOffset, 8, 92)
-    )
+    window.AppColorUtils?.oklchToHex?.(
+      clampControlValue(baseOklch.l + lightnessOffset, 0.08, 0.95),
+      clampControlValue(Math.max(baseOklch.c, 0.01) + chromaOffset, 0.004, 0.26),
+      baseOklch.h + hueOffset,
+      {
+        minLightness: 0.08,
+        maxLightness: 0.95,
+        maxChroma: 0.26,
+      }
+    ) || cluster.hex
   );
 }
 
@@ -373,8 +387,8 @@ function getImageClusterStartPenalty(cluster, allClusters) {
     1
   );
   const normalizedWeight = clampControlValue((cluster.weight || 0) / maxWeight, 0, 1);
-  const saturationFactor = clampControlValue(cluster.hsl?.s ?? 0, 0, 100) / 100;
-  const balancedLightness = 1 - Math.min(Math.abs((cluster.hsl?.l ?? 50) - 58) / 58, 1);
+  const saturationFactor = clampControlValue(((cluster.oklch?.c ?? 0) / 0.24) * 100, 0, 100) / 100;
+  const balancedLightness = 1 - Math.min(Math.abs((cluster.oklch?.l ?? 0.58) - 0.58) / 0.38, 1);
 
   if (prioritizeImageDominantColors) {
     return (1 - normalizedWeight) * 0.2 + (1 - balancedLightness) * 0.04;
@@ -384,12 +398,10 @@ function getImageClusterStartPenalty(cluster, allClusters) {
 }
 
 function getImageClusterHarmonyDistance(clusterA, clusterB) {
-  const hueDifference = Math.abs((clusterA.hsl?.h ?? 0) - (clusterB.hsl?.h ?? 0));
+  const hueDifference = Math.abs((clusterA.oklch?.h ?? clusterA.hsl?.h ?? 0) - (clusterB.oklch?.h ?? clusterB.hsl?.h ?? 0));
   const wrappedHueDifference = Math.min(hueDifference, 360 - hueDifference) / 180;
-  const saturationDifference =
-    Math.abs((clusterA.hsl?.s ?? 0) - (clusterB.hsl?.s ?? 0)) / 100;
-  const lightnessDifference =
-    Math.abs((clusterA.hsl?.l ?? 50) - (clusterB.hsl?.l ?? 50)) / 100;
+  const saturationDifference = Math.abs((clusterA.oklch?.c ?? 0) - (clusterB.oklch?.c ?? 0)) / 0.24;
+  const lightnessDifference = Math.abs((clusterA.oklch?.l ?? 0.5) - (clusterB.oklch?.l ?? 0.5));
 
   return (
     wrappedHueDifference * 0.6 +
@@ -475,8 +487,8 @@ function expandImagePalette(selectedClusters, targetCount, variantIndex = 0, see
       normalizedVariantIndex % IMAGE_PALETTE_VARIANT_PROFILES.length
     ];
   const lightnessOffsets = normalizedVariantIndex === 0
-    ? [-18, 18, -10, 10, -28, 28, -36, 36]
-    : profile.stagger.map((offset) => Math.round(offset * 1.4)).concat([-20, 20, -30, 30]);
+    ? [-0.14, 0.14, -0.08, 0.08, -0.2, 0.2, -0.26, 0.26]
+    : profile.stagger.map((offset) => offset * 0.01).concat([-0.16, 0.16, -0.22, 0.22]);
   let expansionStep = 0;
 
   while (palette.length < targetCount && selectedClusters.length > 0) {
@@ -487,16 +499,35 @@ function expandImagePalette(selectedClusters, targetCount, variantIndex = 0, see
       Math.floor(expansionStep / selectedClusters.length) % lightnessOffsets.length
     ];
     const direction = (expansionStep + normalizedVariantIndex) % 2 === 0 ? 1 : -1;
+    const baseOklch = cluster.oklch || window.AppColorUtils?.hexToOklch?.(cluster.hex);
+    if (!baseOklch) {
+      expansionStep += 1;
+      if (expansionStep > selectedClusters.length * lightnessOffsets.length * 2) {
+        break;
+      }
+      continue;
+    }
+
     const variantHex = controlsNormalizeHexColor(
-      controlsHslToHex(
-        (cluster.hsl.h + profile.hueShift * direction + 360) % 360,
+      window.AppColorUtils?.oklchToHex?.(
         clampControlValue(
-          cluster.hsl.s + (offset > 0 ? -6 : 8) + profile.saturationShift * 0.7,
-          4,
-          100
+          baseOklch.l + offset + profile.lightnessShift * 0.0055,
+          0.08,
+          0.95
         ),
-        clampControlValue(cluster.hsl.l + offset + profile.lightnessShift * 0.55, 8, 92)
-      )
+        clampControlValue(
+          Math.max(baseOklch.c, 0.01) +
+            ((offset > 0 ? -6 : 8) + profile.saturationShift * 0.7) * 0.0018,
+          0.004,
+          0.26
+        ),
+        baseOklch.h + profile.hueShift * direction,
+        {
+          minLightness: 0.08,
+          maxLightness: 0.95,
+          maxChroma: 0.26,
+        }
+      ) || cluster.hex
     );
 
     if (!usedColors.has(variantHex) && !isDisallowedColor(variantHex)) {

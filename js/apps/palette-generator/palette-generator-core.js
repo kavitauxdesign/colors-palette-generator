@@ -4,6 +4,8 @@ const controlsNormalizeHexColor = window.AppColorUtils?.normalizeHexColor;
 const controlsIsValidHexColor = window.AppColorUtils?.isValidHexColor;
 const controlsHexToRgb = window.AppColorUtils?.hexToRgb;
 const controlsHexToHsl = window.AppColorUtils?.hexToHsl;
+const controlsHexToOklch = window.AppColorUtils?.hexToOklch;
+const controlsOklchToHex = window.AppColorUtils?.oklchToHex;
 const controlsGetRgbDistance = window.AppColorUtils?.getRgbDistance;
 if (
   typeof controlsHslToHex !== "function" ||
@@ -11,6 +13,8 @@ if (
   typeof controlsIsValidHexColor !== "function" ||
   typeof controlsHexToRgb !== "function" ||
   typeof controlsHexToHsl !== "function" ||
+  typeof controlsHexToOklch !== "function" ||
+  typeof controlsOklchToHex !== "function" ||
   typeof controlsGetRgbDistance !== "function"
 ) {
   throw new Error("AppColorUtils helpers are required before script-controls.js loads.");
@@ -190,29 +194,102 @@ function getPaletteAdjustmentDeltas(
   };
 }
 
+function mapBrightnessValueToOklchLightness(
+  brightness,
+  options = {}
+) {
+  const minimumLightness = Number.isFinite(options.minLightness)
+    ? options.minLightness
+    : 0.18;
+  const maximumLightness = Number.isFinite(options.maxLightness)
+    ? options.maxLightness
+    : 0.94;
+  const gamma = Number.isFinite(options.gamma) ? options.gamma : 0.84;
+  const ratio = clampControlValue((Number(brightness) || 0) / 100, 0, 1);
+
+  return minimumLightness + (maximumLightness - minimumLightness) * (ratio ** gamma);
+}
+
+function mapSaturationValueToOklchChroma(
+  saturation,
+  options = {}
+) {
+  const minimumChroma = Number.isFinite(options.minChroma)
+    ? options.minChroma
+    : 0.0015;
+  const maximumChroma = Number.isFinite(options.maxChroma)
+    ? options.maxChroma
+    : 0.24;
+  const gamma = Number.isFinite(options.gamma) ? options.gamma : 1.7;
+  const ratio = clampControlValue((Number(saturation) || 0) / 100, 0, 1);
+
+  return minimumChroma + (maximumChroma - minimumChroma) * (ratio ** gamma);
+}
+
 function getAdjustedPaletteColor(
   hex,
   variantIndex = 0,
   settings = getCurrentPaletteAdjustmentSnapshot(),
   baseSettings = paletteAdjustmentBaseSettings
 ) {
-  const hsl = controlsHexToHsl(hex);
-  const { brightnessDelta, saturationDelta } = getPaletteAdjustmentDeltas(
-    settings,
-    baseSettings
-  );
-  const lightnessVariants = [0, -4, 4, -8, 8, -12, 12, -16, 16];
-  const hueVariants = [0, 2, -2, 4, -4];
+  const oklch = controlsHexToOklch(hex);
+  if (!oklch) {
+    return controlsNormalizeHexColor(hex);
+  }
+
+  const lightnessVariants = [0, -0.014, 0.014, -0.028, 0.028, -0.04, 0.04];
+  const hueVariants = [0];
+  const chromaVariants = [1, 0.99, 1.01, 0.97, 1.03];
   const lightnessOffset = lightnessVariants[variantIndex % lightnessVariants.length];
   const hueOffset =
     hueVariants[Math.floor(variantIndex / lightnessVariants.length) % hueVariants.length];
+  const chromaScale =
+    chromaVariants[
+      Math.floor(variantIndex / (lightnessVariants.length * hueVariants.length)) %
+        chromaVariants.length
+    ];
+  const saturationMappingOptions = {
+    minChroma: 0.001,
+    maxChroma: 0.24,
+    gamma: 1.35,
+  };
+  const baseLightnessAnchor = mapBrightnessValueToOklchLightness(baseSettings?.brightness);
+  const targetLightnessAnchor = mapBrightnessValueToOklchLightness(settings?.brightness);
+  const baseSaturationAnchor = mapSaturationValueToOklchChroma(
+    baseSettings?.saturation,
+    saturationMappingOptions
+  );
+  const targetSaturationAnchor = mapSaturationValueToOklchChroma(
+    settings?.saturation,
+    saturationMappingOptions
+  );
+  const brightnessShift = (targetLightnessAnchor - baseLightnessAnchor) * 0.7;
+  const chromaRatio = baseSaturationAnchor > 0.0001
+    ? targetSaturationAnchor / baseSaturationAnchor
+    : 1;
+  const nextLightness = clampControlValue(
+    oklch.l + brightnessShift + lightnessOffset,
+    0.14,
+    0.96
+  );
+  const variantChroma = Math.max(oklch.c, 0.003) * chromaScale;
+  const nextChroma = clampControlValue(
+    variantChroma * clampControlValue(chromaRatio, 0.02, 1.25),
+    0.001,
+    0.28
+  );
 
   return controlsNormalizeHexColor(
-    controlsHslToHex(
-      (hsl.h + hueOffset + 360) % 360,
-      clampControlValue(hsl.s + saturationDelta, 0, 100),
-      clampControlValue(hsl.l + brightnessDelta * 0.45 + lightnessOffset, 0, 100)
-    )
+    controlsOklchToHex(
+      nextLightness,
+      nextChroma,
+      oklch.h + hueOffset,
+      {
+        minLightness: 0.14,
+        maxLightness: 0.96,
+        maxChroma: 0.28,
+      }
+    ) || hex
   );
 }
 
@@ -251,6 +328,8 @@ function buildAdjustedPaletteFromBase(
       }
     }
 
+    let fallbackCandidate = controlsNormalizeHexColor(color);
+
     for (let variantIndex = 0; variantIndex < 28; variantIndex++) {
       const candidate = getAdjustedPaletteColor(
         color,
@@ -258,6 +337,7 @@ function buildAdjustedPaletteFromBase(
         settings,
         baseSettings
       );
+      fallbackCandidate = candidate || fallbackCandidate;
       if (usedColors.has(candidate)) {
         continue;
       }
@@ -266,6 +346,8 @@ function buildAdjustedPaletteFromBase(
       adjustedPalette.push(candidate);
       return;
     }
+
+    adjustedPalette.push(fallbackCandidate);
   });
 
   return adjustedPalette;
@@ -306,98 +388,6 @@ function renderAdjustedPalette(colors) {
 function applyCurrentPaletteAdjustments() {
   if (!Array.isArray(paletteAdjustmentBase) || paletteAdjustmentBase.length === 0) {
     return;
-  }
-
-  if (
-    paletteBaseMode === "color" &&
-    typeof isExplicitComplementaryColorModeSelected === "function" &&
-    isExplicitComplementaryColorModeSelected() &&
-    typeof buildComplementaryColorModePalette === "function"
-  ) {
-    const nextPalette = buildComplementaryColorModePalette(
-      paletteSize,
-      getCurrentPaletteAdjustmentSnapshot(),
-      {
-        baseColor:
-          typeof getPaletteBaseColorSnapshot === "function"
-            ? getPaletteBaseColorSnapshot()
-            : null,
-        variantIndex: 0,
-      }
-    );
-
-    if (nextPalette.length > 0) {
-      renderAdjustedPalette(nextPalette);
-      return;
-    }
-  }
-
-  if (
-    paletteBaseMode === "color" &&
-    selectedColorPaletteType === "triad" &&
-    typeof buildTriadColorModePalette === "function"
-  ) {
-    const nextPalette = buildTriadColorModePalette(
-      paletteSize,
-      getCurrentPaletteAdjustmentSnapshot(),
-      {
-        baseColor:
-          typeof getPaletteBaseColorSnapshot === "function"
-            ? getPaletteBaseColorSnapshot()
-            : null,
-        variantIndex: colorPaletteVariantIndex,
-      }
-    );
-
-    if (nextPalette.length > 0) {
-      renderAdjustedPalette(nextPalette);
-      return;
-    }
-  }
-
-  if (
-    paletteBaseMode === "color" &&
-    selectedColorPaletteType === "tetrad" &&
-    typeof buildTetradColorModePalette === "function"
-  ) {
-    const nextPalette = buildTetradColorModePalette(
-      paletteSize,
-      getCurrentPaletteAdjustmentSnapshot(),
-      {
-        baseColor:
-          typeof getPaletteBaseColorSnapshot === "function"
-            ? getPaletteBaseColorSnapshot()
-            : null,
-        variantIndex: colorPaletteVariantIndex,
-      }
-    );
-
-    if (nextPalette.length > 0) {
-      renderAdjustedPalette(nextPalette);
-      return;
-    }
-  }
-
-  if (
-    typeof isColorModeMonochromaticScaleActive === "function" &&
-    isColorModeMonochromaticScaleActive() &&
-    typeof buildMonochromaticColorModePalette === "function"
-  ) {
-    const nextPalette = buildMonochromaticColorModePalette(
-      paletteSize,
-      getCurrentPaletteAdjustmentSnapshot(),
-      {
-        baseColor:
-          typeof getPaletteBaseColorSnapshot === "function"
-            ? getPaletteBaseColorSnapshot()
-            : null,
-      }
-    );
-
-    if (nextPalette.length > 0) {
-      renderAdjustedPalette(nextPalette);
-      return;
-    }
   }
 
   renderAdjustedPalette(buildAdjustedPaletteFromBase());
@@ -594,20 +584,23 @@ function scorePaletteHarmony(colors) {
     return 0;
   }
 
-  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  const paletteOklch = normalizedColors.map((color) => controlsHexToOklch(color));
   let pairwiseDistanceScore = 0;
   let pairCount = 0;
   let closePairPenalty = 0;
 
   for (let leftIndex = 0; leftIndex < normalizedColors.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < normalizedColors.length; rightIndex += 1) {
-      const leftRgb = controlsHexToRgb(normalizedColors[leftIndex]);
-      const rightRgb = controlsHexToRgb(normalizedColors[rightIndex]);
-      const rgbDistance = controlsGetRgbDistance(leftRgb, rightRgb);
+      const distance =
+        window.AppColorUtils?.getColorDistance?.(
+          normalizedColors[leftIndex],
+          normalizedColors[rightIndex],
+          { method: "deltae2000" }
+        ) || 0;
 
-      pairwiseDistanceScore += Math.min(rgbDistance / 180, 1);
-      if (rgbDistance < 42) {
-        closePairPenalty += (42 - rgbDistance) / 42;
+      pairwiseDistanceScore += Math.min(distance / 34, 1);
+      if (distance < 10) {
+        closePairPenalty += (10 - distance) / 10;
       }
       pairCount += 1;
     }
@@ -615,11 +608,13 @@ function scorePaletteHarmony(colors) {
 
   const averageDistanceScore = pairCount > 0 ? pairwiseDistanceScore / pairCount : 0;
   const averageSaturation =
-    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => sum + clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100), 0) /
+    paletteOklch.length;
   const averageLightness =
-    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
-  const saturationBalance = 1 - Math.min(Math.abs(averageSaturation - 58) / 58, 1);
-  const lightnessBalance = 1 - Math.min(Math.abs(averageLightness - 56) / 56, 1);
+    paletteOklch.reduce((sum, color) => sum + clampControlValue((color?.l ?? 0.5) * 100, 0, 100), 0) /
+    paletteOklch.length;
+  const saturationBalance = 1 - Math.min(Math.abs(averageSaturation - 42) / 42, 1);
+  const lightnessBalance = 1 - Math.min(Math.abs(averageLightness - 58) / 58, 1);
 
   return (
     averageDistanceScore * 2.1 +
@@ -635,23 +630,37 @@ function scorePaletteElegance(colors) {
     return -Infinity;
   }
 
-  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  const paletteOklch = normalizedColors.map((color) => controlsHexToOklch(color));
   const averageSaturation =
-    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => {
+      return sum + clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100);
+    }, 0) / paletteOklch.length;
   const averageLightness =
-    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => {
+      return sum + clampControlValue((color?.l ?? 0.5) * 100, 0, 100);
+    }, 0) / paletteOklch.length;
   const averageSaturationDeviation =
-    paletteHsl.reduce((sum, color) => sum + Math.abs(color.s - averageSaturation), 0) /
-    paletteHsl.length;
+    paletteOklch.reduce((sum, color) => {
+      const chromaPercent = clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100);
+      return sum + Math.abs(chromaPercent - averageSaturation);
+    }, 0) / paletteOklch.length;
   const averageLightnessDeviation =
-    paletteHsl.reduce((sum, color) => sum + Math.abs(color.l - averageLightness), 0) /
-    paletteHsl.length;
-  const vividCount = paletteHsl.filter((color) => color.s > 76).length;
-  const extremeLightnessCount = paletteHsl.filter((color) => color.l < 20 || color.l > 82).length;
-  const softColorCount = paletteHsl.filter((color) => color.s >= 22 && color.s <= 62).length;
-  const elegantSaturationBalance = 1 - Math.min(Math.abs(averageSaturation - 48) / 48, 1);
+    paletteOklch.reduce((sum, color) => {
+      const lightnessPercent = clampControlValue((color?.l ?? 0.5) * 100, 0, 100);
+      return sum + Math.abs(lightnessPercent - averageLightness);
+    }, 0) / paletteOklch.length;
+  const vividCount = paletteOklch.filter((color) => ((color?.c ?? 0) / 0.24) * 100 > 62).length;
+  const extremeLightnessCount = paletteOklch.filter((color) => {
+    const lightnessPercent = ((color?.l ?? 0.5) * 100);
+    return lightnessPercent < 22 || lightnessPercent > 82;
+  }).length;
+  const softColorCount = paletteOklch.filter((color) => {
+    const chromaPercent = ((color?.c ?? 0) / 0.24) * 100;
+    return chromaPercent >= 18 && chromaPercent <= 52;
+  }).length;
+  const elegantSaturationBalance = 1 - Math.min(Math.abs(averageSaturation - 36) / 36, 1);
   const elegantLightnessBalance = 1 - Math.min(Math.abs(averageLightness - 58) / 58, 1);
-  const saturationSpreadBalance = 1 - Math.min(Math.abs(averageSaturationDeviation - 14) / 22, 1);
+  const saturationSpreadBalance = 1 - Math.min(Math.abs(averageSaturationDeviation - 12) / 20, 1);
   const lightnessSpreadBalance = 1 - Math.min(Math.abs(averageLightnessDeviation - 13) / 22, 1);
 
   return (
@@ -659,9 +668,9 @@ function scorePaletteElegance(colors) {
     elegantLightnessBalance * 0.85 +
     saturationSpreadBalance * 0.65 +
     lightnessSpreadBalance * 0.6 +
-    (softColorCount / paletteHsl.length) * 0.4 -
-    (vividCount / paletteHsl.length) * 0.85 -
-    (extremeLightnessCount / paletteHsl.length) * 0.75
+    (softColorCount / paletteOklch.length) * 0.4 -
+    (vividCount / paletteOklch.length) * 0.85 -
+    (extremeLightnessCount / paletteOklch.length) * 0.75
   );
 }
 
@@ -826,7 +835,9 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   capturePaletteAdjustmentBase(mergedPalette);
   const shouldRenderRawGeneratedPalette =
     paletteBaseMode === "color" &&
-    ["monochromatic", "complementary", "triad", "tetrad"].includes(options.effectiveType);
+    ["monochromatic", "complementary", "analogous", "triad", "tetrad"].includes(
+      options.effectiveType
+    );
 
   currentPalette = shouldRenderRawGeneratedPalette
     ? [...mergedPalette]
@@ -935,13 +946,22 @@ async function generatePalette(options = {}) {
 // GENERATE COLOR
 
 function generateColor() {
-  let h = getTemperatureBasedHue();
+  const hue = getTemperatureBasedHue();
+  const chroma = mapSaturationValueToOklchChroma(getCurrentSaturationValue(), {
+    minChroma: 0.006,
+    maxChroma: 0.22,
+    gamma: 1.08,
+  });
+  const lightness = mapBrightnessValueToOklchLightness(getCurrentBrightnessValue(), {
+    minLightness: 0.18,
+    maxLightness: 0.92,
+  });
 
-  let s = getCurrentSaturationValue();
-
-  // Keep the slider at 0-100, but avoid real lightness extremes with a 10-90 range.
-  let sliderValue = getCurrentBrightnessValue();
-  let l = 10 + (sliderValue / 100) * 80;
-
-  return controlsHslToHex(h, s, l);
+  return controlsNormalizeHexColor(
+    controlsOklchToHex(lightness, chroma, hue, {
+      minLightness: 0.12,
+      maxLightness: 0.94,
+      maxChroma: 0.24,
+    })
+  );
 }

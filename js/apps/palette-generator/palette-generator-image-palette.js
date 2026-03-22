@@ -320,11 +320,11 @@ async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
 function getImageInspirationAtmosphere(clusters) {
   if (!Array.isArray(clusters) || clusters.length === 0) {
     return {
-      averageSaturation: 56,
-      averageLightness: 54,
+      averageSaturation: 42,
+      averageLightness: 58,
       averageHue: 35,
       maxWeight: 1,
-      maxSaturation: 72,
+      maxSaturation: 58,
       lightnessSpread: 0.3,
       warmthBias: 0,
     };
@@ -337,28 +337,32 @@ function getImageInspirationAtmosphere(clusters) {
   );
   const hueVector = clusters.reduce((sum, cluster) => {
     const weight = Math.max(cluster.weight || 0, 1);
-    const hueRadians = ((cluster.hsl?.h ?? 0) / 180) * Math.PI;
+    const hueRadians = ((cluster.oklch?.h ?? cluster.hsl?.h ?? 0) / 180) * Math.PI;
     return {
       x: sum.x + Math.cos(hueRadians) * weight,
       y: sum.y + Math.sin(hueRadians) * weight,
     };
   }, { x: 0, y: 0 });
   const maxSaturation = Math.max(
-    ...clusters.map((cluster) => clampControlValue(cluster.hsl?.s ?? 0, 0, 100)),
+    ...clusters.map((cluster) =>
+      clampControlValue(((cluster.oklch?.c ?? 0) / 0.24) * 100, 0, 100)
+    ),
     0
   );
-  const lightnessValues = clusters.map((cluster) => clampControlValue(cluster.hsl?.l ?? 50, 0, 100));
+  const lightnessValues = clusters.map((cluster) =>
+    clampControlValue((cluster.oklch?.l ?? 0.5) * 100, 0, 100)
+  );
   const averageSaturation = clusters.reduce((sum, cluster) => {
     const weight = Math.max(cluster.weight || 0, 1);
-    return sum + (cluster.hsl?.s ?? 0) * weight;
+    return sum + clampControlValue(((cluster.oklch?.c ?? 0) / 0.24) * 100, 0, 100) * weight;
   }, 0) / totalWeight;
   const averageLightness = clusters.reduce((sum, cluster) => {
     const weight = Math.max(cluster.weight || 0, 1);
-    return sum + (cluster.hsl?.l ?? 50) * weight;
+    return sum + clampControlValue((cluster.oklch?.l ?? 0.5) * 100, 0, 100) * weight;
   }, 0) / totalWeight;
   const warmthBias = clusters.reduce((sum, cluster) => {
     const weight = Math.max(cluster.weight || 0, 1);
-    const hue = cluster.hsl?.h ?? 0;
+    const hue = cluster.oklch?.h ?? cluster.hsl?.h ?? 0;
     const hueRadians = (hue / 180) * Math.PI;
     return sum + Math.cos(hueRadians) * weight;
   }, 0) / totalWeight;
@@ -383,6 +387,7 @@ function orderPaletteHexColorsByHarmony(colors) {
   const nodes = normalizePaletteHexCollection(colors).map((hex) => ({
     hex,
     hsl: controlsHexToHsl(hex),
+    oklch: window.AppColorUtils?.hexToOklch?.(hex) || null,
     weight: 1,
   }));
 
@@ -428,31 +433,36 @@ function getPaletteAtmosphereMetrics(colors) {
   if (normalizedColors.length === 0) {
     return {
       averageHue: 35,
-      averageSaturation: 56,
-      averageLightness: 54,
+      averageSaturation: 42,
+      averageLightness: 58,
       warmthBias: 0,
       lightnessSpread: 0.3,
     };
   }
 
-  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
-  const hueVector = paletteHsl.reduce((sum, color) => {
-    const hueRadians = (color.h / 180) * Math.PI;
+  const paletteOklch = normalizedColors.map((color) => window.AppColorUtils?.hexToOklch?.(color));
+  const hueVector = paletteOklch.reduce((sum, color) => {
+    const hueRadians = ((color?.h ?? 0) / 180) * Math.PI;
     return {
       x: sum.x + Math.cos(hueRadians),
       y: sum.y + Math.sin(hueRadians),
     };
   }, { x: 0, y: 0 });
-  const lightnessValues = paletteHsl.map((color) => color.l);
+  const lightnessValues = paletteOklch.map((color) =>
+    clampControlValue((color?.l ?? 0.5) * 100, 0, 100)
+  );
   const averageSaturation =
-    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => {
+      return sum + clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100);
+    }, 0) / paletteOklch.length;
   const averageLightness =
-    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => sum + clampControlValue((color?.l ?? 0.5) * 100, 0, 100), 0) /
+    paletteOklch.length;
   const warmthBias =
-    paletteHsl.reduce((sum, color) => {
-      const hueRadians = (color.h / 180) * Math.PI;
+    paletteOklch.reduce((sum, color) => {
+      const hueRadians = ((color?.h ?? 0) / 180) * Math.PI;
       return sum + Math.cos(hueRadians);
-    }, 0) / paletteHsl.length;
+    }, 0) / paletteOklch.length;
 
   return {
     averageHue: (
@@ -501,7 +511,11 @@ function getInspiredImageVariantHex(cluster, role, clusterIndex, variantIndex, a
   const variantCycle = Math.floor(
     Math.abs(variantIndex) / IMAGE_INSPIRATION_VARIANT_PROFILES.length
   );
-  const hsl = cluster.hsl;
+  const oklch = cluster.oklch || window.AppColorUtils?.hexToOklch?.(cluster.hex);
+  if (!oklch) {
+    return cluster.hex;
+  }
+
   const weightRatio = clampControlValue(
     Math.max(cluster.weight || 0, 1) / Math.max(atmosphere.maxWeight || 1, 1),
     0,
@@ -509,61 +523,64 @@ function getInspiredImageVariantHex(cluster, role, clusterIndex, variantIndex, a
   );
   const atmosphereHue = Number.isFinite(atmosphere.averageHue)
     ? atmosphere.averageHue
-    : hsl.h;
+    : oklch.h;
+  const atmosphereChroma = clampControlValue((atmosphere.averageSaturation / 100) * 0.24, 0.01, 0.24);
+  const maximumAtmosphereChroma = clampControlValue((atmosphere.maxSaturation / 100) * 0.24, 0.01, 0.26);
+  const atmosphereLightness = clampControlValue(atmosphere.averageLightness / 100, 0.18, 0.86);
   const warmthAdjustment = atmosphere.warmthBias * 9;
   const orbitOffset =
     (variantCycle % 3 - 1) * (role === "accent" ? 18 : role === "dominant" ? 10 : 14);
   let hue = shiftHueTowards(
-    hsl.h,
+    oklch.h,
     atmosphereHue,
     role === "dominant" ? 0.42 : role === "accent" ? 0.22 : 0.3
   );
-  let saturation = hsl.s;
-  let lightness = hsl.l;
+  let chroma = oklch.c;
+  let lightness = oklch.l;
 
   if (role === "dominant") {
     hue += profile.hueShift * 0.95 * direction + orbitOffset * 0.45 + warmthAdjustment * 0.4;
-    saturation = blendControlValue(
-      hsl.s,
+    chroma = blendControlValue(
+      oklch.c,
       clampControlValue(
-        atmosphere.averageSaturation + 4 + profile.saturationShift - weightRatio * 4,
-        20,
-        68
+        atmosphereChroma + 0.012 + profile.saturationShift * 0.0018 - weightRatio * 0.008,
+        0.04,
+        0.18
       ),
       0.58
     );
     lightness = blendControlValue(
-      hsl.l,
+      oklch.l,
       clampControlValue(
-        atmosphere.averageLightness + profile.neutralLift + orbitOffset * 0.18,
-        28,
-        72
+        atmosphereLightness + profile.neutralLift * 0.006 + orbitOffset * 0.0018,
+        0.28,
+        0.72
       ),
       0.62
     );
   } else if (role === "accent") {
     hue += profile.accentHueShift * 1.15 * direction + orbitOffset + warmthAdjustment * 0.24;
-    saturation = blendControlValue(
-      hsl.s,
+    chroma = blendControlValue(
+      oklch.c,
       clampControlValue(
         Math.max(
-          atmosphere.averageSaturation + profile.accentBoost,
-          atmosphere.maxSaturation * 0.7
+          atmosphereChroma + profile.accentBoost * 0.0018,
+          maximumAtmosphereChroma * 0.7
         ),
-        40,
-        84
+        0.08,
+        0.24
       ),
       0.72
     );
     lightness = blendControlValue(
-      hsl.l,
+      oklch.l,
       clampControlValue(
-        atmosphere.averageLightness +
-          profile.lightnessShift +
-          direction * 12 * (0.5 + atmosphere.lightnessSpread) +
-          orbitOffset * 0.3,
-        24,
-        80
+        atmosphereLightness +
+          profile.lightnessShift * 0.006 +
+          direction * 0.12 * (0.5 + atmosphere.lightnessSpread) +
+          orbitOffset * 0.003,
+        0.24,
+        0.8
       ),
       0.64
     );
@@ -573,48 +590,57 @@ function getInspiredImageVariantHex(cluster, role, clusterIndex, variantIndex, a
       direction * 8 +
       orbitOffset * 0.75 +
       warmthAdjustment * 0.28;
-    saturation = blendControlValue(
-      hsl.s,
+    chroma = blendControlValue(
+      oklch.c,
       clampControlValue(
-        atmosphere.averageSaturation + 8 + profile.saturationShift,
-        24,
-        78
+        atmosphereChroma + 0.02 + profile.saturationShift * 0.0018,
+        0.05,
+        0.2
       ),
       0.66
     );
     lightness = blendControlValue(
-      hsl.l,
+      oklch.l,
       clampControlValue(
-        atmosphere.averageLightness +
-          profile.lightnessShift +
-          direction * 7 * (0.45 + atmosphere.lightnessSpread) +
-          orbitOffset * 0.22,
-        24,
-        78
+        atmosphereLightness +
+          profile.lightnessShift * 0.006 +
+          direction * 0.07 * (0.45 + atmosphere.lightnessSpread) +
+          orbitOffset * 0.0022,
+        0.24,
+        0.78
       ),
       0.6
     );
   }
 
   hue = (hue + 360) % 360;
-  saturation = clampControlValue(
-    saturation,
-    role === "accent" ? 42 : 24,
-    role === "dominant" ? 68 : 82
+  chroma = clampControlValue(
+    chroma,
+    role === "accent" ? 0.07 : 0.035,
+    role === "dominant" ? 0.18 : 0.24
   );
-  lightness = clampControlValue(lightness, 22, role === "accent" ? 82 : 78);
+  lightness = clampControlValue(lightness, 0.22, role === "accent" ? 0.82 : 0.78);
 
   let candidate = controlsNormalizeHexColor(
-    controlsHslToHex(hue, saturation, lightness)
+    window.AppColorUtils?.oklchToHex(lightness, chroma, hue, {
+      minLightness: 0.22,
+      maxLightness: role === "accent" ? 0.82 : 0.78,
+      maxChroma: 0.26,
+    }) || cluster.hex
   );
 
   if (candidate === cluster.hex || isPaletteColorTooClose(candidate, [cluster.hex], 18)) {
     candidate = controlsNormalizeHexColor(
-      controlsHslToHex(
+      window.AppColorUtils?.oklchToHex(
+        clampControlValue(lightness + direction * (role === "accent" ? 0.08 : 0.06), 0.12, 0.88),
+        clampControlValue(chroma + (role === "accent" ? 0.018 : 0.012), 0.01, 0.26),
         (hue + direction * (role === "accent" ? 18 : 12) + orbitOffset + 360) % 360,
-        clampControlValue(saturation + (role === "accent" ? 10 : 6), 0, 100),
-        clampControlValue(lightness + direction * (role === "accent" ? 8 : 6), 12, 88)
-      )
+        {
+          minLightness: 0.12,
+          maxLightness: 0.88,
+          maxChroma: 0.26,
+        }
+      ) || candidate
     );
   }
 
@@ -768,16 +794,19 @@ function derivePaletteAdjustmentSettingsFromColors(colors) {
     return resolvePaletteAdjustmentSettings();
   }
 
-  const paletteHsl = normalizedColors.map((color) => controlsHexToHsl(color));
+  const paletteOklch = normalizedColors.map((color) => window.AppColorUtils?.hexToOklch?.(color));
   const averageSaturation =
-    paletteHsl.reduce((sum, color) => sum + color.s, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => {
+      return sum + clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100);
+    }, 0) / paletteOklch.length;
   const averageLightness =
-    paletteHsl.reduce((sum, color) => sum + color.l, 0) / paletteHsl.length;
+    paletteOklch.reduce((sum, color) => sum + clampControlValue((color?.l ?? 0.5) * 100, 0, 100), 0) /
+    paletteOklch.length;
 
   return resolvePaletteAdjustmentSettings({
     saturation: clampControlValue(Math.round(averageSaturation / 5) * 5, 0, 100),
     brightness: clampControlValue(
-      Math.round((((averageLightness - 10) / 80) * 100) / 5) * 5,
+      Math.round(((((averageLightness / 100) - 0.18) / 0.76) * 100) / 5) * 5,
       0,
       100
     ),
