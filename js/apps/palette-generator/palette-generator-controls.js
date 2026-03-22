@@ -64,6 +64,7 @@ async function applyPaletteSizeChange(nextSize) {
   if (paletteBaseMode === "color") {
     const allowedSizes = getAllowedPaletteSizesForCurrentMode();
     const resolvedSize = getNearestAllowedPaletteSize(nextSize, allowedSizes);
+    const previousPalette = [...currentPalette];
 
     if (resolvedSize !== paletteSize) {
       setPaletteSize(resolvedSize);
@@ -81,7 +82,53 @@ async function applyPaletteSizeChange(nextSize) {
       updateRegenerateButtonsAvailability();
     }
 
-    await generatePalette();
+    const applyRecalculatedColorPalette = () => {
+      const effectiveType = typeof getEffectiveColorPaletteType === "function"
+        ? getEffectiveColorPaletteType(resolvedSize)
+        : selectedColorPaletteType;
+      const nextPalette =
+        typeof buildColorModePaletteForSettings === "function"
+          ? buildColorModePaletteForSettings(
+              resolvedSize,
+              getCurrentPaletteAdjustmentSnapshot(),
+              {
+                baseColor:
+                  typeof getPaletteBaseColorSnapshot === "function"
+                    ? getPaletteBaseColorSnapshot()
+                    : null,
+                effectiveType,
+                variantIndex:
+                  effectiveType === "monochromatic" || effectiveType === "complementary"
+                    ? 0
+                    : colorPaletteVariantIndex,
+              }
+            )
+          : [];
+
+      if (!Array.isArray(nextPalette) || nextPalette.length !== resolvedSize) {
+        alert("No se pudo recalcular una paleta válida para esta cantidad de colores.");
+        return;
+      }
+
+      if (effectiveType === "monochromatic" || effectiveType === "complementary") {
+        colorPaletteVariantIndex = 0;
+      }
+
+      if (typeof commitGeneratedPalette === "function") {
+        commitGeneratedPalette(nextPalette, {
+          effectiveType,
+          previousPalette,
+        });
+      }
+    };
+
+    if (typeof withPaletteLoadingOverlay === "function") {
+      await withPaletteLoadingOverlay(async () => {
+        applyRecalculatedColorPalette();
+      });
+    } else {
+      applyRecalculatedColorPalette();
+    }
     return;
   }
 

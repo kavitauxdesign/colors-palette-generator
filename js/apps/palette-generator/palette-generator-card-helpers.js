@@ -135,6 +135,13 @@ function getCurrentPaletteCardEntries() {
 }
 
 function getPinnedPaletteIndexes() {
+  if (
+    typeof isCardPinningAvailable === "function" &&
+    !isCardPinningAvailable()
+  ) {
+    return [];
+  }
+
   return getCurrentPaletteCardEntries()
     .filter((entry) => {
       if (!entry.pinned) {

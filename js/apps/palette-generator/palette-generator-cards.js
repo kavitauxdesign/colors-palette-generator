@@ -48,10 +48,11 @@ function isLockedColorModeBaseCard(card) {
 }
 
 function isCardPinningAvailable() {
-  return !(
-    typeof isExplicitMonochromaticColorModeSelected === "function" &&
-    isExplicitMonochromaticColorModeSelected()
-  );
+  if (paletteBaseMode === "color") {
+    return false;
+  }
+
+  return true;
 }
 
 function isLockedComplementaryRoleCard(card) {

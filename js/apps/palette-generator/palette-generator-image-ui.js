@@ -550,6 +550,9 @@ function setPaletteBaseMode(nextMode) {
   }
 
   if (paletteBaseMode === "color") {
+    if (typeof clearUnavailablePinnedCards === "function") {
+      clearUnavailablePinnedCards();
+    }
     syncColorModeBaseControls();
     syncColorModeSizeSelection();
   }

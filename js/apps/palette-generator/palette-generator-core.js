@@ -309,6 +309,76 @@ function applyCurrentPaletteAdjustments() {
   }
 
   if (
+    paletteBaseMode === "color" &&
+    typeof isExplicitComplementaryColorModeSelected === "function" &&
+    isExplicitComplementaryColorModeSelected() &&
+    typeof buildComplementaryColorModePalette === "function"
+  ) {
+    const nextPalette = buildComplementaryColorModePalette(
+      paletteSize,
+      getCurrentPaletteAdjustmentSnapshot(),
+      {
+        baseColor:
+          typeof getPaletteBaseColorSnapshot === "function"
+            ? getPaletteBaseColorSnapshot()
+            : null,
+        variantIndex: 0,
+      }
+    );
+
+    if (nextPalette.length > 0) {
+      renderAdjustedPalette(nextPalette);
+      return;
+    }
+  }
+
+  if (
+    paletteBaseMode === "color" &&
+    selectedColorPaletteType === "triad" &&
+    typeof buildTriadColorModePalette === "function"
+  ) {
+    const nextPalette = buildTriadColorModePalette(
+      paletteSize,
+      getCurrentPaletteAdjustmentSnapshot(),
+      {
+        baseColor:
+          typeof getPaletteBaseColorSnapshot === "function"
+            ? getPaletteBaseColorSnapshot()
+            : null,
+        variantIndex: colorPaletteVariantIndex,
+      }
+    );
+
+    if (nextPalette.length > 0) {
+      renderAdjustedPalette(nextPalette);
+      return;
+    }
+  }
+
+  if (
+    paletteBaseMode === "color" &&
+    selectedColorPaletteType === "tetrad" &&
+    typeof buildTetradColorModePalette === "function"
+  ) {
+    const nextPalette = buildTetradColorModePalette(
+      paletteSize,
+      getCurrentPaletteAdjustmentSnapshot(),
+      {
+        baseColor:
+          typeof getPaletteBaseColorSnapshot === "function"
+            ? getPaletteBaseColorSnapshot()
+            : null,
+        variantIndex: colorPaletteVariantIndex,
+      }
+    );
+
+    if (nextPalette.length > 0) {
+      renderAdjustedPalette(nextPalette);
+      return;
+    }
+  }
+
+  if (
     typeof isColorModeMonochromaticScaleActive === "function" &&
     isColorModeMonochromaticScaleActive() &&
     typeof buildMonochromaticColorModePalette === "function"
@@ -615,6 +685,13 @@ function getPinnedPaletteEntriesSnapshot() {
   }
 
   if (
+    typeof isCardPinningAvailable === "function" &&
+    !isCardPinningAvailable()
+  ) {
+    return [];
+  }
+
+  if (
     typeof isColorModeMonochromaticScaleActive === "function" &&
     isColorModeMonochromaticScaleActive()
   ) {
@@ -714,7 +791,31 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   const pinnedEntries = Array.isArray(options.pinnedEntries)
     ? options.pinnedEntries
     : getPinnedPaletteEntriesSnapshot();
-  const mergedPalette = mergePaletteWithPinnedColors(nextPalette, pinnedEntries);
+  let mergedPalette = mergePaletteWithPinnedColors(nextPalette, pinnedEntries);
+
+  if (
+    paletteBaseMode === "color" &&
+    options.effectiveType === "complementary" &&
+    paletteSize === 2 &&
+    typeof buildComplementaryColorModePalette === "function"
+  ) {
+    const explicitComplementaryPair = buildComplementaryColorModePalette(
+      2,
+      getCurrentPaletteAdjustmentSnapshot(),
+      {
+        baseColor:
+          typeof getPaletteBaseColorSnapshot === "function"
+            ? getPaletteBaseColorSnapshot()
+            : null,
+        variantIndex: 0,
+      }
+    );
+
+    if (explicitComplementaryPair.length === 2) {
+      mergedPalette = explicitComplementaryPair;
+    }
+  }
+
   const pinnedIndexes = pinnedEntries
     .filter((entry) => Number.isFinite(entry?.index) && entry.index >= 0 && entry.index < mergedPalette.length)
     .map((entry) => entry.index);
@@ -725,7 +826,7 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   capturePaletteAdjustmentBase(mergedPalette);
   const shouldRenderRawGeneratedPalette =
     paletteBaseMode === "color" &&
-    options.effectiveType === "monochromatic";
+    ["monochromatic", "complementary", "triad", "tetrad"].includes(options.effectiveType);
 
   currentPalette = shouldRenderRawGeneratedPalette
     ? [...mergedPalette]
@@ -755,12 +856,14 @@ function commitGeneratedPalette(nextPalette, options = {}) {
   }
 }
 
-async function generatePalette() {
+async function generatePalette(options = {}) {
   return withPaletteLoadingOverlay(async () => {
     let nextPalette = [];
     let usedAlternativePalette = false;
     let effectiveColorPaletteType = null;
-    const previousPalette = normalizePaletteHexCollection(currentPalette);
+    const previousPalette = normalizePaletteHexCollection(
+      options.referencePalette ?? currentPalette
+    );
 
     if (paletteBaseMode === "image") {
       try {
@@ -777,10 +880,35 @@ async function generatePalette() {
         return;
       }
     } else if (paletteBaseMode === "color") {
-      const candidate = createColorModePaletteCandidate(getCurrentPaletteAdjustmentSnapshot(), {
-        referencePalette: currentPalette,
-        effectiveType: getEffectiveColorPaletteType(),
-      });
+      const effectiveType = options.effectiveType || getEffectiveColorPaletteType();
+      const shouldRecalculateFromScratch = !!options.recalculateFromScratch;
+      const candidate = shouldRecalculateFromScratch
+        ? {
+            palette: buildColorModePaletteForSettings(
+              paletteSize,
+              getCurrentPaletteAdjustmentSnapshot(),
+              {
+                baseColor:
+                  typeof getPaletteBaseColorSnapshot === "function"
+                    ? getPaletteBaseColorSnapshot()
+                    : null,
+                effectiveType,
+                variantIndex:
+                  effectiveType === "monochromatic" || effectiveType === "complementary"
+                    ? 0
+                    : colorPaletteVariantIndex,
+              }
+            ),
+            effectiveType,
+            variantIndex:
+              effectiveType === "monochromatic" || effectiveType === "complementary"
+                ? 0
+                : colorPaletteVariantIndex,
+          }
+        : createColorModePaletteCandidate(getCurrentPaletteAdjustmentSnapshot(), {
+            referencePalette: previousPalette,
+            effectiveType,
+          });
 
       if (!candidate?.palette?.length) {
         alert("No se pudo generar una paleta válida a partir del color base.");
