@@ -19,6 +19,25 @@ if (
 ) {
   throw new Error("AppColorUtils helpers are required before script-controls.js loads.");
 }
+const paletteGeneratorCoreHelpers = window.PaletteGeneratorCoreHelpers || {};
+if (
+  typeof paletteGeneratorCoreHelpers.clampControlValue !== "function" ||
+  typeof paletteGeneratorCoreHelpers.blendControlValue !== "function" ||
+  typeof paletteGeneratorCoreHelpers.resolvePaletteAdjustmentSettings !== "function" ||
+  typeof paletteGeneratorCoreHelpers.getPaletteAdjustmentDeltas !== "function" ||
+  typeof paletteGeneratorCoreHelpers.mapBrightnessValueToOklchLightness !== "function" ||
+  typeof paletteGeneratorCoreHelpers.mapSaturationValueToOklchChroma !== "function" ||
+  typeof paletteGeneratorCoreHelpers.getAdjustedPaletteColor !== "function" ||
+  typeof paletteGeneratorCoreHelpers.normalizePaletteHexCollection !== "function" ||
+  typeof paletteGeneratorCoreHelpers.getPaletteSimilarityMetrics !== "function" ||
+  typeof paletteGeneratorCoreHelpers.getPalettePositionalSimilarityMetrics !== "function" ||
+  typeof paletteGeneratorCoreHelpers.arePalettesTooSimilar !== "function" ||
+  typeof paletteGeneratorCoreHelpers.isBetterPaletteFallbackCandidate !== "function" ||
+  typeof paletteGeneratorCoreHelpers.scorePaletteHarmony !== "function" ||
+  typeof paletteGeneratorCoreHelpers.scorePaletteElegance !== "function"
+) {
+  throw new Error("PaletteGeneratorCoreHelpers are required before palette-generator-core.js loads.");
+}
 
 let saturationAttentionTimeout = null;
 let isPaletteImageDropzoneVisible = true;
@@ -50,7 +69,7 @@ const IMAGE_INSPIRATION_VARIANT_PROFILES = [
 const MAX_RECENT_INSPIRED_PALETTES = 8;
 
 function blendControlValue(fromValue, toValue, ratio) {
-  return fromValue + (toValue - fromValue) * ratio;
+  return paletteGeneratorCoreHelpers.blendControlValue(fromValue, toValue, ratio);
 }
 
 function setPaletteLoadingOverlayState(isVisible) {
@@ -91,14 +110,13 @@ async function withPaletteLoadingOverlay(task) {
 }
 
 function resolvePaletteAdjustmentSettings(settings = {}) {
-  return {
-    brightness: Number.isFinite(settings?.brightness)
-      ? settings.brightness
-      : getCurrentBrightnessValue(),
-    saturation: Number.isFinite(settings?.saturation)
-      ? settings.saturation
-      : getCurrentSaturationValue(),
-  };
+  return paletteGeneratorCoreHelpers.resolvePaletteAdjustmentSettings(
+    settings,
+    {
+      brightness: getCurrentBrightnessValue(),
+      saturation: getCurrentSaturationValue(),
+    }
+  );
 }
 
 function isValidPaletteHex(hex) {
@@ -194,45 +212,28 @@ function getPaletteAdjustmentDeltas(
   settings = getCurrentPaletteAdjustmentSnapshot(),
   baseSettings = paletteAdjustmentBaseSettings
 ) {
-  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
-  const resolvedBaseSettings = resolvePaletteAdjustmentSettings(baseSettings);
-
-  return {
-    brightnessDelta: resolvedSettings.brightness - resolvedBaseSettings.brightness,
-    saturationDelta: resolvedSettings.saturation - resolvedBaseSettings.saturation,
-  };
+  return paletteGeneratorCoreHelpers.getPaletteAdjustmentDeltas(
+    settings,
+    baseSettings,
+    {
+      brightness: getCurrentBrightnessValue(),
+      saturation: getCurrentSaturationValue(),
+    }
+  );
 }
 
 function mapBrightnessValueToOklchLightness(
   brightness,
   options = {}
 ) {
-  const minimumLightness = Number.isFinite(options.minLightness)
-    ? options.minLightness
-    : 0.18;
-  const maximumLightness = Number.isFinite(options.maxLightness)
-    ? options.maxLightness
-    : 0.94;
-  const gamma = Number.isFinite(options.gamma) ? options.gamma : 0.84;
-  const ratio = clampControlValue((Number(brightness) || 0) / 100, 0, 1);
-
-  return minimumLightness + (maximumLightness - minimumLightness) * (ratio ** gamma);
+  return paletteGeneratorCoreHelpers.mapBrightnessValueToOklchLightness(brightness, options);
 }
 
 function mapSaturationValueToOklchChroma(
   saturation,
   options = {}
 ) {
-  const minimumChroma = Number.isFinite(options.minChroma)
-    ? options.minChroma
-    : 0.0015;
-  const maximumChroma = Number.isFinite(options.maxChroma)
-    ? options.maxChroma
-    : 0.24;
-  const gamma = Number.isFinite(options.gamma) ? options.gamma : 1.7;
-  const ratio = clampControlValue((Number(saturation) || 0) / 100, 0, 1);
-
-  return minimumChroma + (maximumChroma - minimumChroma) * (ratio ** gamma);
+  return paletteGeneratorCoreHelpers.mapSaturationValueToOklchChroma(saturation, options);
 }
 
 function getAdjustedPaletteColor(
@@ -241,64 +242,17 @@ function getAdjustedPaletteColor(
   settings = getCurrentPaletteAdjustmentSnapshot(),
   baseSettings = paletteAdjustmentBaseSettings
 ) {
-  const oklch = controlsHexToOklch(hex);
-  if (!oklch) {
-    return controlsNormalizeHexColor(hex);
-  }
-
-  const lightnessVariants = [0, -0.014, 0.014, -0.028, 0.028, -0.04, 0.04];
-  const hueVariants = [0];
-  const chromaVariants = [1, 0.99, 1.01, 0.97, 1.03];
-  const lightnessOffset = lightnessVariants[variantIndex % lightnessVariants.length];
-  const hueOffset =
-    hueVariants[Math.floor(variantIndex / lightnessVariants.length) % hueVariants.length];
-  const chromaScale =
-    chromaVariants[
-      Math.floor(variantIndex / (lightnessVariants.length * hueVariants.length)) %
-        chromaVariants.length
-    ];
-  const saturationMappingOptions = {
-    minChroma: 0.001,
-    maxChroma: 0.24,
-    gamma: 1.35,
-  };
-  const baseLightnessAnchor = mapBrightnessValueToOklchLightness(baseSettings?.brightness);
-  const targetLightnessAnchor = mapBrightnessValueToOklchLightness(settings?.brightness);
-  const baseSaturationAnchor = mapSaturationValueToOklchChroma(
-    baseSettings?.saturation,
-    saturationMappingOptions
-  );
-  const targetSaturationAnchor = mapSaturationValueToOklchChroma(
-    settings?.saturation,
-    saturationMappingOptions
-  );
-  const brightnessShift = (targetLightnessAnchor - baseLightnessAnchor) * 0.7;
-  const chromaRatio = baseSaturationAnchor > 0.0001
-    ? targetSaturationAnchor / baseSaturationAnchor
-    : 1;
-  const nextLightness = clampControlValue(
-    oklch.l + brightnessShift + lightnessOffset,
-    0.14,
-    0.96
-  );
-  const variantChroma = Math.max(oklch.c, 0.003) * chromaScale;
-  const nextChroma = clampControlValue(
-    variantChroma * clampControlValue(chromaRatio, 0.02, 1.25),
-    0.001,
-    0.28
-  );
-
-  return controlsNormalizeHexColor(
-    controlsOklchToHex(
-      nextLightness,
-      nextChroma,
-      oklch.h + hueOffset,
-      {
-        minLightness: 0.14,
-        maxLightness: 0.96,
-        maxChroma: 0.28,
-      }
-    ) || hex
+  return paletteGeneratorCoreHelpers.getAdjustedPaletteColor(
+    hex,
+    {
+      variantIndex,
+      settings,
+      baseSettings,
+      fallbackSettings: {
+        brightness: DEFAULT_BRIGHTNESS,
+        saturation: DEFAULT_SATURATION,
+      },
+    }
   );
 }
 
@@ -403,69 +357,22 @@ function applyCurrentPaletteAdjustments() {
 }
 
 function normalizePaletteHexCollection(colors) {
-  return Array.isArray(colors)
-    ? colors
-        .map((color) => controlsNormalizeHexColor(color))
-        .filter((hex) => isValidPaletteHex(hex))
-    : [];
+  return paletteGeneratorCoreHelpers.normalizePaletteHexCollection(colors);
 }
 
 function getPaletteSimilarityMetrics(nextPalette, referencePalette) {
-  const nextColors = normalizePaletteHexCollection(nextPalette);
-  const referenceColors = normalizePaletteHexCollection(referencePalette);
-
-  if (nextColors.length === 0 || referenceColors.length === 0) {
-    return {
-      exactMatch: false,
-      sharedColorCount: 0,
-      nextCount: nextColors.length,
-      referenceCount: referenceColors.length,
-    };
-  }
-
-  const exactMatch =
-    nextColors.length === referenceColors.length &&
-    nextColors.every((color, index) => color === referenceColors[index]);
-
-  const referenceSet = new Set(referenceColors);
-  const sharedColorCount = nextColors.reduce((count, color) => {
-    return count + (referenceSet.has(color) ? 1 : 0);
-  }, 0);
-
-  return {
-    exactMatch,
-    sharedColorCount,
-    nextCount: nextColors.length,
-    referenceCount: referenceColors.length,
-  };
+  return paletteGeneratorCoreHelpers.getPaletteSimilarityMetrics(nextPalette, referencePalette);
 }
 
 function getPalettePositionalSimilarityMetrics(nextPalette, referencePalette) {
-  const nextColors = normalizePaletteHexCollection(nextPalette);
-  const referenceColors = normalizePaletteHexCollection(referencePalette);
-  const comparableCount = Math.min(nextColors.length, referenceColors.length);
-  let samePositionCount = 0;
-
-  for (let index = 0; index < comparableCount; index += 1) {
-    if (nextColors[index] === referenceColors[index]) {
-      samePositionCount += 1;
-    }
-  }
-
-  return {
-    samePositionCount,
-    comparableCount,
-    nextCount: nextColors.length,
-    referenceCount: referenceColors.length,
-  };
+  return paletteGeneratorCoreHelpers.getPalettePositionalSimilarityMetrics(
+    nextPalette,
+    referencePalette
+  );
 }
 
 function arePalettesTooSimilar(nextPalette, referencePalette) {
-  const similarityMetrics = getPaletteSimilarityMetrics(nextPalette, referencePalette);
-  return (
-    similarityMetrics.exactMatch ||
-    similarityMetrics.sharedColorCount >= Math.max(similarityMetrics.nextCount - 1, 3)
-  );
+  return paletteGeneratorCoreHelpers.arePalettesTooSimilar(nextPalette, referencePalette);
 }
 
 function getPinnedPaletteIndexSet(pinnedEntries = getPinnedPaletteEntriesSnapshot()) {
@@ -503,19 +410,10 @@ function getComparableMergedPaletteSlice(colors, pinnedEntries = getPinnedPalett
 }
 
 function isBetterPaletteFallbackCandidate(nextCandidate, currentFallbackCandidate) {
-  if (!currentFallbackCandidate) {
-    return true;
-  }
-
-  if (nextCandidate.samePositionCount !== currentFallbackCandidate.samePositionCount) {
-    return nextCandidate.samePositionCount < currentFallbackCandidate.samePositionCount;
-  }
-
-  if (nextCandidate.isTooSimilar !== currentFallbackCandidate.isTooSimilar) {
-    return !nextCandidate.isTooSimilar;
-  }
-
-  return nextCandidate.score > currentFallbackCandidate.score;
+  return paletteGeneratorCoreHelpers.isBetterPaletteFallbackCandidate(
+    nextCandidate,
+    currentFallbackCandidate
+  );
 }
 
 function getMutablePaletteSlotCount(totalCount = paletteSize, pinnedEntries = getPinnedPaletteEntriesSnapshot()) {
@@ -561,7 +459,7 @@ function isPaletteTooSimilarToRecentInspiredPalettes(nextPalette, recentPalettes
   return recentPalettes.some((palette) => arePalettesTooSimilar(normalizedPalette, palette));
 }
 function clampControlValue(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+  return paletteGeneratorCoreHelpers.clampControlValue(value, min, max);
 }
 
 function getCurrentBrightnessValue() {
@@ -584,103 +482,11 @@ function shouldUseAlternativePalette() {
   return getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD;
 }
 function scorePaletteHarmony(colors) {
-  const normalizedColors = normalizePaletteHexCollection(colors);
-  if (normalizedColors.length === 0) {
-    return -Infinity;
-  }
-
-  if (normalizedColors.length === 1) {
-    return 0;
-  }
-
-  const paletteOklch = normalizedColors.map((color) => controlsHexToOklch(color));
-  let pairwiseDistanceScore = 0;
-  let pairCount = 0;
-  let closePairPenalty = 0;
-
-  for (let leftIndex = 0; leftIndex < normalizedColors.length; leftIndex += 1) {
-    for (let rightIndex = leftIndex + 1; rightIndex < normalizedColors.length; rightIndex += 1) {
-      const distance =
-        window.AppColorUtils?.getColorDistance?.(
-          normalizedColors[leftIndex],
-          normalizedColors[rightIndex],
-          { method: "deltae2000" }
-        ) || 0;
-
-      pairwiseDistanceScore += Math.min(distance / 34, 1);
-      if (distance < 10) {
-        closePairPenalty += (10 - distance) / 10;
-      }
-      pairCount += 1;
-    }
-  }
-
-  const averageDistanceScore = pairCount > 0 ? pairwiseDistanceScore / pairCount : 0;
-  const averageSaturation =
-    paletteOklch.reduce((sum, color) => sum + clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100), 0) /
-    paletteOklch.length;
-  const averageLightness =
-    paletteOklch.reduce((sum, color) => sum + clampControlValue((color?.l ?? 0.5) * 100, 0, 100), 0) /
-    paletteOklch.length;
-  const saturationBalance = 1 - Math.min(Math.abs(averageSaturation - 42) / 42, 1);
-  const lightnessBalance = 1 - Math.min(Math.abs(averageLightness - 58) / 58, 1);
-
-  return (
-    averageDistanceScore * 2.1 +
-    saturationBalance * 0.75 +
-    lightnessBalance * 0.7 -
-    closePairPenalty * 0.9
-  );
+  return paletteGeneratorCoreHelpers.scorePaletteHarmony(colors);
 }
 
 function scorePaletteElegance(colors) {
-  const normalizedColors = normalizePaletteHexCollection(colors);
-  if (normalizedColors.length === 0) {
-    return -Infinity;
-  }
-
-  const paletteOklch = normalizedColors.map((color) => controlsHexToOklch(color));
-  const averageSaturation =
-    paletteOklch.reduce((sum, color) => {
-      return sum + clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100);
-    }, 0) / paletteOklch.length;
-  const averageLightness =
-    paletteOklch.reduce((sum, color) => {
-      return sum + clampControlValue((color?.l ?? 0.5) * 100, 0, 100);
-    }, 0) / paletteOklch.length;
-  const averageSaturationDeviation =
-    paletteOklch.reduce((sum, color) => {
-      const chromaPercent = clampControlValue(((color?.c ?? 0) / 0.24) * 100, 0, 100);
-      return sum + Math.abs(chromaPercent - averageSaturation);
-    }, 0) / paletteOklch.length;
-  const averageLightnessDeviation =
-    paletteOklch.reduce((sum, color) => {
-      const lightnessPercent = clampControlValue((color?.l ?? 0.5) * 100, 0, 100);
-      return sum + Math.abs(lightnessPercent - averageLightness);
-    }, 0) / paletteOklch.length;
-  const vividCount = paletteOklch.filter((color) => ((color?.c ?? 0) / 0.24) * 100 > 62).length;
-  const extremeLightnessCount = paletteOklch.filter((color) => {
-    const lightnessPercent = ((color?.l ?? 0.5) * 100);
-    return lightnessPercent < 22 || lightnessPercent > 82;
-  }).length;
-  const softColorCount = paletteOklch.filter((color) => {
-    const chromaPercent = ((color?.c ?? 0) / 0.24) * 100;
-    return chromaPercent >= 18 && chromaPercent <= 52;
-  }).length;
-  const elegantSaturationBalance = 1 - Math.min(Math.abs(averageSaturation - 36) / 36, 1);
-  const elegantLightnessBalance = 1 - Math.min(Math.abs(averageLightness - 58) / 58, 1);
-  const saturationSpreadBalance = 1 - Math.min(Math.abs(averageSaturationDeviation - 12) / 20, 1);
-  const lightnessSpreadBalance = 1 - Math.min(Math.abs(averageLightnessDeviation - 13) / 22, 1);
-
-  return (
-    elegantSaturationBalance * 0.95 +
-    elegantLightnessBalance * 0.85 +
-    saturationSpreadBalance * 0.65 +
-    lightnessSpreadBalance * 0.6 +
-    (softColorCount / paletteOklch.length) * 0.4 -
-    (vividCount / paletteOklch.length) * 0.85 -
-    (extremeLightnessCount / paletteOklch.length) * 0.75
-  );
+  return paletteGeneratorCoreHelpers.scorePaletteElegance(colors);
 }
 
 function setPaletteAdjustmentControls(settings) {

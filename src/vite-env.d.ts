@@ -20,6 +20,7 @@ declare global {
     HexToFilterApp?: any;
     PaletteGeneratorApp?: any;
     PaletteGeneratorStore?: any;
+    PaletteGeneratorCoreHelpers?: any;
     Color?: any;
     copyTextToClipboard?: (text: string) => Promise<void>;
   }

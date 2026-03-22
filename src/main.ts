@@ -5,6 +5,7 @@ import "./shared/services/clipboard";
 import "./shared/color/color-utils";
 import "./shared/services/shared-colors";
 import "./apps/palette-generator/store";
+import "./apps/palette-generator/core-helpers";
 
 import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";
