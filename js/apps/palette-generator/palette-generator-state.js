@@ -100,7 +100,10 @@ let prioritizeImageDominantColors = paletteImageDominantToggle?.checked ?? true;
 let imagePaletteVariantIndex = 0;
 let imageInspirationVariantIndex = 0;
 let recentInspiredPalettes = [];
-let selectedPaletteBaseColor = DEFAULT_COLOR_BASE;
+let selectedPaletteBaseColor =
+  window.AppSharedColors?.getDefaultActiveColor?.() ||
+  window.AppSharedColors?.getState?.().activeColor ||
+  DEFAULT_COLOR_BASE;
 let selectedColorPaletteType = DEFAULT_COLOR_PALETTE_TYPE;
 let selectedMonochromaticGenerationMode = DEFAULT_MONOCHROMATIC_GENERATION_MODE;
 let resolvedAutomaticColorPaletteType = "triad";

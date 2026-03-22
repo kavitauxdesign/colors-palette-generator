@@ -156,6 +156,8 @@ if (paletteAdjustBtn) {
 function updatePaletteModeActionVisibility() {
   const isImageMode = paletteBaseMode === "image";
   const isColorMode = paletteBaseMode === "color";
+  const isComplementaryColorMode =
+    isColorMode && selectedColorPaletteType === "complementary";
   const isMonochromaticColorScale =
     typeof isColorModeMonochromaticScaleActive === "function" &&
     isColorModeMonochromaticScaleActive();
@@ -167,7 +169,7 @@ function updatePaletteModeActionVisibility() {
 
   if (paletteRegenerateBtn) {
     const shouldShowRegenerate = isColorMode
-      ? !isMonochromaticColorScale
+      ? !isMonochromaticColorScale && !isComplementaryColorMode
       : (!isImageMode || hasImageSource);
     paletteRegenerateBtn.hidden = !shouldShowRegenerate;
   }

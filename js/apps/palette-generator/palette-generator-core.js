@@ -185,8 +185,34 @@ function buildAdjustedPaletteFromBase(
 ) {
   const adjustedPalette = [];
   const usedColors = new Set();
+  const baseCardIndex =
+    paletteBaseMode === "color" && typeof getColorModeBaseCardIndex === "function"
+      ? getColorModeBaseCardIndex(Array.isArray(colors) ? colors.length : 0)
+      : -1;
+  const complementaryCardIndex =
+    paletteBaseMode === "color" && typeof getComplementaryRoleCardIndex === "function"
+      ? getComplementaryRoleCardIndex(Array.isArray(colors) ? colors.length : 0)
+      : -1;
 
   colors.forEach((color, colorIndex) => {
+    if (colorIndex === baseCardIndex && paletteBaseMode === "color") {
+      const fixedBaseColor = controlsNormalizeHexColor(selectedPaletteBaseColor || color);
+      if (!usedColors.has(fixedBaseColor)) {
+        usedColors.add(fixedBaseColor);
+        adjustedPalette.push(fixedBaseColor);
+        return;
+      }
+    }
+
+    if (colorIndex === complementaryCardIndex && paletteBaseMode === "color") {
+      const fixedComplementaryColor = controlsNormalizeHexColor(color);
+      if (!usedColors.has(fixedComplementaryColor)) {
+        usedColors.add(fixedComplementaryColor);
+        adjustedPalette.push(fixedComplementaryColor);
+        return;
+      }
+    }
+
     for (let variantIndex = 0; variantIndex < 28; variantIndex++) {
       const candidate = getAdjustedPaletteColor(
         color,
@@ -563,9 +589,26 @@ function getPinnedPaletteEntriesSnapshot() {
         return false;
       }
 
-      // In color mode, the first card is controlled by the base-color input,
+      // In color mode, the base card is controlled by the base-color input,
       // so it should not behave like a regular pinned slot during regeneration.
-      if (paletteBaseMode === "color" && entry.index === 0) {
+      const baseCardIndex =
+        typeof getColorModeBaseCardIndex === "function"
+          ? getColorModeBaseCardIndex(getColorCards().length)
+          : 0;
+      if (paletteBaseMode === "color" && entry.index === baseCardIndex) {
+        return false;
+      }
+
+      const complementaryCardIndex =
+        typeof getComplementaryRoleCardIndex === "function"
+          ? getComplementaryRoleCardIndex(getColorCards().length)
+          : -1;
+      if (
+        typeof isExplicitComplementaryColorModeSelected === "function" &&
+        isExplicitComplementaryColorModeSelected() &&
+        paletteBaseMode === "color" &&
+        entry.index === complementaryCardIndex
+      ) {
         return false;
       }
 

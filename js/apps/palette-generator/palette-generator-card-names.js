@@ -90,16 +90,49 @@ function refreshColorCardNames() {
   cards.forEach((card, index) => {
     const colorName = card.querySelector(".color-name");
     const colorBaseIndicator = card.querySelector(".color-base-indicator");
+    const complementaryIndicator = card.querySelector(".color-complementary-indicator");
     if (!colorName) {
       return;
     }
 
     const hex = hexValues[index];
     const displayName = displayNames[index] || getNearestColorName(hex);
-    const isBaseColorCard = paletteBaseMode === "color" && index === 0;
+    const baseCardIndex =
+      typeof getColorModeBaseCardIndex === "function"
+        ? getColorModeBaseCardIndex(cards.length)
+        : 0;
+    const complementaryCardIndex =
+      typeof getComplementaryRoleCardIndex === "function"
+        ? getComplementaryRoleCardIndex(cards.length)
+        : -1;
+    const isBaseColorCard = paletteBaseMode === "color" && index === baseCardIndex;
+    const isComplementaryColorCard =
+      (typeof isExplicitComplementaryColorModeSelected === "function" &&
+        isExplicitComplementaryColorModeSelected()) &&
+      index === complementaryCardIndex;
+    const shouldShowReadonlyFixedPin =
+      (
+        typeof isExplicitMonochromaticColorModeSelected === "function" &&
+        isExplicitMonochromaticColorModeSelected() &&
+        isBaseColorCard
+      ) ||
+      (
+        typeof isExplicitComplementaryColorModeSelected === "function" &&
+        isExplicitComplementaryColorModeSelected() &&
+        (isBaseColorCard || isComplementaryColorCard)
+      );
+    const hadReadonlyFixedPin = card.dataset.readonlyFixedPin === "true";
 
     card.classList.toggle("is-base-color", isBaseColorCard);
-    if (isBaseColorCard && !isCardPinned(card)) {
+    card.classList.toggle("is-complementary-color", isComplementaryColorCard);
+
+    if (hadReadonlyFixedPin && !shouldShowReadonlyFixedPin && !isBaseColorCard) {
+      setCardPinnedState(card, false);
+    }
+
+    card.dataset.readonlyFixedPin = shouldShowReadonlyFixedPin ? "true" : "false";
+
+    if ((isBaseColorCard || shouldShowReadonlyFixedPin) && !isCardPinned(card)) {
       setCardPinnedState(card, true);
     }
     colorName.textContent = displayName;
@@ -108,6 +141,11 @@ function refreshColorCardNames() {
     if (colorBaseIndicator) {
       colorBaseIndicator.hidden = !isBaseColorCard;
       applyAccessibleColorNameStyle(colorBaseIndicator, hex);
+    }
+
+    if (complementaryIndicator) {
+      complementaryIndicator.hidden = !isComplementaryColorCard;
+      applyAccessibleColorNameStyle(complementaryIndicator, hex);
     }
   });
 }

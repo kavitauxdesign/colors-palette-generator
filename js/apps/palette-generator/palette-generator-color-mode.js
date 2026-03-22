@@ -3,12 +3,17 @@
 const COLOR_MODE_PALETTE_SIZES = Object.freeze({
   automatic: [2, 3, 4, 6, 9],
   monochromatic: [6, 9, 12],
-  complementary: [2, 3, 6, 9],
+  complementary: [2, 6],
   analogous: [2, 3, 6, 9],
   triad: [3, 6, 9],
   tetrad: [4],
 });
 const MONOCHROMATIC_GENERATION_MODES = new Set(["automatic", "shades", "tints"]);
+const COMPLEMENTARY_VARIANT_PROFILES = Object.freeze([
+  { complementLightnessOffset: 0, complementChromaScale: 1, tintStrength: 0.66, shadeStrength: 0.58 },
+  { complementLightnessOffset: 0.02, complementChromaScale: 0.94, tintStrength: 0.72, shadeStrength: 0.54 },
+  { complementLightnessOffset: -0.02, complementChromaScale: 1.06, tintStrength: 0.62, shadeStrength: 0.62 },
+]);
 
 let colorModeParserElement = null;
 let colorPaletteVariantIndex = 0;
@@ -157,7 +162,12 @@ function syncSelectedPaletteBaseColorCard() {
     return;
   }
 
-  const baseCard = Array.from(getColorCards())[0];
+  const cards = Array.from(getColorCards());
+  const baseCardIndex =
+    typeof getColorModeBaseCardIndex === "function"
+      ? getColorModeBaseCardIndex(cards.length)
+      : 0;
+  const baseCard = cards[baseCardIndex];
   if (!baseCard) {
     return;
   }
@@ -590,6 +600,264 @@ function createMonochromaticScaleTargetHex(baseColor, settings, direction) {
   return window.AppColorUtils?.colorToHex?.(targetColor) || null;
 }
 
+function createColorModeOklchHex(lightness, chroma, hue) {
+  const ColorConstructor = window.AppColorUtils?.Color;
+  if (typeof ColorConstructor !== "function") {
+    return null;
+  }
+
+  let color = new ColorConstructor("oklch", [
+    clampControlValue(lightness, 0, 1),
+    clampControlValue(chroma, 0, 0.4),
+    ((Number(hue) % 360) + 360) % 360,
+  ]);
+
+  if (typeof color.toGamut === "function") {
+    color = color.toGamut({
+      space: "srgb",
+      method: "oklch.c",
+    });
+  }
+
+  return window.AppColorUtils?.colorToHex?.(color) || null;
+}
+
+function getComplementaryVariantProfile(variantIndex = 0) {
+  const profiles = COMPLEMENTARY_VARIANT_PROFILES;
+  return profiles[Math.abs(variantIndex) % profiles.length] || profiles[0];
+}
+
+function buildComplementaryHueColor(baseColor, settings, variantIndex = 0) {
+  const baseOklch = getMonochromaticBaseOklch(baseColor);
+  if (!baseOklch) {
+    return null;
+  }
+
+  const profile = getComplementaryVariantProfile(variantIndex);
+  const saturationRatio = clampControlValue(settings.saturation / 100, 0, 1);
+  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+  const lightness = clampControlValue(
+    baseOklch.lightness + profile.complementLightnessOffset + (brightnessRatio - 0.5) * 0.04,
+    0.2,
+    0.88
+  );
+  const chroma = clampControlValue(
+    Math.max(baseOklch.chroma, 0.038) * (0.84 + saturationRatio * 0.18) * profile.complementChromaScale,
+    0.03,
+    0.24
+  );
+
+  return createColorModeOklchHex(lightness, chroma, baseOklch.hue + 180);
+}
+
+function createComplementaryScaleTargetHex(baseColor, settings, direction) {
+  const baseOklch = getMonochromaticBaseOklch(baseColor);
+  if (!baseOklch) {
+    return null;
+  }
+
+  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+  const saturationRatio = clampControlValue(settings.saturation / 100, 0, 1);
+
+  if (direction === "light") {
+    const maximumLightness = clampControlValue(0.91 + brightnessRatio * 0.03, 0.88, 0.94);
+    const lightnessRoom = Math.max(0.1, maximumLightness - baseOklch.lightness);
+    const targetLightness = clampControlValue(
+      baseOklch.lightness + lightnessRoom * (0.58 + brightnessRatio * 0.08),
+      Math.min(maximumLightness, baseOklch.lightness + 0.14),
+      maximumLightness
+    );
+    const chromaScale = 0.42 + saturationRatio * 0.12;
+
+    return createColorModeOklchHex(
+      targetLightness,
+      clampControlValue(baseOklch.chroma * chromaScale, 0.012, 0.12),
+      baseOklch.hue
+    );
+  }
+
+  const minimumLightness = clampControlValue(0.18 + (1 - brightnessRatio) * 0.03, 0.16, 0.26);
+  const darknessRoom = Math.max(0.1, baseOklch.lightness - minimumLightness);
+  const targetLightness = clampControlValue(
+    baseOklch.lightness - darknessRoom * (0.54 + (1 - brightnessRatio) * 0.08),
+    minimumLightness,
+    Math.max(minimumLightness, baseOklch.lightness - 0.14)
+  );
+  const chromaScale = 0.74 + saturationRatio * 0.16;
+
+  return createColorModeOklchHex(
+    targetLightness,
+    clampControlValue(baseOklch.chroma * chromaScale, 0.02, 0.2),
+    baseOklch.hue
+  );
+}
+
+function buildComplementaryScaleVariant(baseHex, direction, settings, ratio, existingColors = new Set()) {
+  const parsedColor = normalizePaletteBaseCssColor(baseHex);
+  if (!parsedColor) {
+    return null;
+  }
+
+  const targetHex = createComplementaryScaleTargetHex(parsedColor, settings, direction);
+  if (!targetHex || targetHex === baseHex) {
+    return null;
+  }
+
+  const steps = buildMonochromaticScaleCandidates(baseHex, targetHex, 8).slice(1);
+  if (steps.length === 0) {
+    return null;
+  }
+
+  const idealIndex = Math.max(
+    0,
+    Math.min(steps.length - 1, Math.round((steps.length - 1) * clampControlValue(ratio, 0.35, 0.9)))
+  );
+  const candidateIndexes = [
+    ...steps.slice(idealIndex).map((_, index) => idealIndex + index),
+    ...steps.slice(0, idealIndex).map((_, index) => idealIndex - index - 1),
+  ];
+
+  function resolveComplementaryScaleCandidate(candidateIndex) {
+    let resolvedIndex = candidateIndex;
+    let candidate = controlsNormalizeHexColor(steps[resolvedIndex]);
+
+    while (
+      resolvedIndex > 0 &&
+      (candidate === "#FFFFFF" || candidate === "#000000")
+    ) {
+      resolvedIndex -= 1;
+      candidate = controlsNormalizeHexColor(steps[resolvedIndex]);
+    }
+
+    return candidate;
+  }
+
+  for (const candidateIndex of candidateIndexes) {
+    const candidate = resolveComplementaryScaleCandidate(candidateIndex);
+    if (
+      !candidate ||
+      candidate === baseHex ||
+      existingColors.has(candidate) ||
+      isDisallowedColor(candidate)
+    ) {
+      continue;
+    }
+
+    const isDistinctEnough = [...existingColors].every((existingColor) => {
+      const deltaE = window.AppColorUtils?.getColorDistance?.(candidate, existingColor, {
+        method: "deltae2000",
+      });
+      return deltaE >= 8;
+    });
+
+    if (isDistinctEnough) {
+      return candidate;
+    }
+  }
+
+  const fallbackCandidate = resolveComplementaryScaleCandidate(steps.length - 1);
+  if (
+    fallbackCandidate &&
+    fallbackCandidate !== baseHex &&
+    !existingColors.has(fallbackCandidate) &&
+    !isDisallowedColor(fallbackCandidate)
+  ) {
+    return fallbackCandidate;
+  }
+
+  return null;
+}
+
+function buildComplementaryColorModePalette(targetCount, settings, options = {}) {
+  const parsedBaseColor = options.baseColor || getPaletteBaseColorSnapshot();
+  if (!parsedBaseColor) {
+    return [];
+  }
+
+  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
+  const variantIndex = Number.isFinite(options.variantIndex)
+    ? options.variantIndex
+    : colorPaletteVariantIndex;
+  const profile = getComplementaryVariantProfile(variantIndex);
+  const tintRatio = targetCount >= 6
+    ? clampControlValue(profile.tintStrength - 0.18, 0.38, 0.58)
+    : profile.tintStrength;
+  const baseHex = parsedBaseColor.hex;
+  const complementHex = buildComplementaryHueColor(
+    parsedBaseColor,
+    resolvedSettings,
+    variantIndex
+  );
+
+  if (!complementHex || complementHex === baseHex) {
+    return [baseHex];
+  }
+
+  if (targetCount <= 2) {
+    return [baseHex, complementHex];
+  }
+
+  const palette = [];
+  const usedColors = new Set();
+  const baseTint = buildComplementaryScaleVariant(
+    baseHex,
+    "light",
+    resolvedSettings,
+    tintRatio,
+    usedColors
+  );
+  if (baseTint) {
+    palette.push(baseTint);
+    usedColors.add(baseTint);
+  }
+
+  palette.push(baseHex);
+  usedColors.add(baseHex);
+
+  const baseShade = buildComplementaryScaleVariant(
+    baseHex,
+    "dark",
+    resolvedSettings,
+    profile.shadeStrength,
+    usedColors
+  );
+  if (baseShade) {
+    palette.push(baseShade);
+    usedColors.add(baseShade);
+  }
+
+  const complementTint = buildComplementaryScaleVariant(
+    complementHex,
+    "light",
+    resolvedSettings,
+    tintRatio,
+    usedColors
+  );
+  if (complementTint) {
+    palette.push(complementTint);
+    usedColors.add(complementTint);
+  }
+
+  if (!usedColors.has(complementHex)) {
+    palette.push(complementHex);
+    usedColors.add(complementHex);
+  }
+
+  const complementShade = buildComplementaryScaleVariant(
+    complementHex,
+    "dark",
+    resolvedSettings,
+    profile.shadeStrength,
+    usedColors
+  );
+  if (complementShade) {
+    palette.push(complementShade);
+    usedColors.add(complementShade);
+  }
+
+  return palette.slice(0, targetCount);
+}
+
 function getMonochromaticColorOklchLightness(hex) {
   const color = window.AppColorUtils?.createColor?.(hex);
   const [lightness = 0] = color?.to("oklch")?.coords || [];
@@ -833,6 +1101,13 @@ function buildColorModePaletteForSettings(targetCount, settings, options = {}) {
 
   if (effectiveType === "monochromatic") {
     return buildMonochromaticColorModePalette(targetCount, settings, {
+      baseColor: parsedBaseColor,
+      variantIndex,
+    });
+  }
+
+  if (effectiveType === "complementary") {
+    return buildComplementaryColorModePalette(targetCount, settings, {
       baseColor: parsedBaseColor,
       variantIndex,
     });

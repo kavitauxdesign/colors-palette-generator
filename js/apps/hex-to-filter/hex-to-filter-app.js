@@ -8,20 +8,15 @@
   const appColorUtils = window.AppColorUtils || {};
   const parseCssColor = appColorUtils.parseCssColor;
   const getReadableTextColor = appColorUtils.getReadableTextColor;
-  const DEFAULT_TARGET_COLORS = [
-    "#9EBB89",
-    "#6EC5CE",
-    "#E7AA6E",
-    "#B1BDCD",
-    "#6BBDB6",
-    "#B88965",
-    "#DCC9B3",
-    "#A8AA98",
-    "#6B8F71",
-    "#29A9CA",
-    "#B86346",
-    "#5BAB9C",
-  ];
+  const appConstants = window.AppConstants || {};
+  const DEFAULT_TARGET_COLORS = Array.isArray(appConstants.DEFAULT_TARGET_COLORS)
+    ? appConstants.DEFAULT_TARGET_COLORS
+    : ["#9EBB89"];
+  const DEFAULT_TARGET_COLOR =
+    window.AppSharedColors?.getDefaultActiveColor?.() ||
+    window.AppSharedColors?.getState?.().activeColor ||
+    appConstants.DEFAULT_COLOR_BASE ||
+    DEFAULT_TARGET_COLORS[0];
 
   let isHexToFilterInitialized = false;
   let applyExternalTargetColor = () => false;
@@ -57,11 +52,6 @@
     }
 
     return elements;
-  }
-
-  function pickRandomDefaultTargetColor() {
-    const randomIndex = Math.floor(Math.random() * DEFAULT_TARGET_COLORS.length);
-    return DEFAULT_TARGET_COLORS[randomIndex];
   }
 
   async function fallbackCopyText(text) {
@@ -313,12 +303,12 @@
       }
     });
 
-    const initialTargetColor = pickRandomDefaultTargetColor();
+    const initialTargetColor = DEFAULT_TARGET_COLOR;
     elements.textInput.value = initialTargetColor;
     elements.colorPicker.value = initialTargetColor;
 
     const initialColor =
-      normalizeCssColor(elements.textInput.value) || normalizeCssColor("#00A4D6");
+      normalizeCssColor(elements.textInput.value) || normalizeCssColor(DEFAULT_TARGET_COLOR);
     if (initialColor) {
       computeBestFilter({
         normalizedColor: initialColor,

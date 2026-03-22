@@ -649,7 +649,22 @@
   pointer-events: none;
 }
 
+.color-complementary-indicator {
+  display: none;
+  font-size: var(--PX-12);
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+  text-align: center;
+  pointer-events: none;
+}
+
 .color-card.is-base-color .color-base-indicator {
+  display: block;
+}
+
+.color-card.is-complementary-color .color-complementary-indicator {
   display: block;
 }
 
@@ -657,11 +672,23 @@
   display: none;
 }
 
+.color-card.is-complementary-color .color-name {
+  display: none;
+}
+
 .color-card.is-base-color:hover .color-base-indicator {
   display: none;
 }
 
+.color-card.is-complementary-color:hover .color-complementary-indicator {
+  display: none;
+}
+
 .color-card.is-base-color:hover .color-name {
+  display: block;
+}
+
+.color-card.is-complementary-color:hover .color-name {
   display: block;
 }
 
@@ -830,7 +857,6 @@
 .color-pin-overlay.is-corner {
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 10px;
 }
 
 .color-pin-overlay.is-readonly .color-pin-overlay-icon-wrap {
@@ -839,7 +865,21 @@
 }
 
 .color-pin-overlay.is-readonly .pin-overlay-icon-state.is-visible {
-  opacity: 0.72;
+  opacity: 0.4;
+}
+
+.color-pin-overlay.is-fixed-role .color-pin-overlay-icon-wrap {
+  width: 32px;
+  height: 32px;
+}
+
+.color-pin-overlay.is-fixed-role .pin-overlay-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.color-pin-overlay.is-fixed-role .pin-overlay-icon-state.is-visible {
+  opacity: 0.4;
 }
 
 .color-pin-overlay-content {

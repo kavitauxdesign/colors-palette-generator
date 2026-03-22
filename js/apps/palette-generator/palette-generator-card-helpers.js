@@ -56,6 +56,54 @@ function getColorCards() {
   return paletteContainer.querySelectorAll(".color-card");
 }
 
+function isExplicitMonochromaticColorModeSelected() {
+  return paletteBaseMode === "color" && selectedColorPaletteType === "monochromatic";
+}
+
+function isExplicitComplementaryColorModeSelected() {
+  return paletteBaseMode === "color" && selectedColorPaletteType === "complementary";
+}
+
+function getColorModeBaseCardIndex(totalCount = getColorCards().length) {
+  if (paletteBaseMode !== "color") {
+    return -1;
+  }
+
+  const effectiveType =
+    typeof getEffectiveColorPaletteType === "function"
+      ? getEffectiveColorPaletteType(totalCount || paletteSize)
+      : selectedColorPaletteType;
+
+  if (effectiveType === "complementary" && totalCount === 6) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function getComplementaryRoleCardIndex(totalCount = getColorCards().length) {
+  if (paletteBaseMode !== "color") {
+    return -1;
+  }
+
+  const effectiveType =
+    typeof getEffectiveColorPaletteType === "function"
+      ? getEffectiveColorPaletteType(totalCount || paletteSize)
+      : selectedColorPaletteType;
+
+  if (effectiveType === "complementary") {
+    if (totalCount === 2) {
+      return 1;
+    }
+
+    if (totalCount === 6) {
+      return 4;
+    }
+  }
+
+  return -1;
+}
+
 function isCardPinned(card) {
   return card?.dataset.pinned === "true";
 }
