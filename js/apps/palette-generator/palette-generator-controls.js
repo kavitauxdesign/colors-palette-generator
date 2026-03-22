@@ -113,11 +113,15 @@ async function handlePaletteSizeButtonClick(button) {
     return;
   }
 
+  const nextSize = Number.parseInt(button.dataset.size, 10);
+  if (!Number.isFinite(nextSize) || nextSize === paletteSize) {
+    return;
+  }
+
   if (button?.matches(":hover")) {
     button.classList.add("suppress-hover");
   }
 
-  const nextSize = Number.parseInt(button.dataset.size, 10);
   setPaletteSize(nextSize);
   await applyPaletteSizeChange(nextSize);
 }

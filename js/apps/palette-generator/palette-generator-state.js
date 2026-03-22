@@ -19,6 +19,8 @@ const {
   paletteTypeResolvedLabel,
   monochromaticModeControl,
   monochromaticModeSelect,
+  analogousSeparationControl,
+  analogousSeparationSelect,
   paletteImageInput,
   paletteImageDropzonePanel,
   paletteImageDropzone,
@@ -36,6 +38,8 @@ const {
   paletteAdjustPanel,
   paletteUndoBtn,
   paletteRedoBtn,
+  paletteViewport,
+  paletteLoadingOverlay,
   paletteImageExtractionAlert,
   addColorBtn,
   addColorElement,
@@ -74,6 +78,7 @@ const {
   DEFAULT_COLOR_BASE,
   DEFAULT_COLOR_PALETTE_TYPE,
   DEFAULT_MONOCHROMATIC_GENERATION_MODE,
+  DEFAULT_ANALOGOUS_SEPARATION_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_SATURATION,
   LOW_SATURATION_FALLBACK_THRESHOLD,
@@ -106,6 +111,7 @@ let selectedPaletteBaseColor =
   DEFAULT_COLOR_BASE;
 let selectedColorPaletteType = DEFAULT_COLOR_PALETTE_TYPE;
 let selectedMonochromaticGenerationMode = DEFAULT_MONOCHROMATIC_GENERATION_MODE;
+let selectedAnalogousSeparationMode = DEFAULT_ANALOGOUS_SEPARATION_MODE;
 let resolvedAutomaticColorPaletteType = "triad";
 let temperature = {
   warm: !!DEFAULT_TEMPERATURE.warm,

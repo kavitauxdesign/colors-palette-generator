@@ -42,6 +42,7 @@
         baseColor: selectedPaletteBaseColor,
         colorPaletteType: selectedColorPaletteType,
         monochromaticGenerationMode: selectedMonochromaticGenerationMode,
+        analogousSeparationMode: selectedAnalogousSeparationMode,
         temperature: { ...temperature },
       };
     },

@@ -8,6 +8,7 @@ function captureCurrentGeneratorSettings() {
     baseColor: selectedPaletteBaseColor,
     colorPaletteType: selectedColorPaletteType,
     monochromaticGenerationMode: selectedMonochromaticGenerationMode,
+    analogousSeparationMode: selectedAnalogousSeparationMode,
     prioritizeImageDominantColors,
     temperature: {
       warm: !!temperature.warm,
@@ -72,6 +73,12 @@ function applyGeneratorSettings(settings, fallbackSize) {
 
   if (typeof settings?.monochromaticGenerationMode === "string") {
     setSelectedMonochromaticGenerationMode(settings.monochromaticGenerationMode, {
+      generate: false,
+    });
+  }
+
+  if (typeof settings?.analogousSeparationMode === "string") {
+    setSelectedAnalogousSeparationMode(settings.analogousSeparationMode, {
       generate: false,
     });
   }

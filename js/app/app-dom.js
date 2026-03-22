@@ -19,6 +19,8 @@
   const paletteTypeResolvedLabel = document.getElementById("paletteTypeResolvedLabel");
   const monochromaticModeControl = document.getElementById("monochromaticModeControl");
   const monochromaticModeSelect = document.getElementById("monochromaticModeSelect");
+  const analogousSeparationControl = document.getElementById("analogousSeparationControl");
+  const analogousSeparationSelect = document.getElementById("analogousSeparationSelect");
   const paletteImageInput = document.getElementById("paletteImageInput");
   const paletteImageDropzonePanel = document.getElementById("paletteImageDropzonePanel");
   const paletteImageDropzone = document.getElementById("paletteImageDropzone");
@@ -36,6 +38,8 @@
   const paletteAdjustPanel = document.getElementById("paletteAdjustPanel");
   const paletteUndoBtn = document.getElementById("paletteUndoBtn");
   const paletteRedoBtn = document.getElementById("paletteRedoBtn");
+  const paletteViewport = document.getElementById("paletteViewport");
+  const paletteLoadingOverlay = document.getElementById("paletteLoadingOverlay");
   const paletteImageExtractionAlert = document.getElementById("paletteImageExtractionAlert");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker");
@@ -96,6 +100,8 @@
     paletteTypeResolvedLabel,
     monochromaticModeControl,
     monochromaticModeSelect,
+    analogousSeparationControl,
+    analogousSeparationSelect,
     paletteImageInput,
     paletteImageDropzonePanel,
     paletteImageDropzone,
@@ -113,6 +119,8 @@
     paletteAdjustPanel,
     paletteUndoBtn,
     paletteRedoBtn,
+    paletteViewport,
+    paletteLoadingOverlay,
     paletteImageExtractionAlert,
     addColorBtn,
     colorPicker,

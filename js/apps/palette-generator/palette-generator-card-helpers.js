@@ -78,6 +78,14 @@ function getColorModeBaseCardIndex(totalCount = getColorCards().length) {
     return 1;
   }
 
+  if (effectiveType === "analogous" && totalCount === 3) {
+    return 1;
+  }
+
+  if (effectiveType === "triad" && totalCount === 3) {
+    return 1;
+  }
+
   return 0;
 }
 
@@ -128,7 +136,38 @@ function getCurrentPaletteCardEntries() {
 
 function getPinnedPaletteIndexes() {
   return getCurrentPaletteCardEntries()
-    .filter((entry) => entry.pinned)
+    .filter((entry) => {
+      if (!entry.pinned) {
+        return false;
+      }
+
+      if (entry.card?.dataset.readonlyFixedPin === "true") {
+        return false;
+      }
+
+      const baseCardIndex =
+        typeof getColorModeBaseCardIndex === "function"
+          ? getColorModeBaseCardIndex(getColorCards().length)
+          : 0;
+      if (paletteBaseMode === "color" && entry.index === baseCardIndex) {
+        return false;
+      }
+
+      const complementaryCardIndex =
+        typeof getComplementaryRoleCardIndex === "function"
+          ? getComplementaryRoleCardIndex(getColorCards().length)
+          : -1;
+      if (
+        typeof isExplicitComplementaryColorModeSelected === "function" &&
+        isExplicitComplementaryColorModeSelected() &&
+        paletteBaseMode === "color" &&
+        entry.index === complementaryCardIndex
+      ) {
+        return false;
+      }
+
+      return true;
+    })
     .map((entry) => entry.index);
 }
 

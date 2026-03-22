@@ -111,11 +111,7 @@ function refreshColorCardNames() {
         isExplicitComplementaryColorModeSelected()) &&
       index === complementaryCardIndex;
     const shouldShowReadonlyFixedPin =
-      (
-        typeof isExplicitMonochromaticColorModeSelected === "function" &&
-        isExplicitMonochromaticColorModeSelected() &&
-        isBaseColorCard
-      ) ||
+      isBaseColorCard ||
       (
         typeof isExplicitComplementaryColorModeSelected === "function" &&
         isExplicitComplementaryColorModeSelected() &&

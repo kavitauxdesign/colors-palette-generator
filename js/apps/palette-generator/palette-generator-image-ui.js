@@ -156,8 +156,9 @@ if (paletteAdjustBtn) {
 function updatePaletteModeActionVisibility() {
   const isImageMode = paletteBaseMode === "image";
   const isColorMode = paletteBaseMode === "color";
-  const isComplementaryColorMode =
-    isColorMode && selectedColorPaletteType === "complementary";
+  const isHiddenRegenerateColorMode =
+    isColorMode &&
+    ["complementary", "analogous", "triad"].includes(selectedColorPaletteType);
   const isMonochromaticColorScale =
     typeof isColorModeMonochromaticScaleActive === "function" &&
     isColorModeMonochromaticScaleActive();
@@ -169,7 +170,7 @@ function updatePaletteModeActionVisibility() {
 
   if (paletteRegenerateBtn) {
     const shouldShowRegenerate = isColorMode
-      ? !isMonochromaticColorScale && !isComplementaryColorMode
+      ? !isMonochromaticColorScale && !isHiddenRegenerateColorMode
       : (!isImageMode || hasImageSource);
     paletteRegenerateBtn.hidden = !shouldShowRegenerate;
   }
@@ -460,24 +461,32 @@ function regeneratePinnedPaletteSlots() {
 }
 
 async function syncImagePaletteFromSource(options = {}) {
-  if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
-    return;
+  const runSync = async () => {
+    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+      return;
+    }
+
+    if (options.resetVariant) {
+      imagePaletteVariantIndex = 0;
+      imageInspirationVariantIndex = 0;
+      clearRecentInspiredPalettes();
+    } else if (options.advanceVariant) {
+      imagePaletteVariantIndex += 1;
+    }
+
+    await refreshImageDerivedControls();
+    if (!(paletteImageExtractionAlert?.hidden ?? true)) {
+      return;
+    }
+
+    await generatePalette();
+  };
+
+  if (typeof withPaletteLoadingOverlay === "function") {
+    return withPaletteLoadingOverlay(runSync);
   }
 
-  if (options.resetVariant) {
-    imagePaletteVariantIndex = 0;
-    imageInspirationVariantIndex = 0;
-    clearRecentInspiredPalettes();
-  } else if (options.advanceVariant) {
-    imagePaletteVariantIndex += 1;
-  }
-
-  await refreshImageDerivedControls();
-  if (!(paletteImageExtractionAlert?.hidden ?? true)) {
-    return;
-  }
-
-  await generatePalette();
+  return runSync();
 }
 // PALETTE BASE
 
@@ -514,6 +523,10 @@ function setPaletteBaseMode(nextMode) {
     const showImagePanel = paletteBaseMode === "image";
     imageBasePanel.classList.toggle("active", showImagePanel);
     imageBasePanel.hidden = !showImagePanel;
+  }
+
+  if (typeof syncCurrentPaletteFromDom === "function") {
+    syncCurrentPaletteFromDom();
   }
 
   updatePaletteModeActionVisibility();
@@ -809,7 +822,7 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
       buttonSize > availableCount;
     const shouldShowForMode =
       paletteBaseMode === "color"
-        ? true
+        ? Number.isFinite(buttonSize) && allowedColorModeSizes.includes(buttonSize)
         : buttonSize !== 2 && buttonSize !== 4;
     const shouldDisableByColorMode =
       paletteBaseMode === "color" &&
@@ -825,10 +838,31 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
 }
 
 async function refreshImageDerivedControls() {
-  if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
-    setPaletteImageExtractionFeedback(false);
-    updatePaletteSizeButtonsAvailability();
-    updatePaletteActionButtonsAvailability();
+  const runRefresh = async () => {
+    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
+      setPaletteImageExtractionFeedback(false);
+      updatePaletteSizeButtonsAvailability();
+      updatePaletteActionButtonsAvailability();
+
+      if (typeof updateRegenerateButtonsAvailability === "function") {
+        updateRegenerateButtonsAvailability();
+      }
+      if (typeof updateAddColorButtonState === "function") {
+        updateAddColorButtonState();
+      }
+      return;
+    }
+
+    const clusters = await getImageColorClusters();
+    const hasExtractedColors = clusters.length > 0;
+
+    setPaletteImageExtractionFeedback(!hasExtractedColors);
+    if (!hasExtractedColors) {
+      revealPaletteImageDropzoneForRetry();
+    }
+
+    updatePaletteSizeButtonsAvailability(clusters.length);
+    updatePaletteActionButtonsAvailability(clusters.length);
 
     if (typeof updateRegenerateButtonsAvailability === "function") {
       updateRegenerateButtonsAvailability();
@@ -836,24 +870,11 @@ async function refreshImageDerivedControls() {
     if (typeof updateAddColorButtonState === "function") {
       updateAddColorButtonState();
     }
-    return;
+  };
+
+  if (typeof withPaletteLoadingOverlay === "function") {
+    return withPaletteLoadingOverlay(runRefresh);
   }
 
-  const clusters = await getImageColorClusters();
-  const hasExtractedColors = clusters.length > 0;
-
-  setPaletteImageExtractionFeedback(!hasExtractedColors);
-  if (!hasExtractedColors) {
-    revealPaletteImageDropzoneForRetry();
-  }
-
-  updatePaletteSizeButtonsAvailability(clusters.length);
-  updatePaletteActionButtonsAvailability(clusters.length);
-
-  if (typeof updateRegenerateButtonsAvailability === "function") {
-    updateRegenerateButtonsAvailability();
-  }
-  if (typeof updateAddColorButtonState === "function") {
-    updateAddColorButtonState();
-  }
+  return runRefresh();
 }

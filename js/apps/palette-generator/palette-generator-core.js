@@ -20,6 +20,7 @@ let saturationAttentionTimeout = null;
 let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
 let isPaletteAdjustPanelOpen = false;
+let paletteLoadingOverlayDepth = 0;
 const imagePanelTransitionMs = 320;
 const allowedPaletteImageTypes = new Set(["image/jpeg", "image/png", "image/svg+xml", "image/webp"]);
 const allowedPaletteImageExtensions = [".jpg", ".jpeg", ".png", ".svg", ".webp"];
@@ -46,6 +47,43 @@ const MAX_RECENT_INSPIRED_PALETTES = 8;
 
 function blendControlValue(fromValue, toValue, ratio) {
   return fromValue + (toValue - fromValue) * ratio;
+}
+
+function setPaletteLoadingOverlayState(isVisible) {
+  if (!paletteLoadingOverlay || !paletteViewport) {
+    return;
+  }
+
+  paletteLoadingOverlay.hidden = !isVisible;
+  paletteLoadingOverlay.setAttribute("aria-hidden", isVisible ? "false" : "true");
+  paletteViewport.classList.toggle("is-loading", isVisible);
+}
+
+function waitForPaletteLoadingOverlayPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    });
+  });
+}
+
+async function withPaletteLoadingOverlay(task) {
+  const shouldWaitForPaint = paletteLoadingOverlayDepth === 0;
+  paletteLoadingOverlayDepth += 1;
+  setPaletteLoadingOverlayState(true);
+
+  try {
+    if (shouldWaitForPaint) {
+      await waitForPaletteLoadingOverlayPaint();
+    }
+
+    return await task();
+  } finally {
+    paletteLoadingOverlayDepth = Math.max(0, paletteLoadingOverlayDepth - 1);
+    if (paletteLoadingOverlayDepth === 0) {
+      setPaletteLoadingOverlayState(false);
+    }
+  }
 }
 
 function resolvePaletteAdjustmentSettings(settings = {}) {
@@ -589,6 +627,10 @@ function getPinnedPaletteEntriesSnapshot() {
         return false;
       }
 
+      if (entry.card?.dataset.readonlyFixedPin === "true") {
+        return false;
+      }
+
       // In color mode, the base card is controlled by the base-color input,
       // so it should not behave like a regular pinned slot during regeneration.
       const baseCardIndex =
@@ -714,49 +756,51 @@ function commitGeneratedPalette(nextPalette, options = {}) {
 }
 
 async function generatePalette() {
-  let nextPalette = [];
-  let usedAlternativePalette = false;
-  let effectiveColorPaletteType = null;
-  const previousPalette = normalizePaletteHexCollection(currentPalette);
+  return withPaletteLoadingOverlay(async () => {
+    let nextPalette = [];
+    let usedAlternativePalette = false;
+    let effectiveColorPaletteType = null;
+    const previousPalette = normalizePaletteHexCollection(currentPalette);
 
-  if (paletteBaseMode === "image") {
-    try {
-      nextPalette = await buildImageBasedPalette(paletteSize);
-    } catch (error) {
-      console.error(error);
-      alert("No se pudo generar una paleta desde esta imagen.");
-      return;
+    if (paletteBaseMode === "image") {
+      try {
+        nextPalette = await buildImageBasedPalette(paletteSize);
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo generar una paleta desde esta imagen.");
+        return;
+      }
+
+      if (nextPalette.length === 0) {
+        setPaletteImageExtractionFeedback(true);
+        revealPaletteImageDropzoneForRetry();
+        return;
+      }
+    } else if (paletteBaseMode === "color") {
+      const candidate = createColorModePaletteCandidate(getCurrentPaletteAdjustmentSnapshot(), {
+        referencePalette: currentPalette,
+        effectiveType: getEffectiveColorPaletteType(),
+      });
+
+      if (!candidate?.palette?.length) {
+        alert("No se pudo generar una paleta válida a partir del color base.");
+        return;
+      }
+
+      nextPalette = candidate.palette;
+      effectiveColorPaletteType = candidate.effectiveType;
+      colorPaletteVariantIndex = candidate.variantIndex;
+    } else {
+      const temperatureResult = buildTemperaturePaletteForSettings(paletteSize);
+      nextPalette = temperatureResult.palette;
+      usedAlternativePalette = temperatureResult.usedAlternativePalette;
     }
 
-    if (nextPalette.length === 0) {
-      setPaletteImageExtractionFeedback(true);
-      revealPaletteImageDropzoneForRetry();
-      return;
-    }
-  } else if (paletteBaseMode === "color") {
-    const candidate = createColorModePaletteCandidate(getCurrentPaletteAdjustmentSnapshot(), {
-      referencePalette: currentPalette,
-      effectiveType: getEffectiveColorPaletteType(),
+    commitGeneratedPalette(nextPalette, {
+      effectiveType: effectiveColorPaletteType,
+      usedAlternativePalette,
+      previousPalette,
     });
-
-    if (!candidate?.palette?.length) {
-      alert("No se pudo generar una paleta válida a partir del color base.");
-      return;
-    }
-
-    nextPalette = candidate.palette;
-    effectiveColorPaletteType = candidate.effectiveType;
-    colorPaletteVariantIndex = candidate.variantIndex;
-  } else {
-    const temperatureResult = buildTemperaturePaletteForSettings(paletteSize);
-    nextPalette = temperatureResult.palette;
-    usedAlternativePalette = temperatureResult.usedAlternativePalette;
-  }
-
-  commitGeneratedPalette(nextPalette, {
-    effectiveType: effectiveColorPaletteType,
-    usedAlternativePalette,
-    previousPalette,
   });
 }
 

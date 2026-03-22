@@ -4,11 +4,16 @@ const COLOR_MODE_PALETTE_SIZES = Object.freeze({
   automatic: [2, 3, 4, 6, 9],
   monochromatic: [6, 9, 12],
   complementary: [2, 6],
-  analogous: [2, 3, 6, 9],
-  triad: [3, 6, 9],
+  analogous: [3],
+  triad: [3],
   tetrad: [4],
 });
 const MONOCHROMATIC_GENERATION_MODES = new Set(["automatic", "shades", "tints"]);
+const ANALOGOUS_SEPARATION_DEGREES = Object.freeze({
+  soft: 15,
+  medium: 30,
+  intense: 60,
+});
 const COMPLEMENTARY_VARIANT_PROFILES = Object.freeze([
   { complementLightnessOffset: 0, complementChromaScale: 1, tintStrength: 0.66, shadeStrength: 0.58 },
   { complementLightnessOffset: 0.02, complementChromaScale: 0.94, tintStrength: 0.72, shadeStrength: 0.54 },
@@ -24,8 +29,18 @@ function normalizeMonochromaticGenerationMode(mode) {
     : DEFAULT_MONOCHROMATIC_GENERATION_MODE;
 }
 
+function normalizeAnalogousSeparationMode(mode) {
+  return Object.prototype.hasOwnProperty.call(ANALOGOUS_SEPARATION_DEGREES, mode)
+    ? mode
+    : DEFAULT_ANALOGOUS_SEPARATION_MODE;
+}
+
 function shouldShowMonochromaticModeControl() {
   return paletteBaseMode === "color" && selectedColorPaletteType === "monochromatic";
+}
+
+function shouldShowAnalogousSeparationControl() {
+  return paletteBaseMode === "color" && selectedColorPaletteType === "analogous";
 }
 
 function syncMonochromaticModeControlState() {
@@ -40,6 +55,21 @@ function syncMonochromaticModeControlState() {
 
   if (monochromaticModeControl) {
     monochromaticModeControl.hidden = !shouldShowMonochromaticModeControl();
+  }
+}
+
+function syncAnalogousSeparationControlState() {
+  const resolvedMode = normalizeAnalogousSeparationMode(
+    selectedAnalogousSeparationMode
+  );
+  selectedAnalogousSeparationMode = resolvedMode;
+
+  if (analogousSeparationSelect) {
+    analogousSeparationSelect.value = resolvedMode;
+  }
+
+  if (analogousSeparationControl) {
+    analogousSeparationControl.hidden = !shouldShowAnalogousSeparationControl();
   }
 }
 
@@ -330,6 +360,7 @@ function syncColorModeBaseControls() {
 
   syncPaletteTypeOptionStates();
   syncMonochromaticModeControlState();
+  syncAnalogousSeparationControlState();
 }
 
 function setSelectedColorPaletteType(nextType, options = {}) {
@@ -338,6 +369,7 @@ function setSelectedColorPaletteType(nextType, options = {}) {
     : DEFAULT_COLOR_PALETTE_TYPE;
   syncPaletteTypeOptionStates();
   syncMonochromaticModeControlState();
+  syncAnalogousSeparationControlState();
 
   if (typeof clearUnavailablePinnedCards === "function") {
     clearUnavailablePinnedCards();
@@ -424,6 +456,20 @@ function setSelectedMonochromaticGenerationMode(nextMode, options = {}) {
     options.generate !== false &&
     paletteBaseMode === "color" &&
     selectedColorPaletteType === "monochromatic" &&
+    currentPalette.length > 0
+  ) {
+    void generatePalette();
+  }
+}
+
+function setSelectedAnalogousSeparationMode(nextMode, options = {}) {
+  selectedAnalogousSeparationMode = normalizeAnalogousSeparationMode(nextMode);
+  syncAnalogousSeparationControlState();
+
+  if (
+    options.generate !== false &&
+    paletteBaseMode === "color" &&
+    selectedColorPaletteType === "analogous" &&
     currentPalette.length > 0
   ) {
     void generatePalette();
@@ -690,6 +736,87 @@ function createComplementaryScaleTargetHex(baseColor, settings, direction) {
     clampControlValue(baseOklch.chroma * chromaScale, 0.02, 0.2),
     baseOklch.hue
   );
+}
+
+function buildAnalogousRoleColor(baseColor, settings, directionSign, degreeOffset) {
+  const baseOklch = getMonochromaticBaseOklch(baseColor);
+  if (!baseOklch) {
+    return null;
+  }
+
+  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+  const saturationRatio = clampControlValue(settings.saturation / 100, 0, 1);
+  const lightnessOffset = directionSign < 0
+    ? 0.018 - (1 - brightnessRatio) * 0.01
+    : -0.018 + brightnessRatio * 0.01;
+  const chromaScale = directionSign < 0
+    ? 0.9 + saturationRatio * 0.12
+    : 0.86 + saturationRatio * 0.14;
+
+  return createColorModeOklchHex(
+    clampControlValue(baseOklch.lightness + lightnessOffset, 0.18, 0.9),
+    clampControlValue(Math.max(baseOklch.chroma, 0.035) * chromaScale, 0.025, 0.24),
+    baseOklch.hue + degreeOffset * directionSign
+  );
+}
+
+function buildAnalogousColorModePalette(targetCount, settings, options = {}) {
+  const parsedBaseColor = options.baseColor || getPaletteBaseColorSnapshot();
+  if (!parsedBaseColor) {
+    return [];
+  }
+
+  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
+  const baseHex = parsedBaseColor.hex;
+  const separationMode = normalizeAnalogousSeparationMode(selectedAnalogousSeparationMode);
+  const separationDegrees = ANALOGOUS_SEPARATION_DEGREES[separationMode];
+  const attemptOffsets = [0, 6, 10, 14];
+  let leftHex = null;
+  let rightHex = null;
+
+  for (const extraOffset of attemptOffsets) {
+    const nextDegrees = separationDegrees + extraOffset;
+    const candidateLeft = buildAnalogousRoleColor(
+      parsedBaseColor,
+      resolvedSettings,
+      -1,
+      nextDegrees
+    );
+    const candidateRight = buildAnalogousRoleColor(
+      parsedBaseColor,
+      resolvedSettings,
+      1,
+      nextDegrees
+    );
+
+    if (
+      candidateLeft &&
+      candidateRight &&
+      candidateLeft !== baseHex &&
+      candidateRight !== baseHex &&
+      candidateLeft !== candidateRight &&
+      !isDisallowedColor(candidateLeft) &&
+      !isDisallowedColor(candidateRight)
+    ) {
+      leftHex = controlsNormalizeHexColor(candidateLeft);
+      rightHex = controlsNormalizeHexColor(candidateRight);
+      break;
+    }
+  }
+
+  if (!leftHex || !rightHex) {
+    return [baseHex];
+  }
+
+  if (targetCount <= 1) {
+    return [baseHex];
+  }
+
+  if (targetCount === 2) {
+    return [baseHex, rightHex];
+  }
+
+  return [leftHex, baseHex, rightHex];
 }
 
 function buildComplementaryScaleVariant(baseHex, direction, settings, ratio, existingColors = new Set()) {
@@ -1067,7 +1194,7 @@ function buildMonochromaticColorModePalette(targetCount, settings, options = {})
   return [baseHex, ...orderMonochromaticScaleColors(baseHex, scaleColors, direction)];
 }
 
-function orderColorModePaletteByHarmony(colors, baseHex) {
+function orderColorModePaletteByHarmony(colors, baseHex, options = {}) {
   const normalizedColors = normalizePaletteHexCollection(colors);
   if (normalizedColors.length <= 2 || typeof orderPaletteHexColorsByHarmony !== "function") {
     return normalizedColors;
@@ -1075,6 +1202,14 @@ function orderColorModePaletteByHarmony(colors, baseHex) {
 
   const harmonyOrderedColors = orderPaletteHexColorsByHarmony(normalizedColors);
   const baseIndex = harmonyOrderedColors.indexOf(baseHex);
+  const effectiveType = options.effectiveType || getEffectiveColorPaletteType(normalizedColors.length);
+
+  if (effectiveType === "triad" && harmonyOrderedColors.length === 3 && baseIndex !== -1) {
+    const sideColors = harmonyOrderedColors.filter((color) => color !== baseHex);
+    if (sideColors.length === 2) {
+      return [sideColors[0], baseHex, sideColors[1]];
+    }
+  }
 
   if (baseIndex <= 0) {
     return harmonyOrderedColors;
@@ -1108,6 +1243,13 @@ function buildColorModePaletteForSettings(targetCount, settings, options = {}) {
 
   if (effectiveType === "complementary") {
     return buildComplementaryColorModePalette(targetCount, settings, {
+      baseColor: parsedBaseColor,
+      variantIndex,
+    });
+  }
+
+  if (effectiveType === "analogous" && selectedColorPaletteType === "analogous") {
+    return buildAnalogousColorModePalette(targetCount, settings, {
       baseColor: parsedBaseColor,
       variantIndex,
     });
@@ -1148,7 +1290,9 @@ function buildColorModePaletteForSettings(targetCount, settings, options = {}) {
     palette.push(nextColor);
   }
 
-  return orderColorModePaletteByHarmony(palette, baseHex);
+  return orderColorModePaletteByHarmony(palette, baseHex, {
+    effectiveType,
+  });
 }
 
 function createColorModePaletteCandidate(settings, options = {}) {
@@ -1360,6 +1504,12 @@ function initializeColorModeControls() {
   if (monochromaticModeSelect) {
     monochromaticModeSelect.addEventListener("change", () => {
       setSelectedMonochromaticGenerationMode(monochromaticModeSelect.value);
+    });
+  }
+
+  if (analogousSeparationSelect) {
+    analogousSeparationSelect.addEventListener("change", () => {
+      setSelectedAnalogousSeparationMode(analogousSeparationSelect.value);
     });
   }
 }

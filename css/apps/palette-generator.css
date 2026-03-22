@@ -565,6 +565,59 @@
   width: 100%;
 }
 
+.palette-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 148px;
+}
+
+.palette-viewport.is-loading {
+  isolation: isolate;
+}
+
+.palette-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--PX-20);
+  background: rgba(250, 247, 240, 0.18);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  pointer-events: auto;
+  opacity: 1;
+  transition:
+    opacity 180ms ease,
+    backdrop-filter 180ms ease,
+    -webkit-backdrop-filter 180ms ease,
+    background-color 180ms ease;
+}
+
+.palette-loading-overlay[hidden] {
+  display: none;
+}
+
+.palette-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 2px solid rgba(102, 95, 85, 0.18);
+  border-top-color: rgba(102, 95, 85, 0.74);
+  animation: paletteSpinnerSpin 0.72s linear infinite;
+  box-shadow: 0 6px 16px rgba(88, 71, 52, 0.12);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+@keyframes paletteSpinnerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .palette-alert {
   width: 100%;
   padding: var(--PX-16) var(--PX-18);
@@ -857,6 +910,7 @@
 .color-pin-overlay.is-corner {
   align-items: flex-start;
   justify-content: flex-end;
+  padding: 6px;
 }
 
 .color-pin-overlay.is-readonly .color-pin-overlay-icon-wrap {

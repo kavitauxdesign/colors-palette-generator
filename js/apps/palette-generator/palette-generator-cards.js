@@ -49,10 +49,8 @@ function isLockedColorModeBaseCard(card) {
 
 function isCardPinningAvailable() {
   return !(
-    (typeof isExplicitMonochromaticColorModeSelected === "function" &&
-      isExplicitMonochromaticColorModeSelected()) ||
-    (typeof isExplicitComplementaryColorModeSelected === "function" &&
-      isExplicitComplementaryColorModeSelected())
+    typeof isExplicitMonochromaticColorModeSelected === "function" &&
+    isExplicitMonochromaticColorModeSelected()
   );
 }
 
@@ -75,20 +73,10 @@ function isLockedComplementaryRoleCard(card) {
   return cards.indexOf(card) === complementaryCardIndex;
 }
 
-function shouldShowLockedMonochromaticBasePin(card) {
+function shouldShowLockedColorModeBasePin(card) {
   return (
     !!card &&
-    typeof isExplicitMonochromaticColorModeSelected === "function" &&
-    isExplicitMonochromaticColorModeSelected() &&
-    isLockedColorModeBaseCard(card)
-  );
-}
-
-function shouldShowLockedComplementaryBasePin(card) {
-  return (
-    !!card &&
-    typeof isExplicitComplementaryColorModeSelected === "function" &&
-    isExplicitComplementaryColorModeSelected() &&
+    paletteBaseMode === "color" &&
     isLockedColorModeBaseCard(card)
   );
 }
@@ -105,8 +93,7 @@ function clearUnavailablePinnedCards() {
   let hasChanged = false;
   Array.from(getColorCards()).forEach((card) => {
     const shouldPreserveReadonlyFixedPin =
-      shouldShowLockedMonochromaticBasePin(card) ||
-      shouldShowLockedComplementaryBasePin(card) ||
+      shouldShowLockedColorModeBasePin(card) ||
       shouldShowLockedComplementaryPin(card);
 
     if (shouldPreserveReadonlyFixedPin || !isCardPinned(card)) {
@@ -126,8 +113,7 @@ function updateColorModeCardActionVisibility() {
     const pinBtn = card.querySelector(".color-pin-btn");
     const pinOverlay = card.querySelector(".color-pin-overlay");
     const shouldShowReadonlyFixedPin =
-      shouldShowLockedMonochromaticBasePin(card) ||
-      shouldShowLockedComplementaryBasePin(card) ||
+      shouldShowLockedColorModeBasePin(card) ||
       shouldShowLockedComplementaryPin(card);
     if (editBtn) {
       editBtn.classList.toggle(
@@ -322,7 +308,10 @@ function updateRegenerateButtonsAvailability() {
       typeof isColorModeMonochromaticScaleActive === "function" &&
       isColorModeMonochromaticScaleActive()
     ) ||
-    (paletteBaseMode === "color" && selectedColorPaletteType === "complementary");
+    (
+      paletteBaseMode === "color" &&
+      ["complementary", "analogous", "triad"].includes(selectedColorPaletteType)
+    );
 
   cards.forEach((card) => {
     const regenerateBtn = card.querySelector(".action-regenerate");
