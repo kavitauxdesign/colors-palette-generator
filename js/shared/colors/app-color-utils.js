@@ -18,6 +18,18 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  function normalizeHueDegrees(value, fallbackHue = 0) {
+    const resolvedHue = Number.isFinite(Number(value))
+      ? Number(value)
+      : Number(fallbackHue);
+
+    if (!Number.isFinite(resolvedHue)) {
+      return 0;
+    }
+
+    return ((resolvedHue % 360) + 360) % 360;
+  }
+
   function createColor(color) {
     if (color instanceof ColorConstructor) {
       return color;
@@ -124,8 +136,10 @@
 
     const srgbColor = parsedColor.to("srgb");
     const hslColor = parsedColor.to("hsl");
+    const oklchColor = parsedColor.to("oklch");
     const [red = 0, green = 0, blue = 0] = srgbColor.coords;
     const [hue = 0, saturation = 0, lightness = 0] = hslColor.coords;
+    const [oklchLightness = 0, oklchChroma = 0, oklchHue = NaN] = oklchColor.coords;
 
     return {
       color: parsedColor,
@@ -141,6 +155,11 @@
         h: ((hue % 360) + 360) % 360,
         s: clamp(saturation, 0, 100),
         l: clamp(lightness, 0, 100),
+      },
+      oklch: {
+        l: clamp(oklchLightness, 0, 1),
+        c: clamp(oklchChroma, 0, 0.4),
+        h: normalizeHueDegrees(oklchHue, hue),
       },
     };
   }
@@ -211,12 +230,79 @@
     };
   }
 
+  function colorToOklch(color, options = {}) {
+    const parsedColor = createColor(color);
+    if (!parsedColor) {
+      return null;
+    }
+
+    const maxChroma = Number.isFinite(options.maxChroma) ? options.maxChroma : 0.4;
+    const fallbackHue = Number.isFinite(options.fallbackHue)
+      ? options.fallbackHue
+      : createColor(color)?.to("hsl")?.coords?.[0] || 0;
+
+    try {
+      const oklchColor = parsedColor.to("oklch");
+      const [lightness = 0, chroma = 0, hue = NaN] = oklchColor.coords || [];
+
+      return {
+        l: clamp(lightness, 0, 1),
+        c: clamp(chroma, 0, maxChroma),
+        h: normalizeHueDegrees(hue, fallbackHue),
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function hexToOklch(hex, options = {}) {
+    return colorToOklch(hex, options);
+  }
+
+  function oklchToHex(lightness, chroma, hue, options = {}) {
+    const minLightness = Number.isFinite(options.minLightness) ? options.minLightness : 0;
+    const maxLightness = Number.isFinite(options.maxLightness) ? options.maxLightness : 1;
+    const maxChroma = Number.isFinite(options.maxChroma) ? options.maxChroma : 0.4;
+    const outputSpace = options.outputSpace || "srgb";
+    const gamutMethod = options.gamutMethod || "oklch.c";
+
+    let color = null;
+
+    try {
+      color = new ColorConstructor("oklch", [
+        clamp(Number(lightness), minLightness, maxLightness),
+        clamp(Number(chroma), 0, maxChroma),
+        normalizeHueDegrees(hue, options.fallbackHue),
+      ]);
+    } catch (error) {
+      return null;
+    }
+
+    if (typeof color.toGamut === "function") {
+      try {
+        color = color.toGamut({
+          space: outputSpace,
+          method: gamutMethod,
+        });
+      } catch (error) {
+        return null;
+      }
+    }
+
+    return colorToHex(color);
+  }
+
   function getRelativeLuminance(color) {
     const parsedColor = createColor(color);
     return parsedColor ? parsedColor.luminance : 0;
   }
 
   function getPerceivedLightness(color) {
+    const oklch = colorToOklch(color);
+    if (oklch) {
+      return oklch.l;
+    }
+
     const { r, g, b } = hexToRgb(color);
     return ((r * 299) + (g * 587) + (b * 114)) / 2550;
   }
@@ -316,6 +402,9 @@
     rgbToHex,
     hslToHex,
     hexToHsl,
+    colorToOklch,
+    hexToOklch,
+    oklchToHex,
     getRelativeLuminance,
     getPerceivedLightness,
     getRgbDistance,

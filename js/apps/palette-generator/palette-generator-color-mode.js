@@ -150,6 +150,7 @@ function normalizePaletteBaseCssColor(value) {
     hex,
     rgb: rgbChannels,
     hsl: controlsHexToHsl(hex),
+    oklch: window.AppColorUtils?.hexToOklch?.(hex) || null,
   };
 }
 
@@ -520,7 +521,45 @@ function getColorModeVariantOffsets(index, variantIndex) {
   };
 }
 
-function createColorModeCandidateColor(baseHsl, hueOffset, index, variantIndex, settings) {
+function getColorModeSaturationInfluence(saturation, options = {}) {
+  const ratio = clampControlValue((Number(saturation) || 0) / 100, 0, 1);
+  const knee = Number.isFinite(options.knee) ? options.knee : 0.2;
+  const protectedFloor = Number.isFinite(options.protectedFloor)
+    ? options.protectedFloor
+    : 0.2;
+  const upperGamma = Number.isFinite(options.upperGamma) ? options.upperGamma : 0.78;
+  const lowerGamma = Number.isFinite(options.lowerGamma) ? options.lowerGamma : 1.85;
+
+  if (ratio <= 0) {
+    return 0;
+  }
+
+  if (ratio >= 1) {
+    return 1;
+  }
+
+  if (ratio > knee) {
+    const normalizedUpperRatio = (ratio - knee) / (1 - knee);
+    return protectedFloor + (1 - protectedFloor) * (normalizedUpperRatio ** upperGamma);
+  }
+
+  return protectedFloor * ((ratio / knee) ** lowerGamma);
+}
+
+function getColorModeTargetChroma(saturation, options = {}) {
+  const minimumChroma = Number.isFinite(options.minChroma) ? options.minChroma : 0.0015;
+  const maximumChroma = Number.isFinite(options.maxChroma) ? options.maxChroma : 0.24;
+  const saturationInfluence = getColorModeSaturationInfluence(saturation, options);
+
+  return minimumChroma + (maximumChroma - minimumChroma) * saturationInfluence;
+}
+
+function createColorModeCandidateColor(baseColor, hueOffset, index, variantIndex, settings) {
+  const baseOklch = getMonochromaticBaseOklch(baseColor);
+  if (!baseOklch) {
+    return null;
+  }
+
   const targetSaturation = Number.isFinite(settings?.saturation)
     ? settings.saturation
     : getCurrentSaturationValue();
@@ -528,22 +567,28 @@ function createColorModeCandidateColor(baseHsl, hueOffset, index, variantIndex, 
     ? settings.brightness
     : getCurrentBrightnessValue();
   const { lightnessOffset, saturationOffset } = getColorModeVariantOffsets(index, variantIndex);
-  const centerLightness = 10 + (targetBrightness / 100) * 80;
-  const saturation = clampControlValue(
-    blendControlValue(baseHsl.s, targetSaturation, 0.78) + saturationOffset,
-    0,
-    100
+  const centerLightness = mapBrightnessValueToOklchLightness(targetBrightness, {
+    minLightness: 0.2,
+    maxLightness: 0.92,
+  });
+  const targetChroma = getColorModeTargetChroma(targetSaturation, {
+    minChroma: 0.0015,
+    maxChroma: 0.24,
+  });
+  const chroma = clampControlValue(
+    blendControlValue(Math.max(baseOklch.chroma, 0.012), targetChroma, 0.78) +
+      saturationOffset * 0.0014,
+    0.001,
+    0.26
   );
   const lightness = clampControlValue(
-    blendControlValue(baseHsl.l, centerLightness, 0.72) + lightnessOffset,
-    10,
-    90
+    blendControlValue(baseOklch.lightness, centerLightness, 0.72) + lightnessOffset / 100,
+    0.16,
+    0.94
   );
-  const hue = (baseHsl.h + hueOffset + 360) % 360;
+  const hue = baseOklch.hue + hueOffset;
 
-  return controlsNormalizeHexColor(
-    controlsHslToHex(hue, saturation, lightness)
-  );
+  return createColorModeOklchHex(lightness, chroma, hue);
 }
 
 function getMonochromaticScalePerceivedLightness(hex) {
@@ -553,15 +598,17 @@ function getMonochromaticScalePerceivedLightness(hex) {
 }
 
 function resolveAutomaticMonochromaticScaleDirection(baseColor) {
-  const baseLightness = Number.isFinite(baseColor?.hsl?.l)
-    ? baseColor.hsl.l
-    : 50;
+  const baseLightness = Number.isFinite(baseColor?.oklch?.l)
+    ? baseColor.oklch.l
+    : Number.isFinite(baseColor?.hsl?.l)
+      ? baseColor.hsl.l / 100
+      : 0.5;
   const perceivedLightness = typeof baseColor?.hex === "string"
     ? getMonochromaticScalePerceivedLightness(baseColor.hex)
     : baseLightness;
   const resolvedLightness = blendControlValue(baseLightness, perceivedLightness, 0.68);
 
-  return resolvedLightness >= 72 ? "dark" : "light";
+  return resolvedLightness >= 0.72 ? "dark" : "light";
 }
 
 function getMonochromaticScaleDirection(baseColor) {
@@ -599,6 +646,7 @@ function getMonochromaticScaleTarget(baseColor, settings, direction) {
   }
 
   const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+  const saturationInfluence = getColorModeSaturationInfluence(settings.saturation);
   if (direction === "light") {
     const maximumLightness = clampControlValue(0.992 - (1 - brightnessRatio) * 0.008, 0.965, 0.995);
     const lightnessRoom = Math.max(0.2, maximumLightness - baseOklch.lightness);
@@ -607,11 +655,11 @@ function getMonochromaticScaleTarget(baseColor, settings, direction) {
       Math.min(maximumLightness, baseOklch.lightness + 0.22),
       maximumLightness
     );
-    const chromaScale = 0.16 + clampControlValue(settings.saturation / 100, 0, 1) * 0.12;
+    const chromaScale = 0.05 + saturationInfluence * 0.22;
 
     return {
       lightness: targetLightness,
-      chroma: clampControlValue(baseOklch.chroma * chromaScale, 0.008, 0.1),
+      chroma: clampControlValue(baseOklch.chroma * chromaScale, 0.001, 0.085),
       hue: baseOklch.hue,
     };
   }
@@ -623,59 +671,44 @@ function getMonochromaticScaleTarget(baseColor, settings, direction) {
     minimumLightness,
     Math.max(minimumLightness, baseOklch.lightness - 0.18)
   );
-  const chromaScale = 0.6 + clampControlValue(settings.saturation / 100, 0, 1) * 0.26;
+  const chromaScale = 0.22 + saturationInfluence * 0.64;
 
   return {
     lightness: targetLightness,
-    chroma: clampControlValue(baseOklch.chroma * chromaScale, 0.02, 0.24),
+    chroma: clampControlValue(baseOklch.chroma * chromaScale, 0.003, 0.22),
     hue: baseOklch.hue,
   };
 }
 
 function createMonochromaticScaleTargetHex(baseColor, settings, direction) {
   const target = getMonochromaticScaleTarget(baseColor, settings, direction);
-  const ColorConstructor = window.AppColorUtils?.Color;
-
-  if (!target || typeof ColorConstructor !== "function") {
+  if (!target) {
     return null;
   }
 
-  let targetColor = new ColorConstructor("oklch", [
+  return window.AppColorUtils?.oklchToHex?.(
     target.lightness,
     target.chroma,
     target.hue,
-  ]);
-
-  if (typeof targetColor.toGamut === "function") {
-    targetColor = targetColor.toGamut({
-      space: "srgb",
-      method: "oklch.c",
-    });
-  }
-
-  return window.AppColorUtils?.colorToHex?.(targetColor) || null;
+    {
+      minLightness: 0.085,
+      maxLightness: 0.995,
+      maxChroma: 0.28,
+    }
+  ) || null;
 }
 
 function createColorModeOklchHex(lightness, chroma, hue) {
-  const ColorConstructor = window.AppColorUtils?.Color;
-  if (typeof ColorConstructor !== "function") {
-    return null;
-  }
-
-  let color = new ColorConstructor("oklch", [
+  return window.AppColorUtils?.oklchToHex?.(
     clampControlValue(lightness, 0, 1),
     clampControlValue(chroma, 0, 0.4),
-    ((Number(hue) % 360) + 360) % 360,
-  ]);
-
-  if (typeof color.toGamut === "function") {
-    color = color.toGamut({
-      space: "srgb",
-      method: "oklch.c",
-    });
-  }
-
-  return window.AppColorUtils?.colorToHex?.(color) || null;
+    hue,
+    {
+      minLightness: 0.08,
+      maxLightness: 0.97,
+      maxChroma: 0.28,
+    }
+  ) || null;
 }
 
 function getComplementaryVariantProfile(variantIndex = 0) {
@@ -710,27 +743,32 @@ function createComplementaryScaleTargetHex(baseColor, settings, direction) {
     return null;
   }
 
-  const saturationRatio = clampControlValue(settings.saturation / 100, 0, 1);
-  const desaturationStrength = Math.pow(1 - saturationRatio, 0.9);
-  const saturationRetention = 1 - desaturationStrength;
-  const brightnessBias = clampControlValue(
-    (settings.brightness - DEFAULT_BRIGHTNESS) / 35,
-    -1,
-    1
-  );
+  const saturationInfluence = getColorModeSaturationInfluence(settings.saturation, {
+    protectedFloor: 0.22,
+  });
+  const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
+  const targetCenterLightness = mapBrightnessValueToOklchLightness(settings.brightness, {
+    minLightness: 0.22,
+    maxLightness: 0.93,
+    gamma: 0.86,
+  });
 
   if (direction === "light") {
-    const maximumLightness = clampControlValue(0.95 + brightnessBias * 0.12, 0.8, 0.98);
+    const maximumLightness = clampControlValue(0.94 + brightnessRatio * 0.04, 0.88, 0.985);
     const lightnessRoom = Math.max(0.1, maximumLightness - baseOklch.lightness);
-    const lightnessPull = clampControlValue(0.72 + brightnessBias * 0.18, 0.5, 0.9);
+    const lightnessPull = clampControlValue(0.42 + brightnessRatio * 0.34, 0.42, 0.78);
     const targetLightness = clampControlValue(
-      baseOklch.lightness + lightnessRoom * lightnessPull,
-      Math.min(maximumLightness, baseOklch.lightness + 0.16 + Math.max(brightnessBias, 0) * 0.08),
+      blendControlValue(
+        baseOklch.lightness + lightnessRoom * lightnessPull,
+        Math.max(baseOklch.lightness + 0.07, targetCenterLightness + 0.08),
+        0.4
+      ),
+      Math.min(maximumLightness, baseOklch.lightness + 0.1 + brightnessRatio * 0.08),
       maximumLightness
     );
-    const chromaScale = 0.18 + saturationRetention * 0.62;
-    const minimumChroma = 0.003 + saturationRetention * 0.008;
-    const maximumChroma = 0.05 + saturationRetention * 0.09;
+    const chromaScale = 0.002 + saturationInfluence * 0.86;
+    const minimumChroma = 0.0002 + saturationInfluence * 0.0016;
+    const maximumChroma = 0.004 + saturationInfluence * 0.094;
 
     return createColorModeOklchHex(
       targetLightness,
@@ -739,17 +777,21 @@ function createComplementaryScaleTargetHex(baseColor, settings, direction) {
     );
   }
 
-  const minimumLightness = clampControlValue(0.12 + brightnessBias * 0.12, 0.05, 0.26);
+  const minimumLightness = clampControlValue(0.3 - brightnessRatio * 0.04, 0.24, 0.32);
   const darknessRoom = Math.max(0.1, baseOklch.lightness - minimumLightness);
-  const darknessPull = clampControlValue(0.68 - brightnessBias * 0.18, 0.5, 0.86);
+  const darknessPull = clampControlValue(0.18 + (1 - brightnessRatio) * 0.2, 0.16, 0.4);
   const targetLightness = clampControlValue(
-    baseOklch.lightness - darknessRoom * darknessPull,
+    blendControlValue(
+      baseOklch.lightness - darknessRoom * darknessPull,
+      Math.min(baseOklch.lightness - 0.05, targetCenterLightness - 0.08),
+      0.28
+    ),
     minimumLightness,
-    Math.max(minimumLightness, baseOklch.lightness - 0.14)
+    Math.max(minimumLightness, baseOklch.lightness - 0.06)
   );
-  const chromaScale = 0.24 + saturationRetention * 0.82;
-  const minimumChroma = 0.005 + saturationRetention * 0.012;
-  const maximumChroma = 0.06 + saturationRetention * 0.14;
+  const chromaScale = 0.004 + saturationInfluence * 0.98;
+  const minimumChroma = 0.00025 + saturationInfluence * 0.0018;
+  const maximumChroma = 0.005 + saturationInfluence * 0.112;
 
   return createColorModeOklchHex(
     targetLightness,
@@ -765,17 +807,17 @@ function buildAnalogousRoleColor(baseColor, settings, directionSign, degreeOffse
   }
 
   const brightnessRatio = clampControlValue(settings.brightness / 100, 0, 1);
-  const saturationRatio = clampControlValue(settings.saturation / 100, 0, 1);
+  const saturationInfluence = getColorModeSaturationInfluence(settings.saturation);
   const lightnessOffset = directionSign < 0
-    ? 0.018 - (1 - brightnessRatio) * 0.01
-    : -0.018 + brightnessRatio * 0.01;
+    ? 0.016 - (1 - brightnessRatio) * 0.006
+    : -0.016 + brightnessRatio * 0.006;
   const chromaScale = directionSign < 0
-    ? 0.9 + saturationRatio * 0.12
-    : 0.86 + saturationRatio * 0.14;
+    ? 0.28 + saturationInfluence * 0.82
+    : 0.24 + saturationInfluence * 0.86;
 
   return createColorModeOklchHex(
-    clampControlValue(baseOklch.lightness + lightnessOffset, 0.18, 0.9),
-    clampControlValue(Math.max(baseOklch.chroma, 0.035) * chromaScale, 0.025, 0.24),
+    clampControlValue(baseOklch.lightness + lightnessOffset, 0.22, 0.9),
+    clampControlValue(Math.max(baseOklch.chroma, 0.02) * chromaScale, 0.0015, 0.22),
     baseOklch.hue + degreeOffset * directionSign
   );
 }
@@ -860,21 +902,21 @@ function buildBalancedHarmonyRoleColor(baseColor, settings, hueOffset, lightness
     -1,
     1
   );
-  const saturationRatio = clampControlValue(settings.saturation / 100, 0, 1);
+  const saturationInfluence = getColorModeSaturationInfluence(settings.saturation);
   const balancedLightness = blendControlValue(
     baseOklch.lightness,
-    0.54 + brightnessBias * 0.12,
+    0.56 + brightnessBias * 0.08,
     0.42
   );
   const lightness = clampControlValue(
     balancedLightness + lightnessBias,
-    0.28,
-    0.72
+    0.34,
+    0.76
   );
   const chroma = clampControlValue(
-    Math.max(baseOklch.chroma, 0.045) * (0.78 + saturationRatio * 0.18) * chromaScale,
-    0.04,
-    0.2
+    Math.max(baseOklch.chroma, 0.02) * (0.18 + saturationInfluence * 0.92) * chromaScale,
+    0.0015,
+    0.18
   );
 
   return createColorModeOklchHex(
@@ -1110,15 +1152,15 @@ function buildComplementaryColorModePalette(targetCount, settings, options = {})
   );
   const tintRatio = targetCount >= 6
     ? clampControlValue(
-        profile.tintStrength - 0.22 + brightnessBias * 0.18 - saturationLoss * 0.12,
-        0.28,
-        0.72
+        profile.tintStrength - 0.34 + brightnessBias * 0.08 - saturationLoss * 0.08,
+        0.18,
+        0.5
       )
     : profile.tintStrength;
   const shadeRatio = clampControlValue(
-    profile.shadeStrength - brightnessBias * 0.18 + saturationLoss * 0.1,
-    0.44,
-    0.84
+    profile.shadeStrength - 0.22 - brightnessBias * 0.08 + saturationLoss * 0.06,
+    0.24,
+    0.54
   );
   const baseHex = parsedBaseColor.hex;
   const complementHex = buildComplementaryHueColor(
@@ -1443,7 +1485,6 @@ function buildColorModePaletteForSettings(targetCount, settings, options = {}) {
     ? options.variantIndex
     : colorPaletteVariantIndex;
   const baseHex = parsedBaseColor.hex;
-  const baseHsl = parsedBaseColor.hsl;
 
   if (effectiveType === "monochromatic") {
     return buildMonochromaticColorModePalette(targetCount, settings, {
@@ -1492,7 +1533,7 @@ function buildColorModePaletteForSettings(targetCount, settings, options = {}) {
       const anchorOffset = anchorOffsets[(index + attempt - 1) % anchorOffsets.length];
       const hueOffset = anchorOffset + (attempt > 0 ? (attempt % 2 === 0 ? attempt * 2 : -attempt * 2) : 0);
       const candidate = createColorModeCandidateColor(
-        baseHsl,
+        parsedBaseColor,
         hueOffset,
         index + attempt,
         variantIndex + attempt,

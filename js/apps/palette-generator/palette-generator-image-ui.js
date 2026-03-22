@@ -490,7 +490,52 @@ async function syncImagePaletteFromSource(options = {}) {
 }
 // PALETTE BASE
 
+function getFirstPaletteHexForColorBaseAdoption() {
+  const normalizeHexColor = window.AppColorUtils?.normalizeHexColor;
+  const isValidHexColor = window.AppColorUtils?.isValidHexColor;
+
+  const paletteCandidate = Array.isArray(currentPalette) && currentPalette.length > 0
+    ? normalizeHexColor?.(currentPalette[0]) || currentPalette[0]
+    : "";
+  if (typeof isValidHexColor === "function" && isValidHexColor(paletteCandidate)) {
+    return paletteCandidate;
+  }
+
+  if (typeof getCurrentPaletteCardEntries === "function") {
+    const firstEntry = getCurrentPaletteCardEntries()[0];
+    const entryHex = normalizeHexColor?.(firstEntry?.hex || "") || firstEntry?.hex || "";
+    if (typeof isValidHexColor === "function" && isValidHexColor(entryHex)) {
+      return entryHex;
+    }
+  }
+
+  return null;
+}
+
+function clearLeakedColorModeFixedPins() {
+  Array.from(getColorCards()).forEach((card) => {
+    card.dataset.readonlyFixedPin = "false";
+    card.classList.remove("is-base-color", "is-complementary-color");
+
+    const colorBaseIndicator = card.querySelector(".color-base-indicator");
+    if (colorBaseIndicator) {
+      colorBaseIndicator.hidden = true;
+    }
+
+    const complementaryIndicator = card.querySelector(".color-complementary-indicator");
+    if (complementaryIndicator) {
+      complementaryIndicator.hidden = true;
+    }
+
+    if (typeof setCardPinnedState === "function") {
+      setCardPinnedState(card, false);
+    }
+  });
+}
+
 function setPaletteBaseMode(nextMode) {
+  const previousBaseMode = paletteBaseMode;
+
   if (nextMode === "image") {
     paletteBaseMode = "image";
   } else if (nextMode === "temperature") {
@@ -525,6 +570,10 @@ function setPaletteBaseMode(nextMode) {
     imageBasePanel.hidden = !showImagePanel;
   }
 
+  if (previousBaseMode === "color" && paletteBaseMode !== "color") {
+    clearLeakedColorModeFixedPins();
+  }
+
   if (typeof syncCurrentPaletteFromDom === "function") {
     syncCurrentPaletteFromDom();
   }
@@ -550,11 +599,71 @@ function setPaletteBaseMode(nextMode) {
   }
 
   if (paletteBaseMode === "color") {
+    let shouldRefreshMonochromaticPalette = false;
+
+    if (
+      previousBaseMode === "image" &&
+      typeof setSelectedPaletteBaseColor === "function"
+    ) {
+      const adoptedBaseColor = getFirstPaletteHexForColorBaseAdoption();
+      if (adoptedBaseColor) {
+        setSelectedPaletteBaseColor(adoptedBaseColor, {
+          generate: false,
+          publish: true,
+          syncTextInput: true,
+        });
+        shouldRefreshMonochromaticPalette = true;
+      }
+    }
+
+    if (
+      previousBaseMode === "image" &&
+      typeof setSelectedColorPaletteType === "function"
+    ) {
+      setSelectedColorPaletteType("monochromatic", {
+        generate: false,
+      });
+      shouldRefreshMonochromaticPalette = true;
+    }
+
+    if (
+      previousBaseMode === "image" &&
+      typeof setSelectedMonochromaticGenerationMode === "function"
+    ) {
+      setSelectedMonochromaticGenerationMode(
+        DEFAULT_MONOCHROMATIC_GENERATION_MODE,
+        {
+          generate: false,
+        }
+      );
+      shouldRefreshMonochromaticPalette = true;
+    }
+
+    if (
+      previousBaseMode === "image" &&
+      typeof colorPaletteVariantIndex !== "undefined"
+    ) {
+      colorPaletteVariantIndex = 0;
+      shouldRefreshMonochromaticPalette = true;
+    }
+
     if (typeof clearUnavailablePinnedCards === "function") {
       clearUnavailablePinnedCards();
     }
+
     syncColorModeBaseControls();
     syncColorModeSizeSelection();
+
+    if (
+      shouldRefreshMonochromaticPalette &&
+      typeof generatePalette === "function"
+    ) {
+      void generatePalette({
+        recalculateFromScratch: true,
+        effectiveType: "monochromatic",
+      });
+      return;
+    }
   }
 }
 

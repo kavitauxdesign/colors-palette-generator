@@ -242,110 +242,126 @@ function surprisePinnedImagePaletteSlots() {
 }
 
 async function surpriseImagePalette() {
-  if (!uploadedBaseImage?.dataUrl) {
-    return;
-  }
-
-  const originalPriorityPreference = prioritizeImageDominantColors;
-  const pinnedEntries = getPinnedPaletteEntriesSnapshot();
-  const referencePalette = normalizePaletteHexCollection(
-    getComparablePaletteSlice(currentPalette, pinnedEntries)
-  );
-  const currentSettings = getCurrentPaletteAdjustmentSnapshot();
-  let bestCandidate = null;
-
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const candidatePriorityPreference = Math.random() < 0.5;
-    const candidateSettings = {
-      brightness: getRandomSteppedValue(0, 100, 5),
-      saturation: getRandomSteppedValue(0, 100, 5),
-    };
-    const candidateVariantIndex =
-      imagePaletteVariantIndex +
-      1 +
-      Math.floor(Math.random() * IMAGE_PALETTE_VARIANT_PROFILES.length * 2);
-
-    prioritizeImageDominantColors = candidatePriorityPreference;
-    const candidateResult = await buildImageBasedPaletteCandidate(paletteSize, {
-      startVariantIndex: candidateVariantIndex,
-      referencePalette,
-      pinnedEntries,
-      maxVariantAttempts: IMAGE_PALETTE_VARIANT_PROFILES.length * 3,
-    });
-
-    if (candidateResult.palette.length === 0) {
-      continue;
+  const runSurprise = async () => {
+    if (!uploadedBaseImage?.dataUrl) {
+      return;
     }
 
-    const renderedPalette = buildRenderedPaletteFromBaseColors(
-      candidateResult.palette,
-      candidateSettings
+    const originalPriorityPreference = prioritizeImageDominantColors;
+    const pinnedEntries = getPinnedPaletteEntriesSnapshot();
+    const referencePalette = normalizePaletteHexCollection(
+      getComparablePaletteSlice(currentPalette, pinnedEntries)
     );
-    const comparableRenderedPalette = getComparableMergedPaletteSlice(
-      renderedPalette,
-      pinnedEntries
-    );
-    const similarityMetrics = getPaletteSimilarityMetrics(comparableRenderedPalette, referencePalette);
-    const similarityPenalty =
-      similarityMetrics.sharedColorCount / Math.max(comparableRenderedPalette.length, 1);
-    const controlDistance =
-      Math.abs(candidateSettings.brightness - currentSettings.brightness) +
-      Math.abs(candidateSettings.saturation - currentSettings.saturation);
-    const priorityBonus =
-      candidatePriorityPreference !== originalPriorityPreference ? 0.16 : 0;
-    const score =
-      scorePaletteHarmony(renderedPalette) -
-      similarityPenalty * 0.7 +
-      Math.min(controlDistance / 120, 0.8) +
-      priorityBonus;
+    const currentSettings = getCurrentPaletteAdjustmentSnapshot();
+    let bestCandidate = null;
 
-    if (!bestCandidate || score > bestCandidate.score) {
-      bestCandidate = {
-        prioritizeDominant: candidatePriorityPreference,
-        settings: candidateSettings,
-        palette: candidateResult.palette,
-        variantIndex: candidateResult.variantIndex,
-        score,
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const candidatePriorityPreference = Math.random() < 0.5;
+      const candidateSettings = {
+        brightness: getRandomSteppedValue(0, 100, 5),
+        saturation: getRandomSteppedValue(0, 100, 5),
       };
+      const candidateVariantIndex =
+        imagePaletteVariantIndex +
+        1 +
+        Math.floor(Math.random() * IMAGE_PALETTE_VARIANT_PROFILES.length * 2);
+
+      prioritizeImageDominantColors = candidatePriorityPreference;
+      const candidateResult = await buildImageBasedPaletteCandidate(paletteSize, {
+        startVariantIndex: candidateVariantIndex,
+        referencePalette,
+        pinnedEntries,
+        maxVariantAttempts: IMAGE_PALETTE_VARIANT_PROFILES.length * 3,
+      });
+
+      if (candidateResult.palette.length === 0) {
+        continue;
+      }
+
+      const renderedPalette = buildRenderedPaletteFromBaseColors(
+        candidateResult.palette,
+        candidateSettings
+      );
+      const comparableRenderedPalette = getComparableMergedPaletteSlice(
+        renderedPalette,
+        pinnedEntries
+      );
+      const similarityMetrics = getPaletteSimilarityMetrics(comparableRenderedPalette, referencePalette);
+      const similarityPenalty =
+        similarityMetrics.sharedColorCount / Math.max(comparableRenderedPalette.length, 1);
+      const controlDistance =
+        Math.abs(candidateSettings.brightness - currentSettings.brightness) +
+        Math.abs(candidateSettings.saturation - currentSettings.saturation);
+      const priorityBonus =
+        candidatePriorityPreference !== originalPriorityPreference ? 0.16 : 0;
+      const score =
+        scorePaletteHarmony(renderedPalette) -
+        similarityPenalty * 0.7 +
+        Math.min(controlDistance / 120, 0.8) +
+        priorityBonus;
+
+      if (!bestCandidate || score > bestCandidate.score) {
+        bestCandidate = {
+          prioritizeDominant: candidatePriorityPreference,
+          settings: candidateSettings,
+          palette: candidateResult.palette,
+          variantIndex: candidateResult.variantIndex,
+          score,
+        };
+      }
     }
+
+    prioritizeImageDominantColors = originalPriorityPreference;
+
+    if (!bestCandidate) {
+      await syncImagePaletteFromSource({ advanceVariant: true });
+      return;
+    }
+
+    prioritizeImageDominantColors = bestCandidate.prioritizeDominant;
+    if (paletteImageDominantToggle) {
+      paletteImageDominantToggle.checked = bestCandidate.prioritizeDominant;
+    }
+    setPaletteAdjustmentControls(bestCandidate.settings);
+    imagePaletteVariantIndex = bestCandidate.variantIndex;
+    commitGeneratedPalette(bestCandidate.palette, {
+      previousPalette: currentPalette,
+    });
+  };
+
+  if (typeof withPaletteLoadingOverlay === "function") {
+    return withPaletteLoadingOverlay(runSurprise);
   }
 
-  prioritizeImageDominantColors = originalPriorityPreference;
-
-  if (!bestCandidate) {
-    await syncImagePaletteFromSource({ advanceVariant: true });
-    return;
-  }
-
-  prioritizeImageDominantColors = bestCandidate.prioritizeDominant;
-  if (paletteImageDominantToggle) {
-    paletteImageDominantToggle.checked = bestCandidate.prioritizeDominant;
-  }
-  setPaletteAdjustmentControls(bestCandidate.settings);
-  imagePaletteVariantIndex = bestCandidate.variantIndex;
-  commitGeneratedPalette(bestCandidate.palette, {
-    previousPalette: currentPalette,
-  });
+  return runSurprise();
 }
 
 async function applyInspiredImagePalette() {
-  const targetCount = Number.isFinite(paletteSize) && paletteSize > 0 ? paletteSize : 5;
-  const result = await buildInspiredImagePaletteCandidate(targetCount, {
-    referencePalette: currentPalette,
-  });
+  const runInspiration = async () => {
+    const targetCount = Number.isFinite(paletteSize) && paletteSize > 0 ? paletteSize : 5;
+    const result = await buildInspiredImagePaletteCandidate(targetCount, {
+      referencePalette: currentPalette,
+    });
 
-  if (!Array.isArray(result.palette) || result.palette.length === 0) {
-    setPaletteImageExtractionFeedback(true, IMAGE_EXTRACTION_ERROR_MESSAGE);
-    revealPaletteImageDropzoneForRetry();
-    return;
+    if (!Array.isArray(result.palette) || result.palette.length === 0) {
+      setPaletteImageExtractionFeedback(true, IMAGE_EXTRACTION_ERROR_MESSAGE);
+      revealPaletteImageDropzoneForRetry();
+      return;
+    }
+
+    imageInspirationVariantIndex = result.variantIndex + 1;
+    rememberInspiredPalette(result.palette);
+    setPaletteAdjustmentControls(result.settings);
+    commitGeneratedPalette(result.palette, {
+      previousPalette: currentPalette,
+    });
+  };
+
+  if (typeof withPaletteLoadingOverlay === "function") {
+    return withPaletteLoadingOverlay(runInspiration);
   }
 
-  imageInspirationVariantIndex = result.variantIndex + 1;
-  rememberInspiredPalette(result.palette);
-  setPaletteAdjustmentControls(result.settings);
-  commitGeneratedPalette(result.palette, {
-    previousPalette: currentPalette,
-  });
+  return runInspiration();
 }
 
 function setupSurpriseButton() {
@@ -381,6 +397,42 @@ function shouldUseAlternativePalette() {
   return getCurrentSaturationValue() <= LOW_SATURATION_FALLBACK_THRESHOLD;
 }
 
+function getTemperatureTargetLightness(settings) {
+  return mapBrightnessValueToOklchLightness(
+    Number.isFinite(settings?.brightness)
+      ? settings.brightness
+      : getCurrentBrightnessValue(),
+    {
+      minLightness: 0.2,
+      maxLightness: 0.92,
+      gamma: 0.86,
+    }
+  );
+}
+
+function getTemperatureTargetChroma(settings, options = {}) {
+  return mapSaturationValueToOklchChroma(
+    Number.isFinite(settings?.saturation)
+      ? settings.saturation
+      : getCurrentSaturationValue(),
+    {
+      minChroma: Number.isFinite(options.minChroma) ? options.minChroma : 0.0015,
+      maxChroma: Number.isFinite(options.maxChroma) ? options.maxChroma : 0.22,
+      gamma: Number.isFinite(options.gamma) ? options.gamma : 1.7,
+    }
+  );
+}
+
+function createTemperatureOklchHex(hue, lightness, chroma) {
+  return controlsNormalizeHexColor(
+    controlsOklchToHex(lightness, chroma, hue, {
+      minLightness: 0.12,
+      maxLightness: 0.94,
+      maxChroma: 0.24,
+    })
+  );
+}
+
 function getTemperatureBasedHue() {
   const useWarmPalette =
     temperature.warm && (!temperature.cool || Math.random() < 0.5);
@@ -401,21 +453,32 @@ function buildAlternativeMonochromePalette(targetCount) {
 
   const palette = [];
   const usedColors = new Set();
-  const centerLightness = 10 + (getCurrentBrightnessValue() / 100) * 80;
-  const monochromeSaturation = clampControlValue(
-    getCurrentSaturationValue(),
-    0,
-    LOW_SATURATION_FALLBACK_THRESHOLD
+  const centerLightness = getTemperatureTargetLightness({
+    brightness: getCurrentBrightnessValue(),
+  });
+  const monochromeChroma = getTemperatureTargetChroma(
+    {
+      saturation: clampControlValue(
+        getCurrentSaturationValue(),
+        0,
+        LOW_SATURATION_FALLBACK_THRESHOLD
+      ),
+    },
+    {
+      minChroma: 0.001,
+      maxChroma: 0.05,
+      gamma: 1.5,
+    }
   );
   const baseHue = getTemperatureBasedHue();
-  const spread = clampControlValue(targetCount * 8, 36, 72);
+  const spread = clampControlValue(targetCount * 0.07, 0.28, 0.56);
 
-  let minLightness = clampControlValue(centerLightness - spread / 2, 10, 90);
-  let maxLightness = clampControlValue(centerLightness + spread / 2, 10, 90);
+  let minLightness = clampControlValue(centerLightness - spread / 2, 0.14, 0.9);
+  let maxLightness = clampControlValue(centerLightness + spread / 2, 0.18, 0.94);
 
-  if (maxLightness - minLightness < 24) {
-    minLightness = 10;
-    maxLightness = 90;
+  if (maxLightness - minLightness < 0.24) {
+    minLightness = 0.14;
+    maxLightness = 0.94;
   }
 
   const lightnessStops = Array.from({ length: targetCount }, (_, index) => {
@@ -426,16 +489,19 @@ function buildAlternativeMonochromePalette(targetCount) {
     return minLightness + ((maxLightness - minLightness) * index) / (targetCount - 1);
   });
 
-  const adjustments = [0, -6, 6, -12, 12, -18, 18];
+  const adjustments = [0, -0.018, 0.018, -0.036, 0.036, -0.054, 0.054];
+  const chromaAdjustments = [0, -0.004, 0.004, -0.008, 0.008];
 
   lightnessStops.forEach((baseLightness) => {
     for (const adjustment of adjustments) {
-      const candidate = controlsNormalizeHexColor(
-        controlsHslToHex(
-          baseHue,
-          monochromeSaturation,
-          clampControlValue(baseLightness + adjustment, 10, 90)
-        )
+      const chromaAdjustment =
+        chromaAdjustments[
+          Math.abs(Math.round((adjustment || 0) * 1000)) % chromaAdjustments.length
+        ];
+      const candidate = createTemperatureOklchHex(
+        baseHue,
+        clampControlValue(baseLightness + adjustment, 0.12, 0.94),
+        clampControlValue(monochromeChroma + chromaAdjustment, 0.004, 0.07)
       );
 
       if (isDisallowedColor(candidate) || usedColors.has(candidate)) {
@@ -453,15 +519,10 @@ function buildAlternativeMonochromePalette(targetCount) {
 
 function buildTemperatureColorFromSettings(settings) {
   const hue = getTemperatureBasedHue();
-  const saturation = Number.isFinite(settings?.saturation)
-    ? settings.saturation
-    : getCurrentSaturationValue();
-  const brightness = Number.isFinite(settings?.brightness)
-    ? settings.brightness
-    : getCurrentBrightnessValue();
-  const lightness = 10 + (brightness / 100) * 80;
+  const lightness = getTemperatureTargetLightness(settings);
+  const chroma = getTemperatureTargetChroma(settings);
 
-  return controlsHslToHex(hue, saturation, lightness);
+  return createTemperatureOklchHex(hue, lightness, chroma);
 }
 
 function buildAlternativeMonochromePaletteForSettings(targetCount, settings) {
@@ -475,21 +536,30 @@ function buildAlternativeMonochromePaletteForSettings(targetCount, settings) {
 
   const palette = [];
   const usedColors = new Set();
-  const centerLightness = 10 + (settings.brightness / 100) * 80;
-  const monochromeSaturation = clampControlValue(
-    settings.saturation,
-    0,
-    LOW_SATURATION_FALLBACK_THRESHOLD
+  const centerLightness = getTemperatureTargetLightness(settings);
+  const monochromeChroma = getTemperatureTargetChroma(
+    {
+      saturation: clampControlValue(
+        settings.saturation,
+        0,
+        LOW_SATURATION_FALLBACK_THRESHOLD
+      ),
+    },
+    {
+      minChroma: 0.001,
+      maxChroma: 0.05,
+      gamma: 1.5,
+    }
   );
   const baseHue = getTemperatureBasedHue();
-  const spread = clampControlValue(targetCount * 8, 36, 72);
+  const spread = clampControlValue(targetCount * 0.07, 0.28, 0.56);
 
-  let minLightness = clampControlValue(centerLightness - spread / 2, 10, 90);
-  let maxLightness = clampControlValue(centerLightness + spread / 2, 10, 90);
+  let minLightness = clampControlValue(centerLightness - spread / 2, 0.14, 0.9);
+  let maxLightness = clampControlValue(centerLightness + spread / 2, 0.18, 0.94);
 
-  if (maxLightness - minLightness < 24) {
-    minLightness = 10;
-    maxLightness = 90;
+  if (maxLightness - minLightness < 0.24) {
+    minLightness = 0.14;
+    maxLightness = 0.94;
   }
 
   const lightnessStops = Array.from({ length: targetCount }, (_, index) => {
@@ -500,16 +570,19 @@ function buildAlternativeMonochromePaletteForSettings(targetCount, settings) {
     return minLightness + ((maxLightness - minLightness) * index) / (targetCount - 1);
   });
 
-  const adjustments = [0, -6, 6, -12, 12, -18, 18];
+  const adjustments = [0, -0.018, 0.018, -0.036, 0.036, -0.054, 0.054];
+  const chromaAdjustments = [0, -0.004, 0.004, -0.008, 0.008];
 
   lightnessStops.forEach((baseLightness) => {
     for (const adjustment of adjustments) {
-      const candidate = controlsNormalizeHexColor(
-        controlsHslToHex(
-          baseHue,
-          monochromeSaturation,
-          clampControlValue(baseLightness + adjustment, 10, 90)
-        )
+      const chromaAdjustment =
+        chromaAdjustments[
+          Math.abs(Math.round((adjustment || 0) * 1000)) % chromaAdjustments.length
+        ];
+      const candidate = createTemperatureOklchHex(
+        baseHue,
+        clampControlValue(baseLightness + adjustment, 0.12, 0.94),
+        clampControlValue(monochromeChroma + chromaAdjustment, 0.004, 0.07)
       );
 
       if (isDisallowedColor(candidate) || usedColors.has(candidate)) {
