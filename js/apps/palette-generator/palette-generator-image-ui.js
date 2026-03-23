@@ -160,7 +160,9 @@ function schedulePaletteAdjustmentPreview() {
     paletteAdjustmentPreviewTimeout = null;
     paletteAdjustmentPreviewFrame = requestAnimationFrame(() => {
       paletteAdjustmentPreviewFrame = null;
-      applyCurrentPaletteAdjustments();
+      applyCurrentPaletteAdjustments({
+        previewOnly: paletteBaseMode === "image",
+      });
     });
   }, PALETTE_ADJUSTMENT_PREVIEW_DELAY_MS);
 }
@@ -476,6 +478,32 @@ function clearLeakedColorModeFixedPins() {
   });
 }
 
+function resetPaletteBeforeColorModeRegeneration() {
+  const cards = typeof getColorCards === "function" ? Array.from(getColorCards()) : [];
+  if (cards.length === 0) {
+    return;
+  }
+
+  cards.forEach((card) => card.remove());
+
+  if (typeof refreshDeleteButtonsVisibility === "function") {
+    refreshDeleteButtonsVisibility();
+  }
+
+  if (typeof syncCurrentPaletteFromDom === "function") {
+    syncCurrentPaletteFromDom();
+  } else {
+    currentPalette = [];
+    syncPaletteGeneratorStoreCurrentPalette(currentPalette, {
+      scope: "current-palette-reset",
+    });
+  }
+
+  if (typeof capturePaletteAdjustmentBase === "function") {
+    capturePaletteAdjustmentBase([]);
+  }
+}
+
 function setPaletteBaseMode(nextMode) {
   const previousBaseMode = paletteBaseMode;
   const transitionPlan = paletteGeneratorImageUiRuntime.getPaletteBaseModeTransitionPlan({
@@ -483,7 +511,7 @@ function setPaletteBaseMode(nextMode) {
     nextMode,
     uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
     adoptedBaseColor:
-      previousBaseMode === "image" ? getFirstPaletteHexForColorBaseAdoption() : null,
+      previousBaseMode !== "color" ? getFirstPaletteHexForColorBaseAdoption() : null,
   });
   paletteBaseMode = transitionPlan.nextMode;
 
@@ -601,9 +629,11 @@ function setPaletteBaseMode(nextMode) {
       transitionPlan.colorModeAdoption.shouldRefreshMonochromaticPalette &&
       typeof generatePalette === "function"
     ) {
+      resetPaletteBeforeColorModeRegeneration();
       void generatePalette({
         recalculateFromScratch: true,
         effectiveType: "monochromatic",
+        referencePalette: [],
       });
       return;
     }

@@ -23,6 +23,7 @@ declare global {
     PaletteGeneratorStateSelectors?: any;
     PaletteGeneratorStateActions?: any;
     PaletteGeneratorCoreHelpers?: any;
+    PaletteGeneratorCoreRuntime?: any;
     PaletteGeneratorTemperatureHelpers?: any;
     PaletteGeneratorImageAnalysisHelpers?: any;
     PaletteGeneratorImageAnalysisStateful?: any;

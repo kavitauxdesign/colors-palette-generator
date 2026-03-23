@@ -110,6 +110,11 @@ function getFirstPaletteHexForColorBaseAdoption(
   currentPalette: unknown[] = [],
   firstCardHex: unknown = ""
 ) {
+  const firstEntryHex = AppColorUtils.normalizeHexColor(firstCardHex || "");
+  if (AppColorUtils.isValidHexColor(firstEntryHex)) {
+    return firstEntryHex;
+  }
+
   const paletteCandidate =
     Array.isArray(currentPalette) && currentPalette.length > 0
       ? AppColorUtils.normalizeHexColor(currentPalette[0])
@@ -119,11 +124,6 @@ function getFirstPaletteHexForColorBaseAdoption(
     return paletteCandidate;
   }
 
-  const firstEntryHex = AppColorUtils.normalizeHexColor(firstCardHex || "");
-  if (AppColorUtils.isValidHexColor(firstEntryHex)) {
-    return firstEntryHex;
-  }
-
   return null;
 }
 
@@ -131,6 +131,7 @@ function getPaletteBaseModeTransitionPlan(args: PaletteBaseModeTransitionArgs) {
   const nextMode = normalizePaletteBaseMode(args.nextMode);
   const previousMode = args.currentMode;
   const isMovingFromImageToColor = previousMode === "image" && nextMode === "color";
+  const isMovingFromNonColorToColor = previousMode !== "color" && nextMode === "color";
 
   return {
     nextMode,
@@ -140,13 +141,13 @@ function getPaletteBaseModeTransitionPlan(args: PaletteBaseModeTransitionArgs) {
     colorModeAdoption: {
       shouldSyncColorModeControls: nextMode === "color",
       shouldClearUnavailablePinnedCards: nextMode === "color",
-      shouldRefreshMonochromaticPalette: isMovingFromImageToColor,
-      adoptedBaseColor: isMovingFromImageToColor ? args.adoptedBaseColor || null : null,
-      nextColorPaletteType: isMovingFromImageToColor ? "monochromatic" : null,
-      nextMonochromaticGenerationMode: isMovingFromImageToColor
+      shouldRefreshMonochromaticPalette: isMovingFromNonColorToColor,
+      adoptedBaseColor: isMovingFromNonColorToColor ? args.adoptedBaseColor || null : null,
+      nextColorPaletteType: isMovingFromNonColorToColor ? "monochromatic" : null,
+      nextMonochromaticGenerationMode: isMovingFromNonColorToColor
         ? (APP_CONSTANTS.DEFAULT_MONOCHROMATIC_GENERATION_MODE as MonochromaticGenerationMode)
         : null,
-      resetColorVariantIndex: isMovingFromImageToColor,
+      resetColorVariantIndex: isMovingFromNonColorToColor,
     },
   };
 }
