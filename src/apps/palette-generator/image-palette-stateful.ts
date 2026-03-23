@@ -5,7 +5,7 @@ import type {
   ImagePaletteCluster,
 } from "./image-types";
 
-type PinnedPaletteEntry = {
+export type ImagePalettePinnedEntry = {
   index?: number;
   hex?: string;
   [key: string]: unknown;
@@ -23,7 +23,7 @@ type DerivedPaletteAdjustmentSettings = ReturnType<
   typeof PaletteGeneratorImagePaletteHelpers.derivePaletteAdjustmentSettingsFromColors
 >;
 
-type InspiredPaletteCandidate = {
+export type ImagePaletteInspiredCandidate = {
   palette: string[];
   mergedPalette?: string[];
   variantIndex: number;
@@ -33,7 +33,7 @@ type InspiredPaletteCandidate = {
   score?: number;
 };
 
-type StatefulDeps = {
+export type ImagePaletteStatefulDeps = {
   getCachedImageColorClusters: () => ImagePaletteCluster[];
   getImagePaletteVariantHex: (
     cluster: ImagePaletteCluster,
@@ -56,12 +56,12 @@ type StatefulDeps = {
   ) => string[];
   mergePaletteWithPinnedColors: (
     palette: string[],
-    pinnedEntries: PinnedPaletteEntry[]
+    pinnedEntries: ImagePalettePinnedEntry[]
   ) => string[];
-  getPinnedPaletteIndexSet: (pinnedEntries: PinnedPaletteEntry[]) => Set<number>;
+  getPinnedPaletteIndexSet: (pinnedEntries: ImagePalettePinnedEntry[]) => Set<number>;
   getComparablePaletteSlice: (
     colors: string[],
-    pinnedEntries: PinnedPaletteEntry[]
+    pinnedEntries: ImagePalettePinnedEntry[]
   ) => string[];
   getPalettePositionalSimilarityMetrics: (
     nextPalette: string[],
@@ -86,7 +86,7 @@ type StatefulDeps = {
   ) => boolean;
   getComparableMergedPaletteSlice: (
     colors: string[],
-    pinnedEntries: PinnedPaletteEntry[]
+    pinnedEntries: ImagePalettePinnedEntry[]
   ) => string[];
 };
 
@@ -96,7 +96,7 @@ type CandidateColorArgs = {
   options?: Record<string, unknown>;
   imagePaletteVariantIndex?: number;
   imagePaletteVariantProfileCount?: number;
-  deps: StatefulDeps;
+  deps: ImagePaletteStatefulDeps;
 };
 
 type AlternativeColorArgs = {
@@ -105,47 +105,47 @@ type AlternativeColorArgs = {
   variantSeed?: number;
   maxVariantSweeps?: number;
   imagePaletteVariantProfileCount?: number;
-  deps: StatefulDeps;
+  deps: ImagePaletteStatefulDeps;
 };
 
 type BuildImagePaletteCandidateArgs = {
   selectedClusters: ImagePaletteCluster[];
   targetCount: number;
   variantIndex: number;
-  deps: StatefulDeps;
+  deps: ImagePaletteStatefulDeps;
 };
 
 type EnsureMutableSlotsArgs = {
   candidatePalette: string[];
   referencePalette: string[];
-  pinnedEntries: PinnedPaletteEntry[];
+  pinnedEntries: ImagePalettePinnedEntry[];
   variantSeed?: number;
   imagePaletteVariantProfileCount?: number;
-  deps: StatefulDeps;
+  deps: ImagePaletteStatefulDeps;
 };
 
 type BuildImageBasedPaletteCandidateArgs = {
   targetCount: number;
   clusters: ImagePaletteCluster[];
-  pinnedEntries: PinnedPaletteEntry[];
+  pinnedEntries: ImagePalettePinnedEntry[];
   referencePalette: string[];
   referenceSourcePalette: string[];
   variantStartIndex: number;
   maxVariantAttempts: number;
-  deps: StatefulDeps;
+  deps: ImagePaletteStatefulDeps;
 };
 
 type BuildInspiredImagePaletteCandidateArgs = {
   targetCount: number;
   clusters: ImagePaletteCluster[];
-  pinnedEntries: PinnedPaletteEntry[];
+  pinnedEntries: ImagePalettePinnedEntry[];
   atmosphere: ImagePaletteAtmosphere;
   referencePalette: string[];
   recentInspiredReferences: string[][];
   startVariantIndex: number;
   maxVariantAttempts: number;
   imageInspirationVariantProfileCount: number;
-  deps: StatefulDeps;
+  deps: ImagePaletteStatefulDeps;
 };
 
 const {
@@ -419,8 +419,8 @@ function buildInspiredImagePaletteCandidate(args: BuildInspiredImagePaletteCandi
   const safeTargetCount = Number.isFinite(args.targetCount) && args.targetCount > 0
     ? args.targetCount
     : 5;
-  let fallbackCandidate: InspiredPaletteCandidate | null = null;
-  let bestCandidate: InspiredPaletteCandidate | null = null;
+  let fallbackCandidate: ImagePaletteInspiredCandidate | null = null;
+  let bestCandidate: ImagePaletteInspiredCandidate | null = null;
 
   for (let attempt = 0; attempt < args.maxVariantAttempts; attempt += 1) {
     const variantIndex = args.startVariantIndex + attempt;

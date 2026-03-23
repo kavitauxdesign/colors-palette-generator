@@ -33,7 +33,11 @@ export type InspiredVariantProfile = {
   neutralLift: number;
 };
 
-export type ImagePaletteCluster = ImageSamplePoint & {
+export type ImagePaletteCluster = {
+  r?: number;
+  g?: number;
+  b?: number;
+  weight?: number;
   hex?: string;
   hsl?: ImageColorHsl | null;
   oklch?: ImageColorOklch | null;
@@ -61,4 +65,3 @@ export type UploadedImageLike = {
   dataUrl?: string | null;
   analysisCache?: UploadedImageAnalysisCache | null;
 };
-

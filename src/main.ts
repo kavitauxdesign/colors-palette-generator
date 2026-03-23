@@ -12,6 +12,7 @@ import "./apps/palette-generator/image-analysis-helpers";
 import "./apps/palette-generator/image-analysis-stateful";
 import "./apps/palette-generator/image-palette-helpers";
 import "./apps/palette-generator/image-palette-stateful";
+import "./apps/palette-generator/image-palette-runtime";
 
 import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";
