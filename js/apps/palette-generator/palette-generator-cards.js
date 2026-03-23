@@ -311,7 +311,7 @@ function updateRegenerateButtonsAvailability() {
     ) ||
     (
       paletteBaseMode === "color" &&
-      ["complementary", "analogous", "triad"].includes(selectedColorPaletteType)
+      ["complementary", "analogous", "triad", "tetrad"].includes(selectedColorPaletteType)
     );
 
   cards.forEach((card) => {

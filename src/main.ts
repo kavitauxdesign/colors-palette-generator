@@ -11,6 +11,7 @@ import "./apps/palette-generator/actions";
 import "./apps/palette-generator/core-helpers";
 import "./apps/palette-generator/core-runtime";
 import "./apps/palette-generator/color-mode-helpers";
+import "./apps/palette-generator/color-mode-runtime";
 import "./apps/palette-generator/temperature-helpers";
 import "./apps/palette-generator/image-analysis-helpers";
 import "./apps/palette-generator/image-analysis-stateful";

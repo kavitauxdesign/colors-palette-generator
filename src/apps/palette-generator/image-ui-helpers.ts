@@ -53,7 +53,9 @@ function getPaletteModeActionVisibility(args: ActionVisibilityArgs) {
   const isColorMode = args.paletteBaseMode === "color";
   const isHiddenRegenerateColorMode =
     isColorMode &&
-    ["complementary", "analogous", "triad"].includes(String(args.selectedColorPaletteType || ""));
+    ["complementary", "analogous", "triad", "tetrad"].includes(
+      String(args.selectedColorPaletteType || "")
+    );
   const isMonochromaticColorScale = !!args.isMonochromaticColorScale;
   const hasImageSource = !!args.hasImageSource;
 

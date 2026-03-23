@@ -33,6 +33,7 @@ const TETRAD_VARIANT_PROFILES = Object.freeze([
 let colorModeParserElement = null;
 const paletteGeneratorStoreSnapshotForColorMode = window.PaletteGeneratorStore?.getState?.() || null;
 const paletteGeneratorColorModeHelpers = window.PaletteGeneratorColorModeHelpers || {};
+const paletteGeneratorColorModeRuntime = window.PaletteGeneratorColorModeRuntime || {};
 let colorPaletteVariantIndex = Number.isFinite(
   paletteGeneratorStoreSnapshotForColorMode?.colorPaletteVariantIndex
 )
@@ -51,6 +52,12 @@ if (
   typeof paletteGeneratorColorModeHelpers.buildTetradColorModePalette !== "function"
 ) {
   throw new Error("PaletteGeneratorColorModeHelpers are required before palette-generator-color-mode.js loads.");
+}
+if (
+  typeof paletteGeneratorColorModeRuntime.createColorModePaletteCandidate !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.getColorModeRegenerationColorForCard !== "function"
+) {
+  throw new Error("PaletteGeneratorColorModeRuntime is required before palette-generator-color-mode.js loads.");
 }
 
 function normalizeMonochromaticGenerationMode(mode) {
@@ -1362,199 +1369,22 @@ function buildColorModePaletteForSettings(targetCount, settings, options = {}) {
 }
 
 function createColorModePaletteCandidate(settings, options = {}) {
-  const attemptCount = Number.isFinite(options.attemptCount)
-    ? Math.max(1, options.attemptCount)
-    : Math.max(18, paletteSize * 6);
-  const pinnedEntries = Array.isArray(options.pinnedEntries)
-    ? options.pinnedEntries
-    : getPinnedPaletteEntriesSnapshot();
-  const referencePalette = normalizePaletteHexCollection(
-    getComparablePaletteSlice(options.referencePalette ?? currentPalette, pinnedEntries)
-  );
-  const baseColor = options.baseColor || getPaletteBaseColorSnapshot();
-  const effectiveType = options.effectiveType || getEffectiveColorPaletteType(paletteSize);
-
-  if (effectiveType === "monochromatic") {
-    const palette = buildColorModePaletteForSettings(
-      paletteSize,
-      settings,
-      {
-        baseColor,
-        effectiveType,
-        variantIndex: 0,
-      }
-    );
-
-    return palette.length === paletteSize
-      ? {
-          palette,
-          effectiveType,
-          variantIndex: 0,
-          samePositionCount: getPalettePositionalSimilarityMetrics(
-            getComparableMergedPaletteSlice(palette, pinnedEntries),
-            referencePalette
-          ).samePositionCount,
-          isTooSimilar: arePalettesTooSimilar(
-            getComparableMergedPaletteSlice(palette, pinnedEntries),
-            referencePalette
-          ),
-          score: scorePaletteHarmony(palette),
-        }
-      : null;
-  }
-
-  if (effectiveType === "complementary") {
-    const palette = buildColorModePaletteForSettings(
-      paletteSize,
-      settings,
-      {
-        baseColor,
-        effectiveType,
-        variantIndex: 0,
-      }
-    );
-
-    return palette.length === paletteSize
-      ? {
-          palette,
-          effectiveType,
-          variantIndex: 0,
-          samePositionCount: getPalettePositionalSimilarityMetrics(
-            getComparableMergedPaletteSlice(palette, pinnedEntries),
-            referencePalette
-          ).samePositionCount,
-          isTooSimilar: arePalettesTooSimilar(
-            getComparableMergedPaletteSlice(palette, pinnedEntries),
-            referencePalette
-          ),
-          score: scorePaletteHarmony(palette),
-        }
-      : null;
-  }
-
-  if (effectiveType === "triad") {
-    const palette = buildColorModePaletteForSettings(
-      paletteSize,
-      settings,
-      {
-        baseColor,
-        effectiveType,
-        variantIndex: 0,
-      }
-    );
-
-    return palette.length === paletteSize
-      ? {
-          palette,
-          effectiveType,
-          variantIndex: 0,
-          samePositionCount: getPalettePositionalSimilarityMetrics(
-            getComparableMergedPaletteSlice(palette, pinnedEntries),
-            referencePalette
-          ).samePositionCount,
-          isTooSimilar: arePalettesTooSimilar(
-            getComparableMergedPaletteSlice(palette, pinnedEntries),
-            referencePalette
-          ),
-          score: scorePaletteHarmony(palette),
-        }
-      : null;
-  }
-
-  if (effectiveType === "tetrad") {
-    let bestCandidate = null;
-
-    for (let attempt = 0; attempt < attemptCount; attempt += 1) {
-      const variantForAttempt = colorPaletteVariantIndex + 1 + attempt;
-      const palette = buildColorModePaletteForSettings(
-        paletteSize,
-        settings,
-        {
-          baseColor,
-          effectiveType,
-          variantIndex: variantForAttempt,
-        }
-      );
-
-      if (palette.length !== paletteSize) {
-        continue;
-      }
-
-      const comparablePalette = getComparableMergedPaletteSlice(palette, pinnedEntries);
-      const positionalSimilarityMetrics = getPalettePositionalSimilarityMetrics(
-        comparablePalette,
-        referencePalette
-      );
-      const candidate = {
-        palette,
-        effectiveType,
-        variantIndex: variantForAttempt,
-        samePositionCount: positionalSimilarityMetrics.samePositionCount,
-        isTooSimilar: arePalettesTooSimilar(comparablePalette, referencePalette),
-        score: scorePaletteHarmony(palette),
-      };
-
-      if (
-        !bestCandidate ||
-        isBetterPaletteFallbackCandidate(candidate, bestCandidate)
-      ) {
-        bestCandidate = candidate;
-      }
-    }
-
-    return bestCandidate;
-  }
-
-  let bestDistinctCandidate = null;
-  let bestFallbackCandidate = null;
-
-  for (let attempt = 0; attempt < attemptCount; attempt += 1) {
-    const variantIndex = colorPaletteVariantIndex + 1 + attempt;
-    const palette = buildColorModePaletteForSettings(
-      paletteSize,
-      settings,
-      {
-        baseColor,
-        effectiveType,
-        variantIndex,
-      }
-    );
-
-    if (palette.length !== paletteSize) {
-      continue;
-    }
-
-    const comparablePalette = getComparableMergedPaletteSlice(palette, pinnedEntries);
-    const similarityMetrics = getPaletteSimilarityMetrics(comparablePalette, referencePalette);
-    const positionalSimilarityMetrics = getPalettePositionalSimilarityMetrics(
-      comparablePalette,
-      referencePalette
-    );
-    const similarityPenalty =
-      similarityMetrics.sharedColorCount / Math.max(comparablePalette.length, 1);
-    const candidate = {
-      palette,
-      effectiveType,
-      variantIndex,
-      samePositionCount: positionalSimilarityMetrics.samePositionCount,
-      isTooSimilar: arePalettesTooSimilar(comparablePalette, referencePalette),
-      score: scorePaletteHarmony(palette) - similarityPenalty * 0.8,
-    };
-
-    if (isBetterPaletteFallbackCandidate(candidate, bestFallbackCandidate)) {
-      bestFallbackCandidate = candidate;
-    }
-
-    if (
-      candidate.samePositionCount === 0 &&
-      !candidate.isTooSimilar &&
-      (!bestDistinctCandidate || candidate.score > bestDistinctCandidate.score)
-    ) {
-      bestDistinctCandidate = candidate;
-    }
-  }
-
-  return bestDistinctCandidate || bestFallbackCandidate;
+  return paletteGeneratorColorModeRuntime.createColorModePaletteCandidate({
+    paletteSize,
+    currentPalette,
+    settings,
+    effectiveType: options.effectiveType || getEffectiveColorPaletteType(paletteSize),
+    currentVariantIndex: colorPaletteVariantIndex,
+    attemptCount: options.attemptCount,
+    pinnedEntries: Array.isArray(options.pinnedEntries)
+      ? options.pinnedEntries
+      : getPinnedPaletteEntriesSnapshot(),
+    referencePalette: options.referencePalette ?? currentPalette,
+    baseColor: options.baseColor || getPaletteBaseColorSnapshot(),
+    buildColorModePaletteForSettings,
+    getComparablePaletteSlice,
+    getComparableMergedPaletteSlice,
+  });
 }
 
 function getColorModeRegenerationColorForCard(card, existingColors = new Set()) {
@@ -1571,29 +1401,30 @@ function getColorModeRegenerationColorForCard(card, existingColors = new Set()) 
     return null;
   }
 
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    const candidate = createColorModePaletteCandidate(getCurrentPaletteAdjustmentSnapshot(), {
-      referencePalette: currentPalette,
-      attemptCount: 1,
+  const regenerationCandidate =
+    paletteGeneratorColorModeRuntime.getColorModeRegenerationColorForCard({
+      paletteSize,
+      currentPalette,
+      settings: getCurrentPaletteAdjustmentSnapshot(),
       effectiveType: getEffectiveColorPaletteType(),
+      currentVariantIndex: colorPaletteVariantIndex,
+      pinnedEntries: getPinnedPaletteEntriesSnapshot(),
+      referencePalette: currentPalette,
+      baseColor: getPaletteBaseColorSnapshot(),
+      buildColorModePaletteForSettings,
+      getComparablePaletteSlice,
+      getComparableMergedPaletteSlice,
+      cardIndex,
+      currentHex,
+      existingColors,
     });
 
-    if (!candidate?.palette?.[cardIndex]) {
-      continue;
-    }
-
-    const nextColor = candidate.palette[cardIndex];
-    if (
-      nextColor &&
-      nextColor !== currentHex &&
-      !existingColors.has(nextColor)
-    ) {
-      colorPaletteVariantIndex = candidate.variantIndex;
-      syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
-        scope: "color-variant",
-      });
-      return nextColor;
-    }
+  if (regenerationCandidate?.color) {
+    colorPaletteVariantIndex = regenerationCandidate.variantIndex;
+    syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+      scope: "color-variant",
+    });
+    return regenerationCandidate.color;
   }
 
   return null;
