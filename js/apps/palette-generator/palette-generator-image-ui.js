@@ -16,7 +16,10 @@ if (
   typeof paletteGeneratorImageUiRuntime.getPaletteBaseModeTransitionPlan !== "function" ||
   typeof paletteGeneratorImageUiRuntime.isAcceptedPaletteImageFile !== "function" ||
   typeof paletteGeneratorImageUiRuntime.createUploadedBaseImage !== "function" ||
-  typeof paletteGeneratorImageUiRuntime.getNextImageVariantState !== "function"
+  typeof paletteGeneratorImageUiRuntime.createPaletteImageFileLoadState !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.getNextImageVariantState !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.refreshImageDerivedControls !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.syncImagePaletteFromSource !== "function"
 ) {
   throw new Error("PaletteGeneratorImageUiRuntime is required before palette-generator-image-ui.js loads.");
 }
@@ -402,47 +405,34 @@ function regeneratePinnedPaletteSlots() {
 }
 
 async function syncImagePaletteFromSource(options = {}) {
-  const runSync = async () => {
-    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
-      return;
-    }
-
-    const nextVariantState = paletteGeneratorImageUiRuntime.getNextImageVariantState({
-      imagePaletteVariantIndex,
-      imageInspirationVariantIndex,
-      resetVariant: options.resetVariant,
-      advanceVariant: options.advanceVariant,
-    });
-    imagePaletteVariantIndex = nextVariantState.imagePaletteVariantIndex;
-    imageInspirationVariantIndex = nextVariantState.imageInspirationVariantIndex;
-
-    if (nextVariantState.shouldClearRecentInspiredPalettes) {
-      clearRecentInspiredPalettes();
-    }
-
-    syncPaletteGeneratorStoreState(
-      {
-        imagePaletteVariantIndex,
-        imageInspirationVariantIndex,
-      },
-      {
-        scope: "image-variants",
-      }
-    );
-
-    await refreshImageDerivedControls();
-    if (!(paletteImageExtractionAlert?.hidden ?? true)) {
-      return;
-    }
-
-    await generatePalette();
-  };
-
-  if (typeof withPaletteLoadingOverlay === "function") {
-    return withPaletteLoadingOverlay(runSync);
-  }
-
-  return runSync();
+  return paletteGeneratorImageUiRuntime.syncImagePaletteFromSource({
+    paletteBaseMode,
+    uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
+    imagePaletteVariantIndex,
+    imageInspirationVariantIndex,
+    options,
+    clearRecentInspiredPalettes,
+    syncVariantState(nextVariantState) {
+      imagePaletteVariantIndex = nextVariantState.imagePaletteVariantIndex;
+      imageInspirationVariantIndex = nextVariantState.imageInspirationVariantIndex;
+      syncPaletteGeneratorStoreState(
+        {
+          imagePaletteVariantIndex,
+          imageInspirationVariantIndex,
+        },
+        {
+          scope: "image-variants",
+        }
+      );
+    },
+    refreshImageDerivedControls,
+    isExtractionFeedbackVisible() {
+      return !(paletteImageExtractionAlert?.hidden ?? true);
+    },
+    generatePalette,
+    withPaletteLoadingOverlay:
+      typeof withPaletteLoadingOverlay === "function" ? withPaletteLoadingOverlay : null,
+  });
 }
 // PALETTE BASE
 
@@ -717,10 +707,11 @@ function handlePaletteImageFile(file) {
 
   const reader = new FileReader();
   reader.addEventListener("load", () => {
-    uploadedBaseImage = paletteGeneratorImageUiRuntime.createUploadedBaseImage(
+    const uploadState = paletteGeneratorImageUiRuntime.createPaletteImageFileLoadState(
       file,
       reader.result
     );
+    uploadedBaseImage = uploadState.uploadedBaseImage;
     syncPaletteGeneratorStoreState(
       {
         uploadedBaseImage,
@@ -729,12 +720,12 @@ function handlePaletteImageFile(file) {
         scope: "uploaded-image",
       }
     );
-    isReplaceImagePending = false;
-    isPaletteImageDropzoneVisible = false;
+    isReplaceImagePending = uploadState.isReplaceImagePending;
+    isPaletteImageDropzoneVisible = uploadState.isPaletteImageDropzoneVisible;
     setPaletteImageExtractionFeedback(false);
-    setPaletteBaseMode("image");
+    setPaletteBaseMode(uploadState.nextBaseMode);
     renderPaletteImagePreview();
-    void syncImagePaletteFromSource({ resetVariant: true });
+    void syncImagePaletteFromSource({ resetVariant: uploadState.shouldResetVariant });
   });
   reader.readAsDataURL(file);
 }
@@ -893,43 +884,23 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
 }
 
 async function refreshImageDerivedControls() {
-  const runRefresh = async () => {
-    if (paletteBaseMode !== "image" || !uploadedBaseImage?.dataUrl) {
-      setPaletteImageExtractionFeedback(false);
-      updatePaletteSizeButtonsAvailability();
-      updatePaletteActionButtonsAvailability();
-
-      if (typeof updateRegenerateButtonsAvailability === "function") {
-        updateRegenerateButtonsAvailability();
-      }
-      if (typeof updateAddColorButtonState === "function") {
-        updateAddColorButtonState();
-      }
-      return;
-    }
-
-    const clusters = await getImageColorClusters();
-    const hasExtractedColors = clusters.length > 0;
-
-    setPaletteImageExtractionFeedback(!hasExtractedColors);
-    if (!hasExtractedColors) {
-      revealPaletteImageDropzoneForRetry();
-    }
-
-    updatePaletteSizeButtonsAvailability(clusters.length);
-    updatePaletteActionButtonsAvailability(clusters.length);
-
-    if (typeof updateRegenerateButtonsAvailability === "function") {
-      updateRegenerateButtonsAvailability();
-    }
-    if (typeof updateAddColorButtonState === "function") {
-      updateAddColorButtonState();
-    }
-  };
-
-  if (typeof withPaletteLoadingOverlay === "function") {
-    return withPaletteLoadingOverlay(runRefresh);
-  }
-
-  return runRefresh();
+  return paletteGeneratorImageUiRuntime.refreshImageDerivedControls({
+    paletteBaseMode,
+    uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
+    getImageColorClusters,
+    setPaletteImageExtractionFeedback,
+    revealPaletteImageDropzoneForRetry,
+    updatePaletteSizeButtonsAvailability,
+    updatePaletteActionButtonsAvailability,
+    updateRegenerateButtonsAvailability:
+      typeof updateRegenerateButtonsAvailability === "function"
+        ? updateRegenerateButtonsAvailability
+        : null,
+    updateAddColorButtonState:
+      typeof updateAddColorButtonState === "function"
+        ? updateAddColorButtonState
+        : null,
+    withPaletteLoadingOverlay:
+      typeof withPaletteLoadingOverlay === "function" ? withPaletteLoadingOverlay : null,
+  });
 }
