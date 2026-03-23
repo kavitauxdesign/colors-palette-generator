@@ -1,6 +1,10 @@
+import APP_CONSTANTS from "../../shared/constants";
 import PaletteGeneratorCoreHelpers from "./core-helpers";
 import type {
+  AnalogousSeparationMode,
   ColorPaletteType,
+  MonochromaticGenerationMode,
+  PaletteBaseMode,
   PaletteGeneratorAdjustments,
 } from "./types";
 import type { ParsedCssColor } from "../../shared/color/color-utils";
@@ -55,6 +59,48 @@ type GetColorModeRegenerationColorForCardArgs = CreateColorModePaletteCandidateA
   existingColors?: Set<string>;
 };
 
+type AutomaticColorPaletteTypeArgs = {
+  targetCount?: unknown;
+  referenceSaturation?: unknown;
+};
+
+type EffectiveColorPaletteTypeArgs = AutomaticColorPaletteTypeArgs & {
+  selectedColorPaletteType?: unknown;
+};
+
+type ControlVisibilityArgs = {
+  paletteBaseMode?: unknown;
+  selectedColorPaletteType?: unknown;
+};
+
+type CurrentModeSizeArgs = {
+  paletteBaseMode?: unknown;
+  selectedColorPaletteType?: unknown;
+};
+
+type ResolveCurrentModeSizeArgs = CurrentModeSizeArgs & {
+  paletteSize?: unknown;
+};
+
+const COLOR_MODE_PALETTE_SIZES: Record<ColorPaletteType, number[]> = {
+  automatic: [2, 3, 4, 6, 9],
+  monochromatic: [6, 9, 12],
+  complementary: [2, 6],
+  analogous: [3],
+  triad: [3],
+  tetrad: [4],
+};
+const MONOCHROMATIC_GENERATION_MODES = new Set<MonochromaticGenerationMode>([
+  "automatic",
+  "shades",
+  "tints",
+]);
+const ANALOGOUS_SEPARATION_MODES = new Set<AnalogousSeparationMode>([
+  "soft",
+  "medium",
+  "intense",
+]);
+
 const {
   normalizePaletteHexCollection,
   getPaletteSimilarityMetrics,
@@ -63,6 +109,166 @@ const {
   isBetterPaletteFallbackCandidate,
   scorePaletteHarmony,
 } = PaletteGeneratorCoreHelpers;
+
+function normalizeColorPaletteType(value: unknown): ColorPaletteType {
+  return Object.prototype.hasOwnProperty.call(COLOR_MODE_PALETTE_SIZES, value)
+    ? (value as ColorPaletteType)
+    : (APP_CONSTANTS.DEFAULT_COLOR_PALETTE_TYPE as ColorPaletteType);
+}
+
+function normalizeMonochromaticGenerationMode(value: unknown): MonochromaticGenerationMode {
+  return MONOCHROMATIC_GENERATION_MODES.has(value as MonochromaticGenerationMode)
+    ? (value as MonochromaticGenerationMode)
+    : (APP_CONSTANTS.DEFAULT_MONOCHROMATIC_GENERATION_MODE as MonochromaticGenerationMode);
+}
+
+function normalizeAnalogousSeparationMode(value: unknown): AnalogousSeparationMode {
+  return ANALOGOUS_SEPARATION_MODES.has(value as AnalogousSeparationMode)
+    ? (value as AnalogousSeparationMode)
+    : (APP_CONSTANTS.DEFAULT_ANALOGOUS_SEPARATION_MODE as AnalogousSeparationMode);
+}
+
+function getAllowedPaletteSizesForType(type: unknown) {
+  return COLOR_MODE_PALETTE_SIZES[normalizeColorPaletteType(type)] ||
+    COLOR_MODE_PALETTE_SIZES.automatic;
+}
+
+function getDefaultPaletteSizeForType(type: unknown) {
+  if (type === "monochromatic") {
+    return 9;
+  }
+
+  const allowedSizes = getAllowedPaletteSizesForType(type);
+  return allowedSizes[0];
+}
+
+function resolveAutomaticColorPaletteType(
+  args: AutomaticColorPaletteTypeArgs
+): Exclude<ColorPaletteType, "automatic"> {
+  const targetCount = Number.isFinite(args.targetCount) ? Number(args.targetCount) : 0;
+
+  if (targetCount === 2) {
+    return "complementary";
+  }
+
+  if (targetCount === 3) {
+    return "triad";
+  }
+
+  if (targetCount === 4) {
+    return "tetrad";
+  }
+
+  if (targetCount === 6) {
+    return "analogous";
+  }
+
+  const referenceSaturation = Number.isFinite(args.referenceSaturation)
+    ? Number(args.referenceSaturation)
+    : 0;
+  return referenceSaturation <= 42 ? "monochromatic" : "analogous";
+}
+
+function getEffectiveColorPaletteType(
+  args: EffectiveColorPaletteTypeArgs
+): Exclude<ColorPaletteType, "automatic"> {
+  const selectedType = normalizeColorPaletteType(args.selectedColorPaletteType);
+  if (selectedType !== "automatic") {
+    return selectedType;
+  }
+
+  return resolveAutomaticColorPaletteType(args);
+}
+
+function isColorModeMonochromaticScaleActive(args: EffectiveColorPaletteTypeArgs & {
+  paletteBaseMode?: unknown;
+}) {
+  return (
+    args.paletteBaseMode === "color" &&
+    getEffectiveColorPaletteType(args) === "monochromatic"
+  );
+}
+
+function getAllowedPaletteSizesForCurrentMode(args: CurrentModeSizeArgs) {
+  if (args.paletteBaseMode !== "color") {
+    return [3, 6, 9];
+  }
+
+  return getAllowedPaletteSizesForType(args.selectedColorPaletteType);
+}
+
+function getNearestAllowedPaletteSize(nextSize: unknown, allowedSizes: number[]) {
+  const resolvedNextSize = Number.isFinite(nextSize) ? Number(nextSize) : allowedSizes[0] || 0;
+  if (allowedSizes.includes(resolvedNextSize)) {
+    return resolvedNextSize;
+  }
+
+  return [...allowedSizes]
+    .sort((left, right) => {
+      const leftDistance = Math.abs(left - resolvedNextSize);
+      const rightDistance = Math.abs(right - resolvedNextSize);
+
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+
+      return left - right;
+    })[0];
+}
+
+function resolvePaletteSizeForType(type: unknown, nextSize: unknown) {
+  const allowedSizes = getAllowedPaletteSizesForType(type);
+
+  if (allowedSizes.includes(Number(nextSize))) {
+    return Number(nextSize);
+  }
+
+  const defaultSize = getDefaultPaletteSizeForType(type);
+  if (allowedSizes.includes(defaultSize)) {
+    return defaultSize;
+  }
+
+  return getNearestAllowedPaletteSize(nextSize, allowedSizes);
+}
+
+function resolveCurrentModePaletteSize(args: ResolveCurrentModeSizeArgs) {
+  const allowedSizes = getAllowedPaletteSizesForCurrentMode(args);
+  const nextSize = args.selectedColorPaletteType === "monochromatic"
+    ? resolvePaletteSizeForType(args.selectedColorPaletteType, args.paletteSize)
+    : getNearestAllowedPaletteSize(args.paletteSize, allowedSizes);
+
+  return {
+    allowedSizes,
+    nextSize,
+  };
+}
+
+function shouldShowMonochromaticModeControl(args: ControlVisibilityArgs) {
+  return args.paletteBaseMode === "color" &&
+    normalizeColorPaletteType(args.selectedColorPaletteType) === "monochromatic";
+}
+
+function shouldShowAnalogousSeparationControl(args: ControlVisibilityArgs) {
+  return args.paletteBaseMode === "color" &&
+    normalizeColorPaletteType(args.selectedColorPaletteType) === "analogous";
+}
+
+function getPaletteTypeDisplayLabel(type: unknown) {
+  switch (normalizeColorPaletteType(type)) {
+    case "monochromatic":
+      return "Monocromática";
+    case "complementary":
+      return "Complementaria";
+    case "analogous":
+      return "Análoga";
+    case "triad":
+      return "Triada";
+    case "tetrad":
+      return "Tétrada";
+    default:
+      return "Automática";
+  }
+}
 
 function createScoredCandidate(
   palette: string[],
@@ -261,6 +467,21 @@ function getColorModeRegenerationColorForCard(
 }
 
 export const PaletteGeneratorColorModeRuntime = {
+  normalizeColorPaletteType,
+  normalizeMonochromaticGenerationMode,
+  normalizeAnalogousSeparationMode,
+  getAllowedPaletteSizesForType,
+  getDefaultPaletteSizeForType,
+  resolveAutomaticColorPaletteType,
+  getEffectiveColorPaletteType,
+  isColorModeMonochromaticScaleActive,
+  getAllowedPaletteSizesForCurrentMode,
+  getNearestAllowedPaletteSize,
+  resolvePaletteSizeForType,
+  resolveCurrentModePaletteSize,
+  shouldShowMonochromaticModeControl,
+  shouldShowAnalogousSeparationControl,
+  getPaletteTypeDisplayLabel,
   createColorModePaletteCandidate,
   getColorModeRegenerationColorForCard,
 };
