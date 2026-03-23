@@ -27,6 +27,7 @@ declare global {
     PaletteGeneratorControlsRuntime?: any;
     PaletteGeneratorCoreHelpers?: any;
     PaletteGeneratorCoreRuntime?: any;
+    PaletteGeneratorCardsRuntime?: any;
     PaletteGeneratorColorModeHelpers?: any;
     PaletteGeneratorColorModeRuntime?: any;
     PaletteGeneratorTemperatureHelpers?: any;

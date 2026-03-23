@@ -1,4 +1,9 @@
 // Palette generator card naming and palette copy helpers.
+const paletteGeneratorCardsRuntimeForCardNames = window.PaletteGeneratorCardsRuntime || {};
+
+if (typeof paletteGeneratorCardsRuntimeForCardNames.resolveCardRoleState !== "function") {
+  throw new Error("PaletteGeneratorCardsRuntime is required before palette-generator-card-names.js loads.");
+}
 
 const colorUtilsForNames = window.AppColorUtils || {};
 const getColorDistanceForNames =
@@ -97,26 +102,19 @@ function refreshColorCardNames() {
 
     const hex = hexValues[index];
     const displayName = displayNames[index] || getNearestColorName(hex);
-    const baseCardIndex =
-      typeof getColorModeBaseCardIndex === "function"
-        ? getColorModeBaseCardIndex(cards.length)
-        : 0;
-    const complementaryCardIndex =
-      typeof getComplementaryRoleCardIndex === "function"
-        ? getComplementaryRoleCardIndex(cards.length)
-        : -1;
-    const isBaseColorCard = paletteBaseMode === "color" && index === baseCardIndex;
-    const isComplementaryColorCard =
-      (typeof isExplicitComplementaryColorModeSelected === "function" &&
-        isExplicitComplementaryColorModeSelected()) &&
-      index === complementaryCardIndex;
-    const shouldShowReadonlyFixedPin =
-      isBaseColorCard ||
-      (
-        typeof isExplicitComplementaryColorModeSelected === "function" &&
-        isExplicitComplementaryColorModeSelected() &&
-        (isBaseColorCard || isComplementaryColorCard)
-      );
+    const effectiveType =
+      typeof getEffectiveColorPaletteType === "function"
+        ? getEffectiveColorPaletteType(cards.length || paletteSize)
+        : selectedColorPaletteType;
+    const roleState = paletteGeneratorCardsRuntimeForCardNames.resolveCardRoleState({
+      paletteBaseMode,
+      effectiveType,
+      totalCount: cards.length,
+      cardIndex: index,
+    });
+    const isBaseColorCard = roleState.isBaseCard;
+    const isComplementaryColorCard = roleState.isComplementaryCard;
+    const shouldShowReadonlyFixedPin = roleState.hasReadonlyFixedPin;
     const hadReadonlyFixedPin = card.dataset.readonlyFixedPin === "true";
 
     card.classList.toggle("is-base-color", isBaseColorCard);

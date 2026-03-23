@@ -1,4 +1,29 @@
 // Palette generator card actions and card DOM wiring.
+const paletteGeneratorCardsRuntimeForCards = window.PaletteGeneratorCardsRuntime || {};
+
+if (
+  typeof paletteGeneratorCardsRuntimeForCards.isCardPinningAvailable !== "function" ||
+  typeof paletteGeneratorCardsRuntimeForCards.resolveCardRoleState !== "function" ||
+  typeof paletteGeneratorCardsRuntimeForCards.resolvePinnedCardState !== "function"
+) {
+  throw new Error("PaletteGeneratorCardsRuntime is required before palette-generator-cards.js loads.");
+}
+
+function getCardRoleState(card) {
+  const cards = Array.from(getColorCards());
+  const cardIndex = cards.indexOf(card);
+  const effectiveType =
+    typeof getEffectiveColorPaletteType === "function"
+      ? getEffectiveColorPaletteType(cards.length || paletteSize)
+      : selectedColorPaletteType;
+
+  return paletteGeneratorCardsRuntimeForCards.resolveCardRoleState({
+    paletteBaseMode,
+    effectiveType,
+    totalCount: cards.length,
+    cardIndex,
+  });
+}
 
 function persistCurrentPaletteSnapshot(saveHistoryEntry = true) {
   syncCurrentPaletteFromDom();
@@ -34,56 +59,23 @@ function updateCardPinButtonState(card) {
 }
 
 function isLockedColorModeBaseCard(card) {
-  if (paletteBaseMode !== "color") {
-    return false;
-  }
-
-  const cards = Array.from(getColorCards());
-  const baseCardIndex =
-    typeof getColorModeBaseCardIndex === "function"
-      ? getColorModeBaseCardIndex(cards.length)
-      : 0;
-
-  return cards.indexOf(card) === baseCardIndex;
+  return getCardRoleState(card).isBaseCard;
 }
 
 function isCardPinningAvailable() {
-  if (paletteBaseMode === "color") {
-    return false;
-  }
-
-  return true;
+  return paletteGeneratorCardsRuntimeForCards.isCardPinningAvailable(paletteBaseMode);
 }
 
 function isLockedComplementaryRoleCard(card) {
-  if (
-    paletteBaseMode !== "color" ||
-    !card ||
-    (typeof isExplicitComplementaryColorModeSelected === "function" &&
-      !isExplicitComplementaryColorModeSelected())
-  ) {
-    return false;
-  }
-
-  const cards = Array.from(getColorCards());
-  const complementaryCardIndex =
-    typeof getComplementaryRoleCardIndex === "function"
-      ? getComplementaryRoleCardIndex(cards.length)
-      : -1;
-
-  return cards.indexOf(card) === complementaryCardIndex;
+  return !!card && getCardRoleState(card).isComplementaryCard;
 }
 
 function shouldShowLockedColorModeBasePin(card) {
-  return (
-    !!card &&
-    paletteBaseMode === "color" &&
-    isLockedColorModeBaseCard(card)
-  );
+  return !!card && getCardRoleState(card).isBaseCard;
 }
 
 function shouldShowLockedComplementaryPin(card) {
-  return isLockedComplementaryRoleCard(card);
+  return !!card && getCardRoleState(card).isComplementaryCard;
 }
 
 function clearUnavailablePinnedCards() {
@@ -160,11 +152,11 @@ function setCardPinnedState(card, isPinned) {
     return;
   }
 
-  const resolvedPinnedState = isLockedColorModeBaseCard(card)
-    ? true
-    : isLockedComplementaryRoleCard(card)
-      ? true
-    : (isCardPinningAvailable() && !!isPinned);
+  const roleState = getCardRoleState(card);
+  const resolvedPinnedState = paletteGeneratorCardsRuntimeForCards.resolvePinnedCardState(
+    isPinned,
+    roleState
+  );
   card.dataset.pinned = resolvedPinnedState ? "true" : "false";
   card.classList.toggle("is-pinned", resolvedPinnedState);
   updateCardPinButtonState(card);

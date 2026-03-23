@@ -13,6 +13,7 @@ import "./apps/palette-generator/history-runtime";
 import "./apps/palette-generator/controls-runtime";
 import "./apps/palette-generator/core-helpers";
 import "./apps/palette-generator/core-runtime";
+import "./apps/palette-generator/cards-runtime";
 import "./apps/palette-generator/color-mode-helpers";
 import "./apps/palette-generator/color-mode-runtime";
 import "./apps/palette-generator/temperature-helpers";
