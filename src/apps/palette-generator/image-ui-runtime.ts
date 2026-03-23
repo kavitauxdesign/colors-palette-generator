@@ -88,6 +88,19 @@ type RegeneratePinnedPaletteSlotsArgs = {
   persistCurrentPaletteSnapshot: () => void;
 };
 
+type ClearLeakedColorModeFixedPinsArgs = {
+  cards?: Element[];
+  setCardPinnedState?: ((card: Element, isPinned: boolean) => void) | null;
+};
+
+type ResetPaletteBeforeColorModeRegenerationArgs = {
+  cards?: Element[];
+  refreshDeleteButtonsVisibility?: (() => void) | null;
+  syncCurrentPaletteFromDom?: (() => void) | null;
+  syncPaletteGeneratorStoreCurrentPalette?: ((colors: string[], metadata?: Record<string, unknown>) => void) | null;
+  capturePaletteAdjustmentBase?: ((colors: string[]) => void) | null;
+};
+
 const ALLOWED_PALETTE_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -203,6 +216,14 @@ function getOpenPaletteImageDropzoneState() {
   return {
     isReplaceImagePending: true,
     isPaletteImageDropzoneVisible: true,
+  };
+}
+
+function getPaletteBasePanelVisibilityState(paletteBaseMode: PaletteBaseMode) {
+  return {
+    showColorPanel: paletteBaseMode === "color",
+    showTemperaturePanel: paletteBaseMode === "temperature",
+    showImagePanel: paletteBaseMode === "image",
   };
 }
 
@@ -418,10 +439,66 @@ function regeneratePinnedPaletteSlots(args: RegeneratePinnedPaletteSlotsArgs) {
   return hasChanged;
 }
 
+function clearLeakedColorModeFixedPins(args: ClearLeakedColorModeFixedPinsArgs) {
+  const cards = Array.isArray(args.cards) ? args.cards : [];
+
+  cards.forEach((card) => {
+    const htmlCard = card as HTMLElement;
+    htmlCard.dataset.readonlyFixedPin = "false";
+    htmlCard.classList.remove("is-base-color", "is-complementary-color");
+
+    const colorBaseIndicator = htmlCard.querySelector(".color-base-indicator") as HTMLElement | null;
+    if (colorBaseIndicator) {
+      colorBaseIndicator.hidden = true;
+    }
+
+    const complementaryIndicator = htmlCard.querySelector(
+      ".color-complementary-indicator"
+    ) as HTMLElement | null;
+    if (complementaryIndicator) {
+      complementaryIndicator.hidden = true;
+    }
+
+    if (typeof args.setCardPinnedState === "function") {
+      args.setCardPinnedState(htmlCard, false);
+    }
+  });
+}
+
+function resetPaletteBeforeColorModeRegeneration(
+  args: ResetPaletteBeforeColorModeRegenerationArgs
+) {
+  const cards = Array.isArray(args.cards) ? args.cards : [];
+  if (cards.length === 0) {
+    return false;
+  }
+
+  cards.forEach((card) => card.remove());
+
+  if (typeof args.refreshDeleteButtonsVisibility === "function") {
+    args.refreshDeleteButtonsVisibility();
+  }
+
+  if (typeof args.syncCurrentPaletteFromDom === "function") {
+    args.syncCurrentPaletteFromDom();
+  } else if (typeof args.syncPaletteGeneratorStoreCurrentPalette === "function") {
+    args.syncPaletteGeneratorStoreCurrentPalette([], {
+      scope: "current-palette-reset",
+    });
+  }
+
+  if (typeof args.capturePaletteAdjustmentBase === "function") {
+    args.capturePaletteAdjustmentBase([]);
+  }
+
+  return true;
+}
+
 export const PaletteGeneratorImageUiRuntime = {
   normalizePaletteBaseMode,
   getFirstPaletteHexForColorBaseAdoption,
   getPaletteBaseModeTransitionPlan,
+  getPaletteBasePanelVisibilityState,
   isAcceptedPaletteImageFile,
   createUploadedBaseImage,
   createPaletteImageFileLoadState,
@@ -431,6 +508,8 @@ export const PaletteGeneratorImageUiRuntime = {
   refreshImageDerivedControls,
   syncImagePaletteFromSource,
   regeneratePinnedPaletteSlots,
+  clearLeakedColorModeFixedPins,
+  resetPaletteBeforeColorModeRegeneration,
 };
 
 window.PaletteGeneratorImageUiRuntime = PaletteGeneratorImageUiRuntime;

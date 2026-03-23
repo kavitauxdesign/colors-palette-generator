@@ -48,6 +48,16 @@ type PaletteSizeButtonStateArgs = {
   availableImageColors: number;
 };
 
+type PaletteActionButtonsAvailabilityArgs = {
+  paletteBaseMode: PaletteBaseMode;
+  mutableSlotCount: number;
+  hasValidSelectedPaletteBaseColor: boolean;
+  isMonochromaticColorScale: boolean;
+  hasImageSource: boolean;
+  availableImageColors: number;
+  paletteSize: number;
+};
+
 function getPaletteModeActionVisibility(args: ActionVisibilityArgs) {
   const isImageMode = args.paletteBaseMode === "image";
   const isColorMode = args.paletteBaseMode === "color";
@@ -215,6 +225,34 @@ function getPaletteSizeButtonState(args: PaletteSizeButtonStateArgs) {
   };
 }
 
+function getPaletteActionButtonsAvailabilityState(
+  args: PaletteActionButtonsAvailabilityArgs
+) {
+  return {
+    regenerate: getPaletteRegenerateButtonState({
+      paletteBaseMode: args.paletteBaseMode,
+      mutableSlotCount: args.mutableSlotCount,
+      hasValidSelectedPaletteBaseColor: args.hasValidSelectedPaletteBaseColor,
+      isMonochromaticColorScale: args.isMonochromaticColorScale,
+      hasImageSource: args.hasImageSource,
+      availableImageColors: args.availableImageColors,
+    }),
+    surprise: getPaletteSurpriseButtonState({
+      paletteBaseMode: args.paletteBaseMode,
+      mutableSlotCount: args.mutableSlotCount,
+      hasImageSource: args.hasImageSource,
+      availableImageColors: args.availableImageColors,
+    }),
+    inspiration: getPaletteInspirationButtonState({
+      paletteBaseMode: args.paletteBaseMode,
+      mutableSlotCount: args.mutableSlotCount,
+      hasImageSource: args.hasImageSource,
+      availableImageColors: args.availableImageColors,
+      paletteSize: args.paletteSize,
+    }),
+  };
+}
+
 export const PaletteGeneratorImageUiHelpers = {
   getPaletteModeActionVisibility,
   getPaletteRegenerateButtonState,
@@ -222,6 +260,7 @@ export const PaletteGeneratorImageUiHelpers = {
   hasInsufficientFreeSlotsForImageInspiration,
   getPaletteInspirationButtonState,
   getPaletteSizeButtonState,
+  getPaletteActionButtonsAvailabilityState,
 };
 
 window.PaletteGeneratorImageUiHelpers = PaletteGeneratorImageUiHelpers;
