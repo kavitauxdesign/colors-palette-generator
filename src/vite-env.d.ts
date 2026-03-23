@@ -19,6 +19,7 @@ declare global {
     HexToFilterCore?: any;
     HexToFilterApp?: any;
     PaletteGeneratorApp?: any;
+    PaletteGeneratorLegacyGlobals?: any;
     PaletteGeneratorStore?: any;
     PaletteGeneratorStateSelectors?: any;
     PaletteGeneratorStateActions?: any;

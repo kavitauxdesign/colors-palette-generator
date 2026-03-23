@@ -6,11 +6,9 @@ import paletteGeneratorImagePaletteScript from "../../js/apps/palette-generator/
 import paletteGeneratorTemperatureScript from "../../js/apps/palette-generator/palette-generator-temperature.js?raw";
 import paletteGeneratorColorModeScript from "../../js/apps/palette-generator/palette-generator-color-mode.js?raw";
 import paletteGeneratorImageUiScript from "../../js/apps/palette-generator/palette-generator-image-ui.js?raw";
-import paletteGeneratorControlsScript from "../../js/apps/palette-generator/palette-generator-controls.js?raw";
 import paletteGeneratorCardHelpersScript from "../../js/apps/palette-generator/palette-generator-card-helpers.js?raw";
 import paletteGeneratorCardNamesScript from "../../js/apps/palette-generator/palette-generator-card-names.js?raw";
 import paletteGeneratorCardsScript from "../../js/apps/palette-generator/palette-generator-cards.js?raw";
-import paletteGeneratorHistoryScript from "../../js/apps/palette-generator/palette-generator-history.js?raw";
 
 export const paletteGeneratorLegacyScripts = [
   {
@@ -46,10 +44,6 @@ export const paletteGeneratorLegacyScripts = [
     code: paletteGeneratorImageUiScript,
   },
   {
-    id: "palette-generator-controls.js",
-    code: paletteGeneratorControlsScript,
-  },
-  {
     id: "palette-generator-card-helpers.js",
     code: paletteGeneratorCardHelpersScript,
   },
@@ -60,10 +54,6 @@ export const paletteGeneratorLegacyScripts = [
   {
     id: "palette-generator-cards.js",
     code: paletteGeneratorCardsScript,
-  },
-  {
-    id: "palette-generator-history.js",
-    code: paletteGeneratorHistoryScript,
   },
 ];
 

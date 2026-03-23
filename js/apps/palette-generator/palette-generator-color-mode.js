@@ -25,6 +25,17 @@ let colorPaletteVariantIndex = Number.isFinite(
 )
   ? paletteGeneratorStoreSnapshotForColorMode.colorPaletteVariantIndex
   : 0;
+if (window.PaletteGeneratorLegacyGlobals) {
+  Object.defineProperty(window.PaletteGeneratorLegacyGlobals, "colorPaletteVariantIndex", {
+    get() {
+      return colorPaletteVariantIndex;
+    },
+    set(value) {
+      colorPaletteVariantIndex = Number.isFinite(value) ? Number(value) : 0;
+    },
+    configurable: true,
+  });
+}
 syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
   scope: "color-variant",
 });

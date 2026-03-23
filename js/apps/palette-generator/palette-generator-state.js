@@ -153,6 +153,170 @@ let paletteAdjustmentBaseSettings = {
 let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;
 let activeEditOriginalColor = "#000000";
+const paletteGeneratorLegacyGlobals = window.PaletteGeneratorLegacyGlobals || {};
+
+Object.defineProperties(paletteGeneratorLegacyGlobals, {
+  paletteSize: {
+    get() {
+      return paletteSize;
+    },
+    set(value) {
+      paletteSize = value;
+    },
+    configurable: true,
+  },
+  paletteHistory: {
+    get() {
+      return paletteHistory;
+    },
+    set(value) {
+      paletteHistory = Array.isArray(value) ? [...value] : [];
+    },
+    configurable: true,
+  },
+  paletteHistoryIndex: {
+    get() {
+      return paletteHistoryIndex;
+    },
+    set(value) {
+      paletteHistoryIndex = Number.isFinite(value) ? Number(value) : -1;
+    },
+    configurable: true,
+  },
+  paletteBaseMode: {
+    get() {
+      return paletteBaseMode;
+    },
+    set(value) {
+      paletteBaseMode = value;
+    },
+    configurable: true,
+  },
+  uploadedBaseImage: {
+    get() {
+      return uploadedBaseImage;
+    },
+    set(value) {
+      uploadedBaseImage = value;
+    },
+    configurable: true,
+  },
+  prioritizeImageDominantColors: {
+    get() {
+      return prioritizeImageDominantColors;
+    },
+    set(value) {
+      prioritizeImageDominantColors = !!value;
+    },
+    configurable: true,
+  },
+  imagePaletteVariantIndex: {
+    get() {
+      return imagePaletteVariantIndex;
+    },
+    set(value) {
+      imagePaletteVariantIndex = Number.isFinite(value) ? Number(value) : 0;
+    },
+    configurable: true,
+  },
+  imageInspirationVariantIndex: {
+    get() {
+      return imageInspirationVariantIndex;
+    },
+    set(value) {
+      imageInspirationVariantIndex = Number.isFinite(value) ? Number(value) : 0;
+    },
+    configurable: true,
+  },
+  selectedPaletteBaseColor: {
+    get() {
+      return selectedPaletteBaseColor;
+    },
+    set(value) {
+      selectedPaletteBaseColor = value;
+    },
+    configurable: true,
+  },
+  selectedColorPaletteType: {
+    get() {
+      return selectedColorPaletteType;
+    },
+    set(value) {
+      selectedColorPaletteType = value;
+    },
+    configurable: true,
+  },
+  selectedMonochromaticGenerationMode: {
+    get() {
+      return selectedMonochromaticGenerationMode;
+    },
+    set(value) {
+      selectedMonochromaticGenerationMode = value;
+    },
+    configurable: true,
+  },
+  selectedAnalogousSeparationMode: {
+    get() {
+      return selectedAnalogousSeparationMode;
+    },
+    set(value) {
+      selectedAnalogousSeparationMode = value;
+    },
+    configurable: true,
+  },
+  resolvedAutomaticColorPaletteType: {
+    get() {
+      return resolvedAutomaticColorPaletteType;
+    },
+    set(value) {
+      resolvedAutomaticColorPaletteType = value;
+    },
+    configurable: true,
+  },
+  temperature: {
+    get() {
+      return temperature;
+    },
+    set(value) {
+      temperature = value;
+    },
+    configurable: true,
+  },
+  currentPalette: {
+    get() {
+      return currentPalette;
+    },
+    set(value) {
+      currentPalette = Array.isArray(value) ? [...value] : [];
+    },
+    configurable: true,
+  },
+  paletteAdjustmentBase: {
+    get() {
+      return paletteAdjustmentBase;
+    },
+    set(value) {
+      paletteAdjustmentBase = Array.isArray(value) ? [...value] : [];
+    },
+    configurable: true,
+  },
+  paletteAdjustmentBaseSettings: {
+    get() {
+      return paletteAdjustmentBaseSettings;
+    },
+    set(value) {
+      paletteAdjustmentBaseSettings = value && typeof value === "object"
+        ? { ...value }
+        : {
+            brightness: DEFAULT_BRIGHTNESS,
+            saturation: DEFAULT_SATURATION,
+          };
+    },
+    configurable: true,
+  },
+});
+
+window.PaletteGeneratorLegacyGlobals = paletteGeneratorLegacyGlobals;
 
 function applyPaletteGeneratorLegacyRuntimeState(
   nextState = null,

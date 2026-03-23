@@ -2,6 +2,8 @@ import AppRegistry from "../../shared/services/registry";
 import APP_CONSTANTS from "../../shared/constants";
 import loadLegacyScripts from "../../legacy/load-legacy-scripts";
 import paletteGeneratorLegacyScripts from "../../legacy/palette-generator-scripts";
+import initializePaletteGeneratorControls from "./controls";
+import initializePaletteGeneratorHistory from "./history";
 
 type PaletteGeneratorRuntimeWindow = Window &
   typeof globalThis & {
@@ -37,6 +39,8 @@ function getPaletteGeneratorStoreState() {
 
 export function loadPaletteGeneratorLegacyScripts() {
   loadLegacyScripts(paletteGeneratorLegacyScripts);
+  initializePaletteGeneratorControls();
+  initializePaletteGeneratorHistory();
 }
 
 export function registerPaletteGeneratorApp() {
