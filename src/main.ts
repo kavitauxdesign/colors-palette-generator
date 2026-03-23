@@ -14,6 +14,7 @@ import "./apps/palette-generator/image-palette-helpers";
 import "./apps/palette-generator/image-palette-stateful";
 import "./apps/palette-generator/image-palette-runtime";
 import "./apps/palette-generator/image-ui-helpers";
+import "./apps/palette-generator/image-ui-runtime";
 
 import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";

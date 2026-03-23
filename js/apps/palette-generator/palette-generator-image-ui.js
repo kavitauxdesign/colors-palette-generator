@@ -1,4 +1,5 @@
 const paletteGeneratorImageUiHelpers = window.PaletteGeneratorImageUiHelpers || {};
+const paletteGeneratorImageUiRuntime = window.PaletteGeneratorImageUiRuntime || {};
 if (
   typeof paletteGeneratorImageUiHelpers.getPaletteModeActionVisibility !== "function" ||
   typeof paletteGeneratorImageUiHelpers.getPaletteRegenerateButtonState !== "function" ||
@@ -8,6 +9,16 @@ if (
   typeof paletteGeneratorImageUiHelpers.getPaletteSizeButtonState !== "function"
 ) {
   throw new Error("PaletteGeneratorImageUiHelpers are required before palette-generator-image-ui.js loads.");
+}
+if (
+  typeof paletteGeneratorImageUiRuntime.normalizePaletteBaseMode !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.getFirstPaletteHexForColorBaseAdoption !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.getPaletteBaseModeTransitionPlan !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.isAcceptedPaletteImageFile !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.createUploadedBaseImage !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.getNextImageVariantState !== "function"
+) {
+  throw new Error("PaletteGeneratorImageUiRuntime is required before palette-generator-image-ui.js loads.");
 }
 
 function setPaletteAdjustPanelOpen(shouldOpen) {
@@ -396,12 +407,17 @@ async function syncImagePaletteFromSource(options = {}) {
       return;
     }
 
-    if (options.resetVariant) {
-      imagePaletteVariantIndex = 0;
-      imageInspirationVariantIndex = 0;
+    const nextVariantState = paletteGeneratorImageUiRuntime.getNextImageVariantState({
+      imagePaletteVariantIndex,
+      imageInspirationVariantIndex,
+      resetVariant: options.resetVariant,
+      advanceVariant: options.advanceVariant,
+    });
+    imagePaletteVariantIndex = nextVariantState.imagePaletteVariantIndex;
+    imageInspirationVariantIndex = nextVariantState.imageInspirationVariantIndex;
+
+    if (nextVariantState.shouldClearRecentInspiredPalettes) {
       clearRecentInspiredPalettes();
-    } else if (options.advanceVariant) {
-      imagePaletteVariantIndex += 1;
     }
 
     syncPaletteGeneratorStoreState(
@@ -431,25 +447,14 @@ async function syncImagePaletteFromSource(options = {}) {
 // PALETTE BASE
 
 function getFirstPaletteHexForColorBaseAdoption() {
-  const normalizeHexColor = window.AppColorUtils?.normalizeHexColor;
-  const isValidHexColor = window.AppColorUtils?.isValidHexColor;
-
-  const paletteCandidate = Array.isArray(currentPalette) && currentPalette.length > 0
-    ? normalizeHexColor?.(currentPalette[0]) || currentPalette[0]
-    : "";
-  if (typeof isValidHexColor === "function" && isValidHexColor(paletteCandidate)) {
-    return paletteCandidate;
-  }
-
-  if (typeof getCurrentPaletteCardEntries === "function") {
-    const firstEntry = getCurrentPaletteCardEntries()[0];
-    const entryHex = normalizeHexColor?.(firstEntry?.hex || "") || firstEntry?.hex || "";
-    if (typeof isValidHexColor === "function" && isValidHexColor(entryHex)) {
-      return entryHex;
-    }
-  }
-
-  return null;
+  const firstEntryHex =
+    typeof getCurrentPaletteCardEntries === "function"
+      ? getCurrentPaletteCardEntries()[0]?.hex || ""
+      : "";
+  return paletteGeneratorImageUiRuntime.getFirstPaletteHexForColorBaseAdoption(
+    currentPalette,
+    firstEntryHex
+  );
 }
 
 function clearLeakedColorModeFixedPins() {
@@ -475,14 +480,14 @@ function clearLeakedColorModeFixedPins() {
 
 function setPaletteBaseMode(nextMode) {
   const previousBaseMode = paletteBaseMode;
-
-  if (nextMode === "image") {
-    paletteBaseMode = "image";
-  } else if (nextMode === "temperature") {
-    paletteBaseMode = "temperature";
-  } else {
-    paletteBaseMode = "color";
-  }
+  const transitionPlan = paletteGeneratorImageUiRuntime.getPaletteBaseModeTransitionPlan({
+    currentMode: previousBaseMode,
+    nextMode,
+    uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
+    adoptedBaseColor:
+      previousBaseMode === "image" ? getFirstPaletteHexForColorBaseAdoption() : null,
+  });
+  paletteBaseMode = transitionPlan.nextMode;
 
   syncPaletteGeneratorStoreState(
     {
@@ -493,7 +498,7 @@ function setPaletteBaseMode(nextMode) {
     }
   );
 
-  if (paletteBaseMode !== "image") {
+  if (transitionPlan.shouldClearImageExtractionFeedback) {
     setPaletteImageExtractionFeedback(false);
   }
 
@@ -519,7 +524,7 @@ function setPaletteBaseMode(nextMode) {
     imageBasePanel.hidden = !showImagePanel;
   }
 
-  if (previousBaseMode === "color" && paletteBaseMode !== "color") {
+  if (transitionPlan.shouldClearLeakedColorModeFixedPins) {
     clearLeakedColorModeFixedPins();
   }
 
@@ -542,64 +547,52 @@ function setPaletteBaseMode(nextMode) {
     updateAddColorButtonState();
   }
 
-  if (paletteBaseMode === "image" && uploadedBaseImage?.dataUrl) {
+  if (transitionPlan.shouldRefreshImageDerivedControls) {
     void refreshImageDerivedControls();
     return;
   }
 
-  if (paletteBaseMode === "color") {
-    let shouldRefreshMonochromaticPalette = false;
-
+  if (transitionPlan.colorModeAdoption.shouldSyncColorModeControls) {
     if (
-      previousBaseMode === "image" &&
+      transitionPlan.colorModeAdoption.adoptedBaseColor &&
       typeof setSelectedPaletteBaseColor === "function"
     ) {
-      const adoptedBaseColor = getFirstPaletteHexForColorBaseAdoption();
-      if (adoptedBaseColor) {
-        setSelectedPaletteBaseColor(adoptedBaseColor, {
-          generate: false,
-          publish: true,
-          syncTextInput: true,
-        });
-        shouldRefreshMonochromaticPalette = true;
-      }
+      setSelectedPaletteBaseColor(transitionPlan.colorModeAdoption.adoptedBaseColor, {
+        generate: false,
+        publish: true,
+        syncTextInput: true,
+      });
     }
 
     if (
-      previousBaseMode === "image" &&
+      transitionPlan.colorModeAdoption.nextColorPaletteType &&
       typeof setSelectedColorPaletteType === "function"
     ) {
-      setSelectedColorPaletteType("monochromatic", {
+      setSelectedColorPaletteType(transitionPlan.colorModeAdoption.nextColorPaletteType, {
         generate: false,
       });
-      shouldRefreshMonochromaticPalette = true;
     }
 
     if (
-      previousBaseMode === "image" &&
+      transitionPlan.colorModeAdoption.nextMonochromaticGenerationMode &&
       typeof setSelectedMonochromaticGenerationMode === "function"
     ) {
       setSelectedMonochromaticGenerationMode(
-        DEFAULT_MONOCHROMATIC_GENERATION_MODE,
+        transitionPlan.colorModeAdoption.nextMonochromaticGenerationMode,
         {
           generate: false,
         }
       );
-      shouldRefreshMonochromaticPalette = true;
     }
 
-    if (
-      previousBaseMode === "image" &&
-      typeof colorPaletteVariantIndex !== "undefined"
-    ) {
+    if (transitionPlan.colorModeAdoption.resetColorVariantIndex) {
       colorPaletteVariantIndex = 0;
       syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
         scope: "color-variant",
       });
-      shouldRefreshMonochromaticPalette = true;
     }
 
-    if (typeof clearUnavailablePinnedCards === "function") {
+    if (transitionPlan.colorModeAdoption.shouldClearUnavailablePinnedCards && typeof clearUnavailablePinnedCards === "function") {
       clearUnavailablePinnedCards();
     }
 
@@ -607,7 +600,7 @@ function setPaletteBaseMode(nextMode) {
     syncColorModeSizeSelection();
 
     if (
-      shouldRefreshMonochromaticPalette &&
+      transitionPlan.colorModeAdoption.shouldRefreshMonochromaticPalette &&
       typeof generatePalette === "function"
     ) {
       void generatePalette({
@@ -620,15 +613,7 @@ function setPaletteBaseMode(nextMode) {
 }
 
 function isAcceptedPaletteImageFile(file) {
-  if (!(file instanceof File)) {
-    return false;
-  }
-
-  const normalizedName = file.name.trim().toLowerCase();
-  return (
-    allowedPaletteImageTypes.has(file.type) ||
-    allowedPaletteImageExtensions.some((extension) => normalizedName.endsWith(extension))
-  );
+  return paletteGeneratorImageUiRuntime.isAcceptedPaletteImageFile(file);
 }
 
 function renderPaletteImagePreview() {
@@ -732,12 +717,10 @@ function handlePaletteImageFile(file) {
 
   const reader = new FileReader();
   reader.addEventListener("load", () => {
-    uploadedBaseImage = {
-      name: file.name,
-      type: file.type,
-      dataUrl: String(reader.result || ""),
-      analysisCache: null,
-    };
+    uploadedBaseImage = paletteGeneratorImageUiRuntime.createUploadedBaseImage(
+      file,
+      reader.result
+    );
     syncPaletteGeneratorStoreState(
       {
         uploadedBaseImage,
