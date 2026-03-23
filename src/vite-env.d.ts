@@ -20,6 +20,8 @@ declare global {
     HexToFilterApp?: any;
     PaletteGeneratorApp?: any;
     PaletteGeneratorStore?: any;
+    PaletteGeneratorStateSelectors?: any;
+    PaletteGeneratorStateActions?: any;
     PaletteGeneratorCoreHelpers?: any;
     PaletteGeneratorTemperatureHelpers?: any;
     PaletteGeneratorImageAnalysisHelpers?: any;
