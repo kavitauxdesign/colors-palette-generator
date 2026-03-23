@@ -43,7 +43,9 @@ function applyGeneratorSettings(settings, fallbackSize) {
   setPaletteSize(nextSize);
 
   if (typeof setPaletteBaseMode === "function" && settings?.baseMode) {
-    setPaletteBaseMode(settings.baseMode);
+    setPaletteBaseMode(settings.baseMode, {
+      suppressAutomaticColorModeRefresh: true,
+    });
   }
 
   if (typeof settings?.prioritizeImageDominantColors === "boolean") {

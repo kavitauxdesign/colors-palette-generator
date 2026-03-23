@@ -96,8 +96,15 @@ const COLOR_NAME_REFERENCES = Array.isArray(window.AppColorNames)
   : [];
 const paletteGeneratorStore = window.PaletteGeneratorStore || null;
 const paletteGeneratorStateActions = window.PaletteGeneratorStateActions || {};
+const paletteGeneratorStateRuntime = window.PaletteGeneratorStateRuntime || {};
 if (typeof paletteGeneratorStateActions.createLegacyStoreBindings !== "function") {
   throw new Error("PaletteGeneratorStateActions.createLegacyStoreBindings is required before palette-generator-state.js loads.");
+}
+if (
+  typeof paletteGeneratorStateRuntime.normalizeLegacyRuntimeState !== "function" ||
+  typeof paletteGeneratorStateRuntime.buildLegacySyncRuntimeState !== "function"
+) {
+  throw new Error("PaletteGeneratorStateRuntime is required before palette-generator-state.js loads.");
 }
 const paletteGeneratorStateBindings =
   paletteGeneratorStateActions.createLegacyStoreBindings({
@@ -152,56 +159,30 @@ function applyPaletteGeneratorLegacyRuntimeState(
   options = {}
 ) {
   const shouldSyncAdjustmentBaseSettings = !!options.syncAdjustmentBaseSettings;
+  const normalizedState = paletteGeneratorStateRuntime.normalizeLegacyRuntimeState({
+    nextState,
+    prioritizeImageDominantColorsFallback: paletteImageDominantToggle?.checked ?? true,
+  });
 
-  paletteSize = Number.isFinite(nextState?.paletteSize)
-    ? nextState.paletteSize
-    : DEFAULT_PALETTE_SIZE;
-  paletteHistory = Array.isArray(nextState?.paletteHistory)
-    ? [...nextState.paletteHistory]
-    : [];
-  paletteHistoryIndex = Number.isFinite(nextState?.paletteHistoryIndex)
-    ? nextState.paletteHistoryIndex
-    : -1;
-  paletteBaseMode = nextState?.paletteBaseMode || DEFAULT_PALETTE_BASE_MODE;
-  uploadedBaseImage = nextState?.uploadedBaseImage || null;
-  prioritizeImageDominantColors =
-    typeof nextState?.prioritizeImageDominantColors === "boolean"
-      ? nextState.prioritizeImageDominantColors
-      : (paletteImageDominantToggle?.checked ?? true);
-  imagePaletteVariantIndex = Number.isFinite(nextState?.imagePaletteVariantIndex)
-    ? nextState.imagePaletteVariantIndex
-    : 0;
-  imageInspirationVariantIndex = Number.isFinite(nextState?.imageInspirationVariantIndex)
-    ? nextState.imageInspirationVariantIndex
-    : 0;
-  selectedPaletteBaseColor = nextState?.selectedPaletteBaseColor || DEFAULT_COLOR_BASE;
-  selectedColorPaletteType =
-    nextState?.selectedColorPaletteType || DEFAULT_COLOR_PALETTE_TYPE;
-  selectedMonochromaticGenerationMode =
-    nextState?.selectedMonochromaticGenerationMode ||
-    DEFAULT_MONOCHROMATIC_GENERATION_MODE;
-  selectedAnalogousSeparationMode =
-    nextState?.selectedAnalogousSeparationMode ||
-    DEFAULT_ANALOGOUS_SEPARATION_MODE;
-  resolvedAutomaticColorPaletteType =
-    nextState?.resolvedAutomaticColorPaletteType || "triad";
-  temperature = nextState?.temperature
-    ? {
-        warm: !!nextState.temperature.warm,
-        cool: !!nextState.temperature.cool,
-      }
-    : {
-        warm: !!DEFAULT_TEMPERATURE.warm,
-        cool: !!DEFAULT_TEMPERATURE.cool,
-      };
-  currentPalette = Array.isArray(nextState?.currentPalette)
-    ? [...nextState.currentPalette]
-    : [];
+  paletteSize = normalizedState.paletteSize;
+  paletteHistory = [...normalizedState.paletteHistory];
+  paletteHistoryIndex = normalizedState.paletteHistoryIndex;
+  paletteBaseMode = normalizedState.paletteBaseMode;
+  uploadedBaseImage = normalizedState.uploadedBaseImage;
+  prioritizeImageDominantColors = normalizedState.prioritizeImageDominantColors;
+  imagePaletteVariantIndex = normalizedState.imagePaletteVariantIndex;
+  imageInspirationVariantIndex = normalizedState.imageInspirationVariantIndex;
+  selectedPaletteBaseColor = normalizedState.selectedPaletteBaseColor;
+  selectedColorPaletteType = normalizedState.selectedColorPaletteType;
+  selectedMonochromaticGenerationMode = normalizedState.selectedMonochromaticGenerationMode;
+  selectedAnalogousSeparationMode = normalizedState.selectedAnalogousSeparationMode;
+  resolvedAutomaticColorPaletteType = normalizedState.resolvedAutomaticColorPaletteType;
+  temperature = normalizedState.temperature;
+  currentPalette = [...normalizedState.currentPalette];
 
   if (shouldSyncAdjustmentBaseSettings) {
-    paletteAdjustmentBaseSettings = nextState?.paletteAdjustmentBaseSettings || {
-      brightness: DEFAULT_BRIGHTNESS,
-      saturation: DEFAULT_SATURATION,
+    paletteAdjustmentBaseSettings = {
+      ...normalizedState.paletteAdjustmentBaseSettings,
     };
   }
 }
@@ -264,7 +245,7 @@ function syncPaletteGeneratorStoreColorVariantIndex(variantIndex = 0, metadata =
 function syncPaletteGeneratorStoreWithLegacyState(partial = {}, metadata = {}) {
   return (
     paletteGeneratorStateBindings?.syncWithLegacyRuntime?.(
-      {
+      paletteGeneratorStateRuntime.buildLegacySyncRuntimeState({
         paletteSize,
         paletteHistory,
         paletteHistoryIndex,
@@ -282,7 +263,7 @@ function syncPaletteGeneratorStoreWithLegacyState(partial = {}, metadata = {}) {
         currentPalette,
         colorPaletteVariantIndex:
           typeof colorPaletteVariantIndex !== "undefined" ? colorPaletteVariantIndex : undefined,
-      },
+      }),
       paletteAdjustmentBaseSettings,
       partial,
       metadata

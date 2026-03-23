@@ -504,7 +504,7 @@ function resetPaletteBeforeColorModeRegeneration() {
   }
 }
 
-function setPaletteBaseMode(nextMode) {
+function setPaletteBaseMode(nextMode, options = {}) {
   const previousBaseMode = paletteBaseMode;
   const transitionPlan = paletteGeneratorImageUiRuntime.getPaletteBaseModeTransitionPlan({
     currentMode: previousBaseMode,
@@ -627,6 +627,7 @@ function setPaletteBaseMode(nextMode) {
 
     if (
       transitionPlan.colorModeAdoption.shouldRefreshMonochromaticPalette &&
+      options.suppressAutomaticColorModeRefresh !== true &&
       typeof generatePalette === "function"
     ) {
       resetPaletteBeforeColorModeRegeneration();
