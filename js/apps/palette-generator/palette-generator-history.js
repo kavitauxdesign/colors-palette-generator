@@ -186,7 +186,8 @@ function renderHistory() {
     const editHistoryBtn = createCardActionButton("edit", "Abrir en el generador");
     const editHistoryIcon = editHistoryBtn.querySelector(".action-icon");
     if (editHistoryIcon) {
-      editHistoryIcon.src = "assets/magic-wand.svg";
+      editHistoryIcon.src =
+        window.AppAssetUrls?.icons?.magicWand || "assets/magic-wand.svg";
       editHistoryIcon.alt = "icono de abrir en el generador";
     }
     const copyHistoryBtn = createCardActionButton("copy", HISTORY_COPY_TOOLTIP_DEFAULT);

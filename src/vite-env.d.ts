@@ -21,6 +21,7 @@ declare global {
     PaletteGeneratorApp?: any;
     PaletteGeneratorStore?: any;
     PaletteGeneratorCoreHelpers?: any;
+    AppAssetUrls?: any;
     Color?: any;
     copyTextToClipboard?: (text: string) => Promise<void>;
   }

@@ -387,15 +387,15 @@ function createCardActionButton(actionName, tooltipText) {
   button.setAttribute("aria-label", actionAriaLabelMap[actionName] || actionName);
 
   const actionIconSrcMap = {
-    regenerate: "assets/regenerate.svg",
-    edit: "assets/edit.svg",
-    copy: "assets/copy.svg",
-    delete: "assets/delete.svg",
+    regenerate: window.AppAssetUrls?.icons?.regenerate || "assets/regenerate.svg",
+    edit: window.AppAssetUrls?.icons?.edit || "assets/edit.svg",
+    copy: window.AppAssetUrls?.icons?.copy || "assets/copy.svg",
+    delete: window.AppAssetUrls?.icons?.delete || "assets/delete.svg",
   };
 
   const icon = document.createElement("img");
   icon.className = "action-icon";
-  icon.src = actionIconSrcMap[actionName] || "assets/edit.svg";
+  icon.src = actionIconSrcMap[actionName] || window.AppAssetUrls?.icons?.edit || "assets/edit.svg";
   icon.alt = actionIconAltMap[actionName] || `icono de ${actionName}`;
   button.appendChild(icon);
 

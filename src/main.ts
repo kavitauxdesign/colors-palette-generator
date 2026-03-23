@@ -4,6 +4,7 @@ import "./shared/services/registry";
 import "./shared/services/clipboard";
 import "./shared/color/color-utils";
 import "./shared/services/shared-colors";
+import "./shared/assets/app-asset-urls";
 import "./apps/palette-generator/store";
 import "./apps/palette-generator/core-helpers";
 
