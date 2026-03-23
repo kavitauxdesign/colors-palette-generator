@@ -4,6 +4,9 @@ import loadLegacyScripts from "../../legacy/load-legacy-scripts";
 import paletteGeneratorLegacyScripts from "../../legacy/palette-generator-scripts";
 import initializePaletteGeneratorControls from "./controls";
 import initializePaletteGeneratorHistory from "./history";
+import initializePaletteGeneratorImageAnalysis from "./image-analysis";
+import initializePaletteGeneratorImagePalette from "./image-palette";
+import initializePaletteGeneratorCardNames from "./card-names";
 
 type PaletteGeneratorRuntimeWindow = Window &
   typeof globalThis & {
@@ -38,6 +41,9 @@ function getPaletteGeneratorStoreState() {
 }
 
 export function loadPaletteGeneratorLegacyScripts() {
+  initializePaletteGeneratorImageAnalysis();
+  initializePaletteGeneratorImagePalette();
+  initializePaletteGeneratorCardNames();
   loadLegacyScripts(paletteGeneratorLegacyScripts);
   initializePaletteGeneratorControls();
   initializePaletteGeneratorHistory();

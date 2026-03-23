@@ -16,7 +16,6 @@ const TETRAD_VARIANT_PROFILES = Object.freeze([
   { offsets: [96, 180, 264], lightnessBiases: [-0.016, -0.002, -0.004], chromaScales: [0.9, 0.86, 0.96] },
 ]);
 
-let colorModeParserElement = null;
 const paletteGeneratorStoreSnapshotForColorMode = window.PaletteGeneratorStore?.getState?.() || null;
 const paletteGeneratorColorModeHelpers = window.PaletteGeneratorColorModeHelpers || {};
 const paletteGeneratorColorModeRuntime = window.PaletteGeneratorColorModeRuntime || {};
@@ -51,6 +50,8 @@ if (
   throw new Error("PaletteGeneratorColorModeHelpers are required before palette-generator-color-mode.js loads.");
 }
 if (
+  typeof paletteGeneratorColorModeRuntime.normalizePaletteBaseColorInput !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.parsePaletteBaseCssColor !== "function" ||
   typeof paletteGeneratorColorModeRuntime.normalizeColorPaletteType !== "function" ||
   typeof paletteGeneratorColorModeRuntime.normalizeMonochromaticGenerationMode !== "function" ||
   typeof paletteGeneratorColorModeRuntime.normalizeAnalogousSeparationMode !== "function" ||
@@ -63,6 +64,7 @@ if (
   typeof paletteGeneratorColorModeRuntime.getNearestAllowedPaletteSize !== "function" ||
   typeof paletteGeneratorColorModeRuntime.resolvePaletteSizeForType !== "function" ||
   typeof paletteGeneratorColorModeRuntime.resolveCurrentModePaletteSize !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.getColorModeReferenceSaturation !== "function" ||
   typeof paletteGeneratorColorModeRuntime.shouldShowMonochromaticModeControl !== "function" ||
   typeof paletteGeneratorColorModeRuntime.shouldShowAnalogousSeparationControl !== "function" ||
   typeof paletteGeneratorColorModeRuntime.getPaletteTypeDisplayLabel !== "function" ||
@@ -148,75 +150,12 @@ function syncAnalogousSeparationControlState() {
   }
 }
 
-function ensureColorModeParserElement() {
-  if (colorModeParserElement) {
-    return colorModeParserElement;
-  }
-
-  const parserElement = document.createElement("div");
-  parserElement.style.position = "absolute";
-  parserElement.style.opacity = "0";
-  parserElement.style.pointerEvents = "none";
-  parserElement.style.inset = "-9999px auto auto -9999px";
-  document.body.appendChild(parserElement);
-  colorModeParserElement = parserElement;
-  return colorModeParserElement;
-}
-
 function normalizePaletteBaseColorInput(value) {
-  return String(value ?? "").trim();
+  return paletteGeneratorColorModeRuntime.normalizePaletteBaseColorInput(value);
 }
 
 function normalizePaletteBaseCssColor(value) {
-  if (typeof window.AppColorUtils?.parseCssColor === "function") {
-    return window.AppColorUtils.parseCssColor(value);
-  }
-
-  const normalizedInputValue = normalizePaletteBaseColorInput(value);
-  if (!normalizedInputValue) {
-    return null;
-  }
-
-  const parserElement = ensureColorModeParserElement();
-  parserElement.style.color = "";
-  parserElement.style.color = normalizedInputValue;
-
-  if (!parserElement.style.color) {
-    return null;
-  }
-
-  const computedColor = window.getComputedStyle(parserElement).color;
-  const rgbMatch = computedColor.match(/rgba?\(([^)]+)\)/i);
-  if (!rgbMatch) {
-    return null;
-  }
-
-  const rgbChannels = rgbMatch[1]
-    .split(",")
-    .slice(0, 3)
-    .map((channel) => Number.parseFloat(channel.trim()));
-
-  if (
-    rgbChannels.length !== 3 ||
-    rgbChannels.some((channel) => !Number.isFinite(channel))
-  ) {
-    return null;
-  }
-
-  const hex = controlsNormalizeHexColor(
-    `#${rgbChannels
-      .map((channel) => Math.round(channel).toString(16).padStart(2, "0"))
-      .join("")}`
-  );
-
-  return {
-    inputValue: normalizedInputValue,
-    css: computedColor,
-    hex,
-    rgb: rgbChannels,
-    hsl: controlsHexToHsl(hex),
-    oklch: window.AppColorUtils?.hexToOklch?.(hex) || null,
-  };
+  return paletteGeneratorColorModeRuntime.parsePaletteBaseCssColor(value);
 }
 
 function setPaletteBaseColorFeedback(message = "", isInvalid = false) {
@@ -313,10 +252,10 @@ function getDefaultPaletteSizeForType(type) {
 }
 
 function getColorModeReferenceSaturation() {
-  const baseColor = getPaletteBaseColorSnapshot();
-  return Number.isFinite(baseColor?.hsl?.s)
-    ? baseColor.hsl.s
-    : getCurrentSaturationValue();
+  return paletteGeneratorColorModeRuntime.getColorModeReferenceSaturation({
+    paletteBaseColorValue: paletteColorTextInput?.value || selectedPaletteBaseColor,
+    fallbackSaturation: getCurrentSaturationValue(),
+  });
 }
 
 function resolveAutomaticColorPaletteType(targetCount = paletteSize) {

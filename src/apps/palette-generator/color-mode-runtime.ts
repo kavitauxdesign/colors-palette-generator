@@ -1,4 +1,5 @@
 import APP_CONSTANTS from "../../shared/constants";
+import AppColorUtils from "../../shared/color/color-utils";
 import PaletteGeneratorCoreHelpers from "./core-helpers";
 import type {
   AnalogousSeparationMode,
@@ -125,6 +126,19 @@ const {
   scorePaletteHarmony,
 } = PaletteGeneratorCoreHelpers;
 
+function normalizePaletteBaseColorInput(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function parsePaletteBaseCssColor(value: unknown): ParsedCssColor | null {
+  const normalizedInputValue = normalizePaletteBaseColorInput(value);
+  if (!normalizedInputValue) {
+    return null;
+  }
+
+  return AppColorUtils.parseCssColor(normalizedInputValue);
+}
+
 function normalizeColorPaletteType(value: unknown): ColorPaletteType {
   return Object.prototype.hasOwnProperty.call(COLOR_MODE_PALETTE_SIZES, value)
     ? (value as ColorPaletteType)
@@ -244,6 +258,20 @@ function resolvePaletteSizeForType(type: unknown, nextSize: unknown) {
   }
 
   return getNearestAllowedPaletteSize(nextSize, allowedSizes);
+}
+
+function getColorModeReferenceSaturation(args: {
+  paletteBaseColorValue?: unknown;
+  fallbackSaturation?: unknown;
+}) {
+  const baseColor = parsePaletteBaseCssColor(args.paletteBaseColorValue);
+  if (Number.isFinite(baseColor?.hsl?.s)) {
+    return Number(baseColor.hsl.s);
+  }
+
+  return Number.isFinite(args.fallbackSaturation)
+    ? Number(args.fallbackSaturation)
+    : 0;
 }
 
 function resolveCurrentModePaletteSize(args: ResolveCurrentModeSizeArgs) {
@@ -538,6 +566,8 @@ function getColorModeRegenerationColorForCard(
 }
 
 export const PaletteGeneratorColorModeRuntime = {
+  normalizePaletteBaseColorInput,
+  parsePaletteBaseCssColor,
   normalizeColorPaletteType,
   normalizeMonochromaticGenerationMode,
   normalizeAnalogousSeparationMode,
@@ -550,6 +580,7 @@ export const PaletteGeneratorColorModeRuntime = {
   getNearestAllowedPaletteSize,
   resolvePaletteSizeForType,
   resolveCurrentModePaletteSize,
+  getColorModeReferenceSaturation,
   shouldShowMonochromaticModeControl,
   shouldShowAnalogousSeparationControl,
   getPaletteTypeDisplayLabel,

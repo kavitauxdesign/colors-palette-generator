@@ -936,6 +936,7 @@ if (paletteImageDropzone) {
 
 setPaletteBaseMode(paletteBaseMode);
 renderPaletteImagePreview();
+updatePaletteSizeButtonsAvailability();
 updatePaletteModeActionVisibility();
 updatePaletteActionButtonsAvailability();
 

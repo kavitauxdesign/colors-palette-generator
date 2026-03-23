@@ -228,6 +228,17 @@ Object.defineProperties(paletteGeneratorLegacyGlobals, {
     },
     configurable: true,
   },
+  recentInspiredPalettes: {
+    get() {
+      return recentInspiredPalettes;
+    },
+    set(value) {
+      recentInspiredPalettes = Array.isArray(value)
+        ? value.map((palette) => (Array.isArray(palette) ? [...palette] : []))
+        : [];
+    },
+    configurable: true,
+  },
   selectedPaletteBaseColor: {
     get() {
       return selectedPaletteBaseColor;
