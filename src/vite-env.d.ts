@@ -23,6 +23,7 @@ declare global {
     PaletteGeneratorCoreHelpers?: any;
     PaletteGeneratorTemperatureHelpers?: any;
     PaletteGeneratorImagePaletteHelpers?: any;
+    PaletteGeneratorImagePaletteStateful?: any;
     AppAssetUrls?: any;
     Color?: any;
     copyTextToClipboard?: (text: string) => Promise<void>;

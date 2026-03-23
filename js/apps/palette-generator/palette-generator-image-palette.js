@@ -1,4 +1,5 @@
 const paletteGeneratorImagePaletteHelpers = window.PaletteGeneratorImagePaletteHelpers || {};
+const paletteGeneratorImagePaletteStateful = window.PaletteGeneratorImagePaletteStateful || {};
 if (
   typeof paletteGeneratorImagePaletteHelpers.getImageInspirationAtmosphere !== "function" ||
   typeof paletteGeneratorImagePaletteHelpers.isPaletteColorTooClose !== "function" ||
@@ -15,6 +16,16 @@ if (
 ) {
   throw new Error("PaletteGeneratorImagePaletteHelpers are required before palette-generator-image-palette.js loads.");
 }
+if (
+  typeof paletteGeneratorImagePaletteStateful.getImageBasedCandidateColor !== "function" ||
+  typeof paletteGeneratorImagePaletteStateful.getAlternativeImagePaletteColor !== "function" ||
+  typeof paletteGeneratorImagePaletteStateful.buildImagePaletteCandidate !== "function" ||
+  typeof paletteGeneratorImagePaletteStateful.ensureMutableImagePaletteSlotsChange !== "function" ||
+  typeof paletteGeneratorImagePaletteStateful.buildImageBasedPaletteCandidate !== "function" ||
+  typeof paletteGeneratorImagePaletteStateful.buildInspiredImagePaletteCandidate !== "function"
+) {
+  throw new Error("PaletteGeneratorImagePaletteStateful is required before palette-generator-image-palette.js loads.");
+}
 
 function getImagePaletteInspiredHelperOptions() {
   return {
@@ -24,80 +35,42 @@ function getImagePaletteInspiredHelperOptions() {
   };
 }
 
+function getImagePaletteStatefulDependencies() {
+  return {
+    getCachedImageColorClusters,
+    getImagePaletteVariantHex,
+    isDisallowedColor,
+    getNearestColorName:
+      typeof getNearestColorName === "function" ? getNearestColorName : null,
+    getImageClusterPriorityScore,
+    orderImageClustersByHarmony,
+    expandImagePalette,
+    mergePaletteWithPinnedColors,
+    getPinnedPaletteIndexSet,
+    getComparablePaletteSlice,
+    getPalettePositionalSimilarityMetrics,
+    arePalettesTooSimilar,
+    selectRelevantImageClusters,
+    buildInspiredPaletteFromClusters,
+    orderPaletteHexColorsByHarmony,
+    isPaletteTooSimilarToRecentInspiredPalettes,
+    getComparableMergedPaletteSlice,
+  };
+}
+
 function getImageBasedCandidateColor(
   existingColors = new Set(),
   adjacentBaseNames = [],
   options = {}
 ) {
-  const imageClusters = getCachedImageColorClusters();
-  if (imageClusters.length === 0) {
-    return null;
-  }
-
-  const excludedColors = options.excludedColors instanceof Set
-    ? options.excludedColors
-    : new Set();
-  const variantSeed = Number.isFinite(options.variantSeed)
-    ? Math.max(0, options.variantSeed)
-    : Math.max(0, imagePaletteVariantIndex + 1);
-  const maxVariantSweeps = Number.isFinite(options.maxVariantSweeps)
-    ? Math.max(1, options.maxVariantSweeps)
-    : Math.max(8, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
-  let bestCandidate = null;
-  let bestConflictCount = Infinity;
-  let bestPriorityScore = -Infinity;
-
-  for (let variantOffset = 0; variantOffset < maxVariantSweeps; variantOffset += 1) {
-    imageClusters.forEach((cluster, clusterIndex) => {
-      const candidate = getImagePaletteVariantHex(
-        cluster,
-        clusterIndex,
-        variantSeed + variantOffset
-      );
-
-      if (
-        !candidate ||
-        existingColors.has(candidate) ||
-        excludedColors.has(candidate) ||
-        isDisallowedColor(candidate)
-      ) {
-        return;
-      }
-
-      const candidateBaseName = typeof getNearestColorName === "function"
-        ? getNearestColorName(candidate)
-        : "";
-      const conflictCount = adjacentBaseNames.reduce((count, adjacentBaseName) => {
-        return count + (adjacentBaseName === candidateBaseName ? 1 : 0);
-      }, 0);
-      const priorityScore =
-        getImageClusterPriorityScore(cluster, imageClusters) - variantOffset * 0.04;
-
-      if (conflictCount === 0) {
-        if (priorityScore > bestPriorityScore) {
-          bestCandidate = candidate;
-          bestConflictCount = 0;
-          bestPriorityScore = priorityScore;
-        }
-        return;
-      }
-
-      if (
-        conflictCount < bestConflictCount ||
-        (conflictCount === bestConflictCount && priorityScore > bestPriorityScore)
-      ) {
-        bestCandidate = candidate;
-        bestConflictCount = conflictCount;
-        bestPriorityScore = priorityScore;
-      }
-    });
-
-    if (bestCandidate && bestConflictCount === 0) {
-      break;
-    }
-  }
-
-  return bestCandidate;
+  return paletteGeneratorImagePaletteStateful.getImageBasedCandidateColor({
+    existingColors,
+    adjacentBaseNames,
+    options,
+    imagePaletteVariantIndex,
+    imagePaletteVariantProfileCount: IMAGE_PALETTE_VARIANT_PROFILES.length,
+    deps: getImagePaletteStatefulDependencies(),
+  });
 }
 
 function getImageRegenerationColorForCard(card, existingColors = new Set(), options = {}) {
@@ -151,26 +124,12 @@ function getImageRegenerationColorForCard(card, existingColors = new Set(), opti
 }
 
 function buildImagePaletteCandidate(selectedClusters, targetCount, variantIndex) {
-  const harmonyOrderedClusters = orderImageClustersByHarmony(selectedClusters);
-  const basePalette = [];
-  const usedColors = new Set();
-
-  harmonyOrderedClusters.forEach((cluster, clusterIndex) => {
-    const variantHex = getImagePaletteVariantHex(cluster, clusterIndex, variantIndex);
-    const nextHex =
-      !usedColors.has(variantHex) && !isDisallowedColor(variantHex)
-        ? variantHex
-        : cluster.hex;
-
-    if (usedColors.has(nextHex) || isDisallowedColor(nextHex)) {
-      return;
-    }
-
-    usedColors.add(nextHex);
-    basePalette.push(nextHex);
+  return paletteGeneratorImagePaletteStateful.buildImagePaletteCandidate({
+    selectedClusters,
+    targetCount,
+    variantIndex,
+    deps: getImagePaletteStatefulDependencies(),
   });
-
-  return expandImagePalette(harmonyOrderedClusters, targetCount, variantIndex, basePalette);
 }
 
 async function buildImageBasedPalette(targetCount) {
@@ -193,34 +152,14 @@ function getAlternativeImagePaletteColor(
   variantSeed = 0,
   maxVariantSweeps = Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
 ) {
-  const clusters = getCachedImageColorClusters();
-  if (!Array.isArray(clusters) || clusters.length === 0) {
-    return null;
-  }
-
-  for (let variantOffset = 0; variantOffset < maxVariantSweeps; variantOffset += 1) {
-    for (let clusterIndex = 0; clusterIndex < clusters.length; clusterIndex += 1) {
-      const cluster = clusters[clusterIndex];
-      const candidate = getImagePaletteVariantHex(
-        cluster,
-        clusterIndex,
-        variantSeed + variantOffset
-      );
-
-      if (
-        !candidate ||
-        existingColors.has(candidate) ||
-        excludedColors.has(candidate) ||
-        isDisallowedColor(candidate)
-      ) {
-        continue;
-      }
-
-      return candidate;
-    }
-  }
-
-  return null;
+  return paletteGeneratorImagePaletteStateful.getAlternativeImagePaletteColor({
+    existingColors,
+    excludedColors,
+    variantSeed,
+    maxVariantSweeps,
+    imagePaletteVariantProfileCount: IMAGE_PALETTE_VARIANT_PROFILES.length,
+    deps: getImagePaletteStatefulDependencies(),
+  });
 }
 
 function ensureMutableImagePaletteSlotsChange(
@@ -229,36 +168,14 @@ function ensureMutableImagePaletteSlotsChange(
   pinnedEntries = getPinnedPaletteEntriesSnapshot(),
   variantSeed = 0
 ) {
-  const mergedPalette = mergePaletteWithPinnedColors(candidatePalette, pinnedEntries);
-  const normalizedReferencePalette = normalizePaletteHexCollection(referencePalette);
-  const pinnedIndexSet = getPinnedPaletteIndexSet(pinnedEntries);
-  const nextPalette = [...mergedPalette];
-
-  nextPalette.forEach((color, index) => {
-    if (pinnedIndexSet.has(index)) {
-      return;
-    }
-
-    const referenceColor = normalizedReferencePalette[index];
-    if (!referenceColor || referenceColor !== color) {
-      return;
-    }
-
-    const existingColors = new Set(
-      nextPalette.filter((entry, entryIndex) => entryIndex !== index)
-    );
-    const alternative = getAlternativeImagePaletteColor(
-      existingColors,
-      new Set([color]),
-      variantSeed + index * 3
-    );
-
-    if (alternative) {
-      nextPalette[index] = alternative;
-    }
+  return paletteGeneratorImagePaletteStateful.ensureMutableImagePaletteSlotsChange({
+    candidatePalette,
+    referencePalette,
+    pinnedEntries,
+    variantSeed,
+    imagePaletteVariantProfileCount: IMAGE_PALETTE_VARIANT_PROFILES.length,
+    deps: getImagePaletteStatefulDependencies(),
   });
-
-  return nextPalette;
 }
 
 async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
@@ -294,61 +211,20 @@ async function buildImageBasedPaletteCandidate(targetCount, options = {}) {
   const maxVariantAttempts = Number.isFinite(options.maxVariantAttempts)
     ? Math.max(1, options.maxVariantAttempts)
     : Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 3);
-  let fallbackPalette = [];
-  let fallbackVariantIndex = variantStartIndex;
-  let fallbackSamePositionCount = Infinity;
+  const referenceSourcePalette =
+    options.referencePalette ??
+    (paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette);
 
-  for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
-    const variantIndex = variantStartIndex + attempt;
-    const selectedClusters = selectRelevantImageClusters(clusters, targetCount, variantIndex);
-    const candidatePalette = buildImagePaletteCandidate(
-      selectedClusters,
-      targetCount,
-      variantIndex
-    );
-    const referenceSourcePalette =
-      options.referencePalette ??
-      (paletteAdjustmentBase.length > 0 ? paletteAdjustmentBase : currentPalette);
-    const repairedPalette = ensureMutableImagePaletteSlotsChange(
-      candidatePalette,
-      referenceSourcePalette,
-      pinnedEntries,
-      variantIndex
-    );
-    const candidateComparablePalette = getComparablePaletteSlice(
-      repairedPalette,
-      pinnedEntries
-    );
-    const positionalSimilarityMetrics = getPalettePositionalSimilarityMetrics(
-      candidateComparablePalette,
-      referencePalette
-    );
-
-    if (candidatePalette.length === 0) {
-      continue;
-    }
-
-    if (positionalSimilarityMetrics.samePositionCount < fallbackSamePositionCount) {
-      fallbackPalette = repairedPalette;
-      fallbackVariantIndex = variantIndex;
-      fallbackSamePositionCount = positionalSimilarityMetrics.samePositionCount;
-    }
-
-    if (
-      positionalSimilarityMetrics.samePositionCount === 0 &&
-      !arePalettesTooSimilar(candidateComparablePalette, referencePalette)
-    ) {
-      return {
-        palette: repairedPalette,
-        variantIndex,
-      };
-    }
-  }
-
-  return {
-    palette: fallbackPalette,
-    variantIndex: fallbackVariantIndex,
-  };
+  return paletteGeneratorImagePaletteStateful.buildImageBasedPaletteCandidate({
+    targetCount,
+    clusters,
+    pinnedEntries,
+    referencePalette,
+    referenceSourcePalette,
+    variantStartIndex,
+    maxVariantAttempts,
+    deps: getImagePaletteStatefulDependencies(),
+  });
 }
 
 function getImageInspirationAtmosphere(clusters) {
@@ -487,101 +363,18 @@ async function buildInspiredImagePaletteCandidate(targetCount, options = {}) {
         IMAGE_INSPIRATION_VARIANT_PROFILES.length * 8,
         recentInspiredReferences.length * 4 + 12
       );
-  let fallbackCandidate = null;
-  let bestCandidate = null;
-
-  for (let attempt = 0; attempt < maxVariantAttempts; attempt += 1) {
-    const variantIndex = startVariantIndex + attempt;
-    const selectedClusters = selectRelevantImageClusters(
-      clusters,
-      Math.min(clusters.length, Math.max(safeTargetCount + 3, 6)),
-      variantIndex
-    );
-    const extractedReferencePalette = orderImageClustersByHarmony(selectedClusters)
-      .map((cluster) => cluster.hex)
-      .slice(0, safeTargetCount);
-    const candidatePalette = buildInspiredPaletteFromClusters(
-      selectedClusters,
-      safeTargetCount,
-      variantIndex,
-      atmosphere
-    );
-    const orderedPalette = orderPaletteHexColorsByHarmony(candidatePalette);
-    const mergedOrderedPalette = mergePaletteWithPinnedColors(orderedPalette, pinnedEntries);
-    const comparableOrderedPalette = getComparablePaletteSlice(
-      mergedOrderedPalette,
-      pinnedEntries
-    );
-
-    if (orderedPalette.length === 0) {
-      continue;
-    }
-
-    const validation = validateInspiredPaletteCandidate(
-      orderedPalette,
-      extractedReferencePalette,
-      clusters,
-      atmosphere
-    );
-    const isTooSimilarToRecentInspired = isPaletteTooSimilarToRecentInspiredPalettes(
-      comparableOrderedPalette,
-      recentInspiredReferences
-    );
-    const similarityToCurrent =
-      getPaletteSimilarityMetrics(comparableOrderedPalette, referencePalette).sharedColorCount /
-      Math.max(comparableOrderedPalette.length, 1);
-    const eleganceScore = scorePaletteElegance(mergedOrderedPalette);
-    const score =
-      scorePaletteHarmony(mergedOrderedPalette) +
-      eleganceScore * 1.2 +
-      validation.atmosphereAlignmentScore * 1.8 +
-      validation.inspirationDistanceScore * 1.45 +
-      (validation.isCoherentWithImage ? 0.45 : 0) -
-      similarityToCurrent * 1.05 -
-      validation.sharedColorRatioToExtraction * 1.2 -
-      (isTooSimilarToRecentInspired ? 1.1 : 0) -
-      (validation.isExactExtractionCopy ? 1.4 : 0) -
-      (validation.hasRepeatedColors ? 3 : 0);
-    const candidate = {
-      palette: orderedPalette,
-      mergedPalette: mergedOrderedPalette,
-      variantIndex,
-      validation,
-      isTooSimilarToRecentInspired,
-      settings: derivePaletteAdjustmentSettingsFromColors(mergedOrderedPalette),
-      score,
-    };
-
-    if (
-      !fallbackCandidate ||
-      (fallbackCandidate.isTooSimilarToRecentInspired && !candidate.isTooSimilarToRecentInspired) ||
-      (
-        fallbackCandidate.isTooSimilarToRecentInspired === candidate.isTooSimilarToRecentInspired &&
-        candidate.score > fallbackCandidate.score
-      )
-    ) {
-      fallbackCandidate = candidate;
-    }
-
-    if (
-      !validation.hasRepeatedColors &&
-      !validation.isExactExtractionCopy &&
-      !isTooSimilarToRecentInspired &&
-      validation.averageNearestClusterDistance >= 34 &&
-      validation.atmosphereAlignmentScore >= 0.42 &&
-      !arePalettesTooSimilar(comparableOrderedPalette, referencePalette) &&
-      (!bestCandidate || candidate.score > bestCandidate.score)
-    ) {
-      bestCandidate = candidate;
-    }
-  }
-
-  const resolvedCandidate = bestCandidate || fallbackCandidate || {
-    palette: [],
-    variantIndex: startVariantIndex,
-    validation: null,
-    settings: resolvePaletteAdjustmentSettings(),
-  };
+  const resolvedCandidate = paletteGeneratorImagePaletteStateful.buildInspiredImagePaletteCandidate({
+    targetCount: safeTargetCount,
+    clusters,
+    pinnedEntries,
+    atmosphere,
+    referencePalette,
+    recentInspiredReferences,
+    startVariantIndex,
+    maxVariantAttempts,
+    imageInspirationVariantProfileCount: IMAGE_INSPIRATION_VARIANT_PROFILES.length,
+    deps: getImagePaletteStatefulDependencies(),
+  });
   updateUploadedImageAnalysisCache({
     lastInspiredPaletteValidation: resolvedCandidate.validation,
   });

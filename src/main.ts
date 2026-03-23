@@ -9,6 +9,7 @@ import "./apps/palette-generator/store";
 import "./apps/palette-generator/core-helpers";
 import "./apps/palette-generator/temperature-helpers";
 import "./apps/palette-generator/image-palette-helpers";
+import "./apps/palette-generator/image-palette-stateful";
 
 import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";
