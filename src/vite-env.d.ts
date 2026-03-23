@@ -24,6 +24,7 @@ declare global {
     PaletteGeneratorStateActions?: any;
     PaletteGeneratorCoreHelpers?: any;
     PaletteGeneratorCoreRuntime?: any;
+    PaletteGeneratorColorModeHelpers?: any;
     PaletteGeneratorTemperatureHelpers?: any;
     PaletteGeneratorImageAnalysisHelpers?: any;
     PaletteGeneratorImageAnalysisStateful?: any;

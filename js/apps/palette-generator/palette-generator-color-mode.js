@@ -32,6 +32,7 @@ const TETRAD_VARIANT_PROFILES = Object.freeze([
 
 let colorModeParserElement = null;
 const paletteGeneratorStoreSnapshotForColorMode = window.PaletteGeneratorStore?.getState?.() || null;
+const paletteGeneratorColorModeHelpers = window.PaletteGeneratorColorModeHelpers || {};
 let colorPaletteVariantIndex = Number.isFinite(
   paletteGeneratorStoreSnapshotForColorMode?.colorPaletteVariantIndex
 )
@@ -40,6 +41,17 @@ let colorPaletteVariantIndex = Number.isFinite(
 syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
   scope: "color-variant",
 });
+
+if (
+  typeof paletteGeneratorColorModeHelpers.buildColorModeHarmonyPalette !== "function" ||
+  typeof paletteGeneratorColorModeHelpers.buildMonochromaticColorModePalette !== "function" ||
+  typeof paletteGeneratorColorModeHelpers.buildComplementaryColorModePalette !== "function" ||
+  typeof paletteGeneratorColorModeHelpers.buildAnalogousColorModePalette !== "function" ||
+  typeof paletteGeneratorColorModeHelpers.buildTriadColorModePalette !== "function" ||
+  typeof paletteGeneratorColorModeHelpers.buildTetradColorModePalette !== "function"
+) {
+  throw new Error("PaletteGeneratorColorModeHelpers are required before palette-generator-color-mode.js loads.");
+}
 
 function normalizeMonochromaticGenerationMode(mode) {
   return MONOCHROMATIC_GENERATION_MODES.has(mode)
@@ -894,57 +906,12 @@ function buildAnalogousColorModePalette(targetCount, settings, options = {}) {
     return [];
   }
 
-  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
-  const baseHex = parsedBaseColor.hex;
-  const separationMode = normalizeAnalogousSeparationMode(selectedAnalogousSeparationMode);
-  const separationDegrees = ANALOGOUS_SEPARATION_DEGREES[separationMode];
-  const attemptOffsets = [0, 6, 10, 14];
-  let leftHex = null;
-  let rightHex = null;
-
-  for (const extraOffset of attemptOffsets) {
-    const nextDegrees = separationDegrees + extraOffset;
-    const candidateLeft = buildAnalogousRoleColor(
-      parsedBaseColor,
-      resolvedSettings,
-      -1,
-      nextDegrees
-    );
-    const candidateRight = buildAnalogousRoleColor(
-      parsedBaseColor,
-      resolvedSettings,
-      1,
-      nextDegrees
-    );
-
-    if (
-      candidateLeft &&
-      candidateRight &&
-      candidateLeft !== baseHex &&
-      candidateRight !== baseHex &&
-      candidateLeft !== candidateRight &&
-      !isDisallowedColor(candidateLeft) &&
-      !isDisallowedColor(candidateRight)
-    ) {
-      leftHex = controlsNormalizeHexColor(candidateLeft);
-      rightHex = controlsNormalizeHexColor(candidateRight);
-      break;
-    }
-  }
-
-  if (!leftHex || !rightHex) {
-    return [baseHex];
-  }
-
-  if (targetCount <= 1) {
-    return [baseHex];
-  }
-
-  if (targetCount === 2) {
-    return [baseHex, rightHex];
-  }
-
-  return [leftHex, baseHex, rightHex];
+  return paletteGeneratorColorModeHelpers.buildAnalogousColorModePalette(targetCount, settings, {
+    ...options,
+    baseColor: parsedBaseColor,
+    selectedAnalogousSeparationMode,
+    isDisallowedColor,
+  });
 }
 
 function getTriadVariantProfile(variantIndex = 0) {
@@ -998,65 +965,14 @@ function buildTriadColorModePalette(targetCount, settings, options = {}) {
     return [];
   }
 
-  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
-  const variantIndex = Number.isFinite(options.variantIndex)
-    ? options.variantIndex
-    : colorPaletteVariantIndex;
-  const baseHex = parsedBaseColor.hex;
-  const variantProfiles = [
-    getTriadVariantProfile(variantIndex),
-    ...TRIAD_VARIANT_PROFILES.filter((profile) => profile !== getTriadVariantProfile(variantIndex)),
-  ];
-
-  for (const profile of variantProfiles) {
-    const [leftOffset, rightOffset] = profile.offsets;
-    const leftHex = buildBalancedHarmonyRoleColor(
-      parsedBaseColor,
-      resolvedSettings,
-      leftOffset,
-      profile.lightnessBiases[0],
-      profile.chromaScales[0]
-    );
-    const rightHex = buildBalancedHarmonyRoleColor(
-      parsedBaseColor,
-      resolvedSettings,
-      rightOffset,
-      profile.lightnessBiases[1],
-      profile.chromaScales[1]
-    );
-
-    if (
-      !leftHex ||
-      !rightHex ||
-      leftHex === baseHex ||
-      rightHex === baseHex ||
-      leftHex === rightHex ||
-      isDisallowedColor(leftHex) ||
-      isDisallowedColor(rightHex)
-    ) {
-      continue;
-    }
-
-    const sideDistance = window.AppColorUtils?.getColorDistance?.(leftHex, rightHex, {
-      method: "deltae2000",
-    });
-    const leftDistanceFromBase = window.AppColorUtils?.getColorDistance?.(leftHex, baseHex, {
-      method: "deltae2000",
-    });
-    const rightDistanceFromBase = window.AppColorUtils?.getColorDistance?.(rightHex, baseHex, {
-      method: "deltae2000",
-    });
-
-    if (
-      sideDistance >= 10 &&
-      leftDistanceFromBase >= 8 &&
-      rightDistanceFromBase >= 8
-    ) {
-      return [leftHex, baseHex, rightHex];
-    }
-  }
-
-  return [baseHex];
+  return paletteGeneratorColorModeHelpers.buildTriadColorModePalette(targetCount, settings, {
+    ...options,
+    baseColor: parsedBaseColor,
+    variantIndex: Number.isFinite(options.variantIndex)
+      ? options.variantIndex
+      : colorPaletteVariantIndex,
+    isDisallowedColor,
+  });
 }
 
 function buildTetradColorModePalette(targetCount, settings, options = {}) {
@@ -1065,59 +981,14 @@ function buildTetradColorModePalette(targetCount, settings, options = {}) {
     return [];
   }
 
-  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
-  const variantIndex = Number.isFinite(options.variantIndex)
-    ? options.variantIndex
-    : colorPaletteVariantIndex;
-  const baseHex = parsedBaseColor.hex;
-  const variantProfiles = [
-    getTetradVariantProfile(variantIndex),
-    ...TETRAD_VARIANT_PROFILES.filter((profile) => profile !== getTetradVariantProfile(variantIndex)),
-  ];
-
-  for (const profile of variantProfiles) {
-    const roleHexes = profile.offsets.map((offset, index) =>
-      buildBalancedHarmonyRoleColor(
-        parsedBaseColor,
-        resolvedSettings,
-        offset,
-        profile.lightnessBiases[index],
-        profile.chromaScales[index]
-      )
-    );
-
-    if (
-      roleHexes.some((hex) => !hex || hex === baseHex || isDisallowedColor(hex)) ||
-      new Set(roleHexes).size !== roleHexes.length
-    ) {
-      continue;
-    }
-
-    const palette = [baseHex, ...roleHexes];
-    const hasEnoughDistance = palette.every((color, colorIndex) => {
-      return palette.every((otherColor, otherIndex) => {
-        if (otherIndex <= colorIndex) {
-          return true;
-        }
-
-        const minimumDistance =
-          colorIndex === 0 || otherIndex === 0
-            ? 8
-            : 10;
-        const distance = window.AppColorUtils?.getColorDistance?.(color, otherColor, {
-          method: "deltae2000",
-        });
-
-        return distance >= minimumDistance;
-      });
-    });
-
-    if (hasEnoughDistance) {
-      return palette.slice(0, targetCount);
-    }
-  }
-
-  return [baseHex];
+  return paletteGeneratorColorModeHelpers.buildTetradColorModePalette(targetCount, settings, {
+    ...options,
+    baseColor: parsedBaseColor,
+    variantIndex: Number.isFinite(options.variantIndex)
+      ? options.variantIndex
+      : colorPaletteVariantIndex,
+    isDisallowedColor,
+  });
 }
 
 function buildComplementaryScaleVariant(baseHex, direction, settings, ratio, existingColors = new Set()) {
@@ -1202,106 +1073,14 @@ function buildComplementaryColorModePalette(targetCount, settings, options = {})
     return [];
   }
 
-  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
-  const variantIndex = Number.isFinite(options.variantIndex)
-    ? options.variantIndex
-    : colorPaletteVariantIndex;
-  const profile = getComplementaryVariantProfile(variantIndex);
-  const brightnessBias = clampControlValue(
-    (resolvedSettings.brightness - DEFAULT_BRIGHTNESS) / 35,
-    -1,
-    1
-  );
-  const saturationLoss = Math.pow(
-    clampControlValue((DEFAULT_SATURATION - resolvedSettings.saturation) / 100, 0, 1),
-    0.9
-  );
-  const tintRatio = targetCount >= 6
-    ? clampControlValue(
-        profile.tintStrength - 0.34 + brightnessBias * 0.08 - saturationLoss * 0.08,
-        0.18,
-        0.5
-      )
-    : profile.tintStrength;
-  const shadeRatio = clampControlValue(
-    profile.shadeStrength - 0.22 - brightnessBias * 0.08 + saturationLoss * 0.06,
-    0.24,
-    0.54
-  );
-  const baseHex = parsedBaseColor.hex;
-  const complementHex = buildComplementaryHueColor(
-    parsedBaseColor,
-    resolvedSettings,
-    variantIndex
-  );
-
-  if (!complementHex || complementHex === baseHex) {
-    return [baseHex];
-  }
-
-  if (targetCount <= 2) {
-    return [baseHex, complementHex];
-  }
-
-  const palette = [];
-  const usedColors = new Set();
-  const baseTint = buildComplementaryScaleVariant(
-    baseHex,
-    "light",
-    resolvedSettings,
-    tintRatio,
-    usedColors
-  );
-  if (baseTint) {
-    palette.push(baseTint);
-    usedColors.add(baseTint);
-  }
-
-  palette.push(baseHex);
-  usedColors.add(baseHex);
-
-  const baseShade = buildComplementaryScaleVariant(
-    baseHex,
-    "dark",
-    resolvedSettings,
-    shadeRatio,
-    usedColors
-  );
-  if (baseShade) {
-    palette.push(baseShade);
-    usedColors.add(baseShade);
-  }
-
-  const complementTint = buildComplementaryScaleVariant(
-    complementHex,
-    "light",
-    resolvedSettings,
-    tintRatio,
-    usedColors
-  );
-  if (complementTint) {
-    palette.push(complementTint);
-    usedColors.add(complementTint);
-  }
-
-  if (!usedColors.has(complementHex)) {
-    palette.push(complementHex);
-    usedColors.add(complementHex);
-  }
-
-  const complementShade = buildComplementaryScaleVariant(
-    complementHex,
-    "dark",
-    resolvedSettings,
-    shadeRatio,
-    usedColors
-  );
-  if (complementShade) {
-    palette.push(complementShade);
-    usedColors.add(complementShade);
-  }
-
-  return palette.slice(0, targetCount);
+  return paletteGeneratorColorModeHelpers.buildComplementaryColorModePalette(targetCount, settings, {
+    ...options,
+    baseColor: parsedBaseColor,
+    variantIndex: Number.isFinite(options.variantIndex)
+      ? options.variantIndex
+      : colorPaletteVariantIndex,
+    isDisallowedColor,
+  });
 }
 
 function getMonochromaticColorOklchLightness(hex) {
@@ -1460,57 +1239,12 @@ function buildMonochromaticColorModePalette(targetCount, settings, options = {})
     return [];
   }
 
-  const resolvedSettings = resolvePaletteAdjustmentSettings(settings);
-  const baseHex = parsedBaseColor.hex;
-  const direction = getMonochromaticScaleDirection(parsedBaseColor);
-  const targetHex = createMonochromaticScaleTargetHex(
-    parsedBaseColor,
-    resolvedSettings,
-    direction
-  );
-
-  if (targetCount <= 1) {
-    return [baseHex];
-  }
-
-  if (!targetHex || targetHex === baseHex) {
-    return [baseHex];
-  }
-
-  const desiredCount = targetCount - 1;
-  const stepCounts = [
-    desiredCount * 2 + 4,
-    desiredCount * 4 + 6,
-    desiredCount * 6 + 8,
-  ];
-  let scaleColors = [];
-
-  stepCounts.some((stepCount) => {
-    const candidates = buildMonochromaticScaleCandidates(
-      baseHex,
-      targetHex,
-      stepCount
-    ).slice(1);
-    const distinctColors = filterDistinctMonochromaticScaleColors(
-      baseHex,
-      candidates,
-      desiredCount,
-      targetCount
-    );
-    const sampledColors = selectMonochromaticScaleStops(
-      distinctColors,
-      desiredCount,
-      direction
-    );
-
-    if (sampledColors.length > scaleColors.length) {
-      scaleColors = sampledColors;
-    }
-
-    return sampledColors.length >= desiredCount;
+  return paletteGeneratorColorModeHelpers.buildMonochromaticColorModePalette(targetCount, settings, {
+    ...options,
+    baseColor: parsedBaseColor,
+    selectedMonochromaticGenerationMode,
+    isDisallowedColor,
   });
-
-  return [baseHex, ...orderMonochromaticScaleColors(baseHex, scaleColors, direction)];
 }
 
 function orderColorModePaletteByHarmony(colors, baseHex, options = {}) {
