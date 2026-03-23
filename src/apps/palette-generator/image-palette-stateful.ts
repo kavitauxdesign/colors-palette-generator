@@ -1,52 +1,93 @@
 import PaletteGeneratorCoreHelpers from "./core-helpers";
 import PaletteGeneratorImagePaletteHelpers from "./image-palette-helpers";
+import type {
+  ImagePaletteAtmosphere,
+  ImagePaletteCluster,
+} from "./image-types";
+
+type PinnedPaletteEntry = {
+  index?: number;
+  hex?: string;
+  [key: string]: unknown;
+};
+
+type PalettePositionSimilarityMetrics = ReturnType<
+  typeof PaletteGeneratorCoreHelpers.getPalettePositionalSimilarityMetrics
+>;
+
+type InspiredPaletteValidation = ReturnType<
+  typeof PaletteGeneratorImagePaletteHelpers.validateInspiredPaletteCandidate
+>;
+
+type DerivedPaletteAdjustmentSettings = ReturnType<
+  typeof PaletteGeneratorImagePaletteHelpers.derivePaletteAdjustmentSettingsFromColors
+>;
+
+type InspiredPaletteCandidate = {
+  palette: string[];
+  mergedPalette?: string[];
+  variantIndex: number;
+  validation: InspiredPaletteValidation | null;
+  isTooSimilarToRecentInspired?: boolean;
+  settings: DerivedPaletteAdjustmentSettings;
+  score?: number;
+};
 
 type StatefulDeps = {
-  getCachedImageColorClusters: () => any[];
+  getCachedImageColorClusters: () => ImagePaletteCluster[];
   getImagePaletteVariantHex: (
-    cluster: any,
+    cluster: ImagePaletteCluster,
     clusterIndex: number,
     variantIndex: number
   ) => string | null;
   isDisallowedColor: (hex: string) => boolean;
   getNearestColorName?: (hex: string) => string;
   getImageClusterPriorityScore: (
-    cluster: any,
-    allClusters: any[],
-    selectedClusters?: any[]
+    cluster: ImagePaletteCluster,
+    allClusters: ImagePaletteCluster[],
+    selectedClusters?: ImagePaletteCluster[]
   ) => number;
-  orderImageClustersByHarmony: (clusters: any[]) => any[];
+  orderImageClustersByHarmony: (clusters: ImagePaletteCluster[]) => ImagePaletteCluster[];
   expandImagePalette: (
-    selectedClusters: any[],
+    selectedClusters: ImagePaletteCluster[],
     targetCount: number,
     variantIndex: number,
     seedPalette?: string[]
   ) => string[];
-  mergePaletteWithPinnedColors: (palette: string[], pinnedEntries: any[]) => string[];
-  getPinnedPaletteIndexSet: (pinnedEntries: any[]) => Set<number>;
-  getComparablePaletteSlice: (colors: string[], pinnedEntries: any[]) => string[];
+  mergePaletteWithPinnedColors: (
+    palette: string[],
+    pinnedEntries: PinnedPaletteEntry[]
+  ) => string[];
+  getPinnedPaletteIndexSet: (pinnedEntries: PinnedPaletteEntry[]) => Set<number>;
+  getComparablePaletteSlice: (
+    colors: string[],
+    pinnedEntries: PinnedPaletteEntry[]
+  ) => string[];
   getPalettePositionalSimilarityMetrics: (
     nextPalette: string[],
     referencePalette: string[]
-  ) => { samePositionCount: number };
+  ) => PalettePositionSimilarityMetrics;
   arePalettesTooSimilar: (nextPalette: string[], referencePalette: string[]) => boolean;
   selectRelevantImageClusters: (
-    clusters: any[],
+    clusters: ImagePaletteCluster[],
     targetCount: number,
     variantIndex?: number
-  ) => any[];
+  ) => ImagePaletteCluster[];
   buildInspiredPaletteFromClusters: (
-    selectedClusters: any[],
+    selectedClusters: ImagePaletteCluster[],
     targetCount: number,
     variantIndex: number,
-    atmosphere: any
+    atmosphere: ImagePaletteAtmosphere
   ) => string[];
   orderPaletteHexColorsByHarmony: (colors: string[]) => string[];
   isPaletteTooSimilarToRecentInspiredPalettes: (
     nextPalette: string[],
     recentPalettes: string[][]
   ) => boolean;
-  getComparableMergedPaletteSlice: (colors: string[], pinnedEntries: any[]) => string[];
+  getComparableMergedPaletteSlice: (
+    colors: string[],
+    pinnedEntries: PinnedPaletteEntry[]
+  ) => string[];
 };
 
 type CandidateColorArgs = {
@@ -68,7 +109,7 @@ type AlternativeColorArgs = {
 };
 
 type BuildImagePaletteCandidateArgs = {
-  selectedClusters: any[];
+  selectedClusters: ImagePaletteCluster[];
   targetCount: number;
   variantIndex: number;
   deps: StatefulDeps;
@@ -77,7 +118,7 @@ type BuildImagePaletteCandidateArgs = {
 type EnsureMutableSlotsArgs = {
   candidatePalette: string[];
   referencePalette: string[];
-  pinnedEntries: any[];
+  pinnedEntries: PinnedPaletteEntry[];
   variantSeed?: number;
   imagePaletteVariantProfileCount?: number;
   deps: StatefulDeps;
@@ -85,8 +126,8 @@ type EnsureMutableSlotsArgs = {
 
 type BuildImageBasedPaletteCandidateArgs = {
   targetCount: number;
-  clusters: any[];
-  pinnedEntries: any[];
+  clusters: ImagePaletteCluster[];
+  pinnedEntries: PinnedPaletteEntry[];
   referencePalette: string[];
   referenceSourcePalette: string[];
   variantStartIndex: number;
@@ -96,9 +137,9 @@ type BuildImageBasedPaletteCandidateArgs = {
 
 type BuildInspiredImagePaletteCandidateArgs = {
   targetCount: number;
-  clusters: any[];
-  pinnedEntries: any[];
-  atmosphere: any;
+  clusters: ImagePaletteCluster[];
+  pinnedEntries: PinnedPaletteEntry[];
+  atmosphere: ImagePaletteAtmosphere;
   referencePalette: string[];
   recentInspiredReferences: string[][];
   startVariantIndex: number;
@@ -378,8 +419,8 @@ function buildInspiredImagePaletteCandidate(args: BuildInspiredImagePaletteCandi
   const safeTargetCount = Number.isFinite(args.targetCount) && args.targetCount > 0
     ? args.targetCount
     : 5;
-  let fallbackCandidate: any = null;
-  let bestCandidate: any = null;
+  let fallbackCandidate: InspiredPaletteCandidate | null = null;
+  let bestCandidate: InspiredPaletteCandidate | null = null;
 
   for (let attempt = 0; attempt < args.maxVariantAttempts; attempt += 1) {
     const variantIndex = args.startVariantIndex + attempt;

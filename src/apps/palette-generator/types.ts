@@ -1,3 +1,5 @@
+import type { UploadedImageAnalysisCache } from "./image-types";
+
 export type PaletteBaseMode = "color" | "temperature" | "image";
 
 export type ColorPaletteType =
@@ -26,7 +28,7 @@ export interface PaletteGeneratorUploadedImage {
   name: string;
   type: string;
   dataUrl: string;
-  analysisCache: unknown | null;
+  analysisCache: UploadedImageAnalysisCache | null;
 }
 
 export interface PaletteGeneratorHistoryEntry {

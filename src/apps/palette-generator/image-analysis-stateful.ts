@@ -1,23 +1,14 @@
 import APP_CONSTANTS from "../../shared/constants";
 import PaletteGeneratorImageAnalysisHelpers, {
-  type ImagePaletteCluster,
-  type ImageSamplePoint,
 } from "./image-analysis-helpers";
+import type {
+  ImagePaletteCluster,
+  ImageSamplePoint,
+  UploadedImageAnalysisCache,
+  UploadedImageLike,
+} from "./image-types";
 
-type UploadedImageLike = {
-  dataUrl?: string | null;
-  analysisCache?: {
-    points?: ImageSamplePoint[];
-    deduplicatedClusters?: ImagePaletteCluster[];
-  } | null;
-};
-
-type ImageAnalysisCachePatch = {
-  points?: ImageSamplePoint[];
-  width?: number;
-  height?: number;
-  deduplicatedClusters?: ImagePaletteCluster[];
-};
+type ImageAnalysisCachePatch = Partial<UploadedImageAnalysisCache>;
 
 type ImageAnalysisStatefulOptions = {
   uploadedBaseImage?: UploadedImageLike | null;

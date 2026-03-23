@@ -1,38 +1,10 @@
 import AppColorUtils from "../../shared/color/color-utils";
 import PaletteGeneratorCoreHelpers from "./core-helpers";
-
-type ImageAnalysisOklch = {
-  l?: number;
-  c?: number;
-  h?: number;
-};
-
-type ImageAnalysisHsl = {
-  h?: number;
-  s?: number;
-  l?: number;
-};
-
-export type ImageSamplePoint = {
-  r: number;
-  g: number;
-  b: number;
-  weight: number;
-};
-
-export type ImagePaletteVariantProfile = {
-  hueShift?: number;
-  saturationShift?: number;
-  lightnessShift?: number;
-  stagger?: number[];
-};
-
-export type ImagePaletteCluster = ImageSamplePoint & {
-  hex?: string;
-  hsl?: ImageAnalysisHsl | null;
-  oklch?: ImageAnalysisOklch | null;
-  relevance?: number;
-};
+import type {
+  ImagePaletteCluster,
+  ImagePaletteVariantProfile,
+  ImageSamplePoint,
+} from "./image-types";
 
 type ImageAnalysisHelperOptions = {
   prioritizeImageDominantColors?: unknown;

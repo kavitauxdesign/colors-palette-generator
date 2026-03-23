@@ -1,42 +1,10 @@
 import AppColorUtils from "../../shared/color/color-utils";
 import PaletteGeneratorCoreHelpers from "./core-helpers";
-
-type ImagePaletteOklch = {
-  l?: number;
-  c?: number;
-  h?: number;
-};
-
-type ImagePaletteCluster = {
-  hex: string;
-  weight?: number;
-  oklch?: ImagePaletteOklch | null;
-  hsl?: {
-    h?: number;
-  } | null;
-  r?: number;
-  g?: number;
-  b?: number;
-};
-
-type ImagePaletteAtmosphere = {
-  averageSaturation: number;
-  averageLightness: number;
-  averageHue: number;
-  maxWeight?: number;
-  maxSaturation?: number;
-  lightnessSpread: number;
-  warmthBias: number;
-};
-
-type InspiredVariantProfile = {
-  hueShift: number;
-  saturationShift: number;
-  lightnessShift: number;
-  accentHueShift: number;
-  accentBoost: number;
-  neutralLift: number;
-};
+import type {
+  ImagePaletteAtmosphere,
+  ImagePaletteCluster,
+  InspiredVariantProfile,
+} from "./image-types";
 
 type InspiredPaletteOptions = {
   profiles?: InspiredVariantProfile[];
