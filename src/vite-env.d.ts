@@ -22,6 +22,8 @@ declare global {
     PaletteGeneratorStore?: any;
     PaletteGeneratorCoreHelpers?: any;
     PaletteGeneratorTemperatureHelpers?: any;
+    PaletteGeneratorImageAnalysisHelpers?: any;
+    PaletteGeneratorImageAnalysisStateful?: any;
     PaletteGeneratorImagePaletteHelpers?: any;
     PaletteGeneratorImagePaletteStateful?: any;
     AppAssetUrls?: any;
