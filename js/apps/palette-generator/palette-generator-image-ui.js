@@ -1,3 +1,15 @@
+const paletteGeneratorImageUiHelpers = window.PaletteGeneratorImageUiHelpers || {};
+if (
+  typeof paletteGeneratorImageUiHelpers.getPaletteModeActionVisibility !== "function" ||
+  typeof paletteGeneratorImageUiHelpers.getPaletteRegenerateButtonState !== "function" ||
+  typeof paletteGeneratorImageUiHelpers.getPaletteSurpriseButtonState !== "function" ||
+  typeof paletteGeneratorImageUiHelpers.hasInsufficientFreeSlotsForImageInspiration !== "function" ||
+  typeof paletteGeneratorImageUiHelpers.getPaletteInspirationButtonState !== "function" ||
+  typeof paletteGeneratorImageUiHelpers.getPaletteSizeButtonState !== "function"
+) {
+  throw new Error("PaletteGeneratorImageUiHelpers are required before palette-generator-image-ui.js loads.");
+}
+
 function setPaletteAdjustPanelOpen(shouldOpen) {
   if (!paletteAdjustPanel || !paletteAdjustBtn) {
     return;
@@ -167,40 +179,33 @@ if (paletteAdjustBtn) {
 }
 
 function updatePaletteModeActionVisibility() {
-  const isImageMode = paletteBaseMode === "image";
-  const isColorMode = paletteBaseMode === "color";
-  const isHiddenRegenerateColorMode =
-    isColorMode &&
-    ["complementary", "analogous", "triad"].includes(selectedColorPaletteType);
-  const isMonochromaticColorScale =
+  const visibility = paletteGeneratorImageUiHelpers.getPaletteModeActionVisibility({
+    paletteBaseMode,
+    selectedColorPaletteType,
+    hasImageSource: !!uploadedBaseImage?.dataUrl,
+    isMonochromaticColorScale:
     typeof isColorModeMonochromaticScaleActive === "function" &&
-    isColorModeMonochromaticScaleActive();
-  const hasImageSource = !!uploadedBaseImage?.dataUrl;
+    isColorModeMonochromaticScaleActive(),
+  });
 
   if (paletteGenerationButtons) {
-    paletteGenerationButtons.hidden = isImageMode;
+    paletteGenerationButtons.hidden = visibility.generationButtonsHidden;
   }
 
   if (paletteRegenerateBtn) {
-    const shouldShowRegenerate = isColorMode
-      ? !isMonochromaticColorScale && !isHiddenRegenerateColorMode
-      : (!isImageMode || hasImageSource);
-    paletteRegenerateBtn.hidden = !shouldShowRegenerate;
+    paletteRegenerateBtn.hidden = visibility.regenerateHidden;
   }
 
   if (surpriseBtn) {
-    const shouldShowSurprise =
-      !isColorMode &&
-      (!isImageMode || hasImageSource);
-    surpriseBtn.hidden = !shouldShowSurprise;
+    surpriseBtn.hidden = visibility.surpriseHidden;
   }
 
   if (paletteInspirationBtn) {
-    paletteInspirationBtn.hidden = !(isImageMode && hasImageSource);
+    paletteInspirationBtn.hidden = visibility.inspirationHidden;
   }
 
   if (paletteIntensityControlGroup) {
-    paletteIntensityControlGroup.hidden = isMonochromaticColorScale;
+    paletteIntensityControlGroup.hidden = visibility.intensityHidden;
   }
 }
 
@@ -243,72 +248,25 @@ function updatePaletteRegenerateButtonAvailability(availableImageColors = null) 
 
   const pinnedEntries = getPinnedPaletteEntriesSnapshot();
   const mutableSlotCount = getMutablePaletteSlotCount(paletteSize, pinnedEntries);
-
-  if (paletteBaseMode === "color") {
-    if (
-      typeof isColorModeMonochromaticScaleActive === "function" &&
-      isColorModeMonochromaticScaleActive()
-    ) {
-      paletteRegenerateBtn.disabled = true;
-      paletteRegenerateBtn.classList.add("is-disabled");
-      paletteRegenerateBtn.setAttribute("aria-disabled", "true");
-      setPaletteRegenerateButtonTooltip("Ajusta el color base o Brillo/Saturación");
-      return;
-    }
-
-    const isDisabled = mutableSlotCount <= 0 || !hasValidSelectedPaletteBaseColor();
-    paletteRegenerateBtn.disabled = isDisabled;
-    paletteRegenerateBtn.classList.toggle("is-disabled", isDisabled);
-    paletteRegenerateBtn.setAttribute("aria-disabled", isDisabled ? "true" : "false");
-    setPaletteRegenerateButtonTooltip(
-      !hasValidSelectedPaletteBaseColor()
-        ? "Introduce un color base válido"
-        : mutableSlotCount <= 0
-          ? "Todos los colores están fijados"
-          : "Generar paleta"
-    );
-    return;
-  }
-
-  if (paletteBaseMode !== "image") {
-    const isDisabled = mutableSlotCount <= 0;
-    paletteRegenerateBtn.disabled = isDisabled;
-    paletteRegenerateBtn.classList.toggle("is-disabled", isDisabled);
-    paletteRegenerateBtn.setAttribute("aria-disabled", isDisabled ? "true" : "false");
-    setPaletteRegenerateButtonTooltip(
-      isDisabled ? "Todos los colores están fijados" : "Regenerar paleta"
-    );
-    return;
-  }
-
-  const hasImageSource = !!uploadedBaseImage?.dataUrl;
-  if (!hasImageSource) {
-    paletteRegenerateBtn.disabled = true;
-    paletteRegenerateBtn.classList.add("is-disabled");
-    paletteRegenerateBtn.setAttribute("aria-disabled", "true");
-    setPaletteRegenerateButtonTooltip("Sube una imagen para regenerar la paleta");
-    return;
-  }
-
   const availableCount = Number.isFinite(availableImageColors)
     ? availableImageColors
     : getCachedImageColorClusters().length;
-  const hasLimitedExtractedColors = availableCount <= Math.max(mutableSlotCount, 0);
-  const isDisabled = mutableSlotCount <= 0 || hasLimitedExtractedColors;
+  const isMonochromaticColorScale =
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive();
+  const state = paletteGeneratorImageUiHelpers.getPaletteRegenerateButtonState({
+    paletteBaseMode,
+    mutableSlotCount,
+    hasValidSelectedPaletteBaseColor: hasValidSelectedPaletteBaseColor(),
+    isMonochromaticColorScale,
+    hasImageSource: !!uploadedBaseImage?.dataUrl,
+    availableImageColors: availableCount,
+  });
 
-  paletteRegenerateBtn.disabled = isDisabled;
-  paletteRegenerateBtn.classList.toggle("is-disabled", isDisabled);
-  paletteRegenerateBtn.setAttribute(
-    "aria-disabled",
-    isDisabled ? "true" : "false"
-  );
-  setPaletteRegenerateButtonTooltip(
-    mutableSlotCount <= 0
-      ? "Todos los colores están fijados"
-      : hasLimitedExtractedColors
-        ? "No hay suficiente variedad de colores en la imagen de referencia"
-      : "Regenerar paleta"
-  );
+  paletteRegenerateBtn.disabled = state.disabled;
+  paletteRegenerateBtn.classList.toggle("is-disabled", state.disabled);
+  paletteRegenerateBtn.setAttribute("aria-disabled", state.disabled ? "true" : "false");
+  setPaletteRegenerateButtonTooltip(state.tooltip);
 }
 
 function updatePaletteSurpriseButtonAvailability(availableImageColors = null) {
@@ -316,46 +274,22 @@ function updatePaletteSurpriseButtonAvailability(availableImageColors = null) {
     return;
   }
 
-  if (paletteBaseMode === "color") {
-    surpriseBtn.disabled = true;
-    surpriseBtn.classList.add("is-disabled");
-    surpriseBtn.setAttribute("aria-disabled", "true");
-    setPaletteSurpriseButtonTooltip("Modo no disponible en Color");
-    return;
-  }
-
   const pinnedEntries = getPinnedPaletteEntriesSnapshot();
   const mutableSlotCount = getMutablePaletteSlotCount(paletteSize, pinnedEntries);
-
-  if (paletteBaseMode !== "image") {
-    const isDisabled = mutableSlotCount <= 0;
-    surpriseBtn.disabled = isDisabled;
-    surpriseBtn.classList.toggle("is-disabled", isDisabled);
-    surpriseBtn.setAttribute("aria-disabled", isDisabled ? "true" : "false");
-    setPaletteSurpriseButtonTooltip(
-      isDisabled
-        ? "Todos los colores están fijados"
-        : "Generar una variante más libre sin cambiar la cantidad de colores"
-    );
-    return;
-  }
-
-  const hasImageSource = !!uploadedBaseImage?.dataUrl;
   const availableCount = Number.isFinite(availableImageColors)
     ? availableImageColors
     : getCachedImageColorClusters().length;
-  const hasExtractedColors = hasImageSource && availableCount > 0 && mutableSlotCount > 0;
+  const state = paletteGeneratorImageUiHelpers.getPaletteSurpriseButtonState({
+    paletteBaseMode,
+    mutableSlotCount,
+    hasImageSource: !!uploadedBaseImage?.dataUrl,
+    availableImageColors: availableCount,
+  });
 
-  surpriseBtn.disabled = !hasExtractedColors;
-  surpriseBtn.classList.toggle("is-disabled", !hasExtractedColors);
-  surpriseBtn.setAttribute("aria-disabled", hasExtractedColors ? "false" : "true");
-  setPaletteSurpriseButtonTooltip(
-    hasExtractedColors
-      ? "Generar una variante libre basada en la imagen original"
-      : mutableSlotCount <= 0
-        ? "Todos los colores están fijados"
-        : "Sube una imagen válida para sorprender la paleta"
-  );
+  surpriseBtn.disabled = state.disabled;
+  surpriseBtn.classList.toggle("is-disabled", state.disabled);
+  surpriseBtn.setAttribute("aria-disabled", state.disabled ? "true" : "false");
+  setPaletteSurpriseButtonTooltip(state.tooltip);
 }
 
 function updatePaletteInspirationButtonAvailability(availableImageColors = null) {
@@ -365,48 +299,31 @@ function updatePaletteInspirationButtonAvailability(availableImageColors = null)
 
   const pinnedEntries = getPinnedPaletteEntriesSnapshot();
   const mutableSlotCount = getMutablePaletteSlotCount(paletteSize, pinnedEntries);
-  const requiresMoreFreeSlotsForInspiration = hasInsufficientFreeSlotsForImageInspiration(
-    mutableSlotCount
-  );
-
-  if (paletteBaseMode !== "image") {
-    paletteInspirationBtn.hidden = true;
-    paletteInspirationBtn.disabled = true;
-    paletteInspirationBtn.classList.add("is-disabled");
-    paletteInspirationBtn.setAttribute("aria-disabled", "true");
-    setPaletteInspirationButtonTooltip("Modo inspiración disponible solo en Imagen");
-    return;
-  }
-
-  const hasImageSource = !!uploadedBaseImage?.dataUrl;
   const availableCount = Number.isFinite(availableImageColors)
     ? availableImageColors
     : getCachedImageColorClusters().length;
-  const hasExtractedColors =
-    hasImageSource &&
-    availableCount > 0 &&
-    mutableSlotCount > 0 &&
-    !requiresMoreFreeSlotsForInspiration;
+  const state = paletteGeneratorImageUiHelpers.getPaletteInspirationButtonState({
+    paletteBaseMode,
+    mutableSlotCount,
+    hasImageSource: !!uploadedBaseImage?.dataUrl,
+    availableImageColors: availableCount,
+    paletteSize,
+  });
 
-  paletteInspirationBtn.hidden = !hasImageSource;
-  paletteInspirationBtn.disabled = !hasExtractedColors;
-  paletteInspirationBtn.classList.toggle("is-disabled", !hasExtractedColors);
-  paletteInspirationBtn.setAttribute("aria-disabled", hasExtractedColors ? "false" : "true");
-  setPaletteInspirationButtonTooltip(
-    hasExtractedColors
-      ? "Generar una paleta inspirada en la imagen"
-      : mutableSlotCount <= 0
-        ? "Todos los colores están fijados"
-      : requiresMoreFreeSlotsForInspiration
-        ? "Desfija más colores para usar Inspiración en toda la paleta"
-        : "Sube una imagen válida para activar el modo inspiración"
-  );
+  paletteInspirationBtn.hidden = state.hidden;
+  paletteInspirationBtn.disabled = state.disabled;
+  paletteInspirationBtn.classList.toggle("is-disabled", state.disabled);
+  paletteInspirationBtn.setAttribute("aria-disabled", state.disabled ? "true" : "false");
+  setPaletteInspirationButtonTooltip(state.tooltip);
 }
 
 function hasInsufficientFreeSlotsForImageInspiration(
   mutableSlotCount = getMutablePaletteSlotCount(paletteSize, getPinnedPaletteEntriesSnapshot())
 ) {
-  return mutableSlotCount < 2 || mutableSlotCount < Math.ceil(paletteSize / 2);
+  return paletteGeneratorImageUiHelpers.hasInsufficientFreeSlotsForImageInspiration(
+    mutableSlotCount,
+    paletteSize
+  );
 }
 
 function regeneratePinnedPaletteSlots() {
@@ -978,25 +895,17 @@ function updatePaletteSizeButtonsAvailability(availableImageColors = null) {
 
   sizeButtons.forEach((button) => {
     const buttonSize = Number.parseInt(button.dataset.size, 10);
-    const shouldDisableByImage =
-      paletteBaseMode === "image" &&
-      !!uploadedBaseImage?.dataUrl &&
-      Number.isFinite(buttonSize) &&
-      buttonSize > availableCount;
-    const shouldShowForMode =
-      paletteBaseMode === "color"
-        ? Number.isFinite(buttonSize) && allowedColorModeSizes.includes(buttonSize)
-        : buttonSize !== 2 && buttonSize !== 4;
-    const shouldDisableByColorMode =
-      paletteBaseMode === "color" &&
-      Number.isFinite(buttonSize) &&
-      !allowedColorModeSizes.includes(buttonSize);
-    const shouldDisable = shouldDisableByImage || shouldDisableByColorMode;
+    const state = paletteGeneratorImageUiHelpers.getPaletteSizeButtonState({
+      paletteBaseMode,
+      buttonSize,
+      allowedColorModeSizes,
+      hasImageSource: !!uploadedBaseImage?.dataUrl,
+      availableImageColors: availableCount,
+    });
 
-    button.hidden = !shouldShowForMode;
-
-    button.classList.toggle("is-disabled", shouldDisable);
-    button.setAttribute("aria-disabled", shouldDisable ? "true" : "false");
+    button.hidden = state.hidden;
+    button.classList.toggle("is-disabled", state.disabled);
+    button.setAttribute("aria-disabled", state.disabled ? "true" : "false");
   });
 }
 
