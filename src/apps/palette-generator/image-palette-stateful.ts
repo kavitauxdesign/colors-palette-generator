@@ -290,15 +290,9 @@ function buildImagePaletteCandidate(args: BuildImagePaletteCandidateArgs) {
   const usedColors = new Set<string>();
 
   harmonyOrderedClusters.forEach((cluster, clusterIndex) => {
-    const variantHex = args.deps.getImagePaletteVariantHex(
-      cluster,
-      clusterIndex,
-      args.variantIndex
-    );
-    const nextHex =
-      !usedColors.has(variantHex || "") && !args.deps.isDisallowedColor(variantHex || "")
-        ? variantHex
-        : cluster.hex;
+    const extractedHex = cluster.hex;
+    const fallbackHex = args.deps.getImagePaletteVariantHex(cluster, clusterIndex, 0);
+    const nextHex = extractedHex || fallbackHex;
 
     if (!nextHex || usedColors.has(nextHex) || args.deps.isDisallowedColor(nextHex)) {
       return;
@@ -308,12 +302,7 @@ function buildImagePaletteCandidate(args: BuildImagePaletteCandidateArgs) {
     basePalette.push(nextHex);
   });
 
-  return args.deps.expandImagePalette(
-    harmonyOrderedClusters,
-    args.targetCount,
-    args.variantIndex,
-    basePalette
-  );
+  return basePalette.slice(0, Math.max(0, args.targetCount));
 }
 
 function ensureMutableImagePaletteSlotsChange(args: EnsureMutableSlotsArgs) {
@@ -372,13 +361,10 @@ function buildImageBasedPaletteCandidate(args: BuildImageBasedPaletteCandidateAr
       variantIndex,
       deps: args.deps,
     });
-    const repairedPalette = ensureMutableImagePaletteSlotsChange({
+    const repairedPalette = args.deps.mergePaletteWithPinnedColors(
       candidatePalette,
-      referencePalette: args.referenceSourcePalette,
-      pinnedEntries: args.pinnedEntries,
-      variantSeed: variantIndex,
-      deps: args.deps,
-    });
+      args.pinnedEntries
+    );
     const candidateComparablePalette = args.deps.getComparablePaletteSlice(
       repairedPalette,
       args.pinnedEntries

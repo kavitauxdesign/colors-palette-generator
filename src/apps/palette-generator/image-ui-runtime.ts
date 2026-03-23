@@ -38,10 +38,12 @@ type RefreshImageDerivedControlsArgs = {
 type SyncImagePaletteFromSourceArgs = {
   paletteBaseMode: PaletteBaseMode;
   uploadedImageDataUrl?: string | null;
+  paletteSize: number;
   imagePaletteVariantIndex: number;
   imageInspirationVariantIndex: number;
   options?: Record<string, unknown>;
   clearRecentInspiredPalettes: () => void;
+  setPaletteSize?: ((size: number) => void) | null;
   syncVariantState: (nextState: {
     imagePaletteVariantIndex: number;
     imageInspirationVariantIndex: number;
@@ -93,6 +95,7 @@ const ALLOWED_PALETTE_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 const ALLOWED_PALETTE_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".svg", ".webp"];
+const NON_COLOR_MODE_SIZE_OPTIONS = [3, 6, 9, 12];
 
 function normalizePaletteBaseMode(value: unknown): PaletteBaseMode {
   if (value === "image") {
@@ -132,12 +135,14 @@ function getPaletteBaseModeTransitionPlan(args: PaletteBaseModeTransitionArgs) {
   const previousMode = args.currentMode;
   const isMovingFromImageToColor = previousMode === "image" && nextMode === "color";
   const isMovingFromNonColorToColor = previousMode !== "color" && nextMode === "color";
+  const isMovingFromNonImageToImage = previousMode !== "image" && nextMode === "image";
 
   return {
     nextMode,
     shouldClearImageExtractionFeedback: nextMode !== "image",
     shouldClearLeakedColorModeFixedPins: previousMode === "color" && nextMode !== "color",
     shouldRefreshImageDerivedControls: nextMode === "image" && !!args.uploadedImageDataUrl,
+    shouldRefreshImagePaletteFromSource: isMovingFromNonImageToImage && !!args.uploadedImageDataUrl,
     colorModeAdoption: {
       shouldSyncColorModeControls: nextMode === "color",
       shouldClearUnavailablePinnedCards: nextMode === "color",
@@ -225,6 +230,31 @@ function getNextImageVariantState(args: VariantStateArgs) {
   };
 }
 
+function resolveImagePaletteSize(currentSize: number, availableImageColors: number) {
+  const safeCurrentSize = Number.isFinite(currentSize) ? Math.max(0, Number(currentSize)) : 0;
+  const safeAvailableColors = Number.isFinite(availableImageColors)
+    ? Math.max(0, Number(availableImageColors))
+    : 0;
+
+  if (safeAvailableColors <= 0) {
+    return safeCurrentSize;
+  }
+
+  const allowedSizes = NON_COLOR_MODE_SIZE_OPTIONS.filter(
+    (size) => size <= safeAvailableColors
+  );
+
+  if (allowedSizes.includes(safeCurrentSize)) {
+    return safeCurrentSize;
+  }
+
+  if (allowedSizes.length > 0) {
+    return allowedSizes[allowedSizes.length - 1];
+  }
+
+  return Math.min(safeCurrentSize || safeAvailableColors, safeAvailableColors);
+}
+
 async function refreshImageDerivedControls(args: RefreshImageDerivedControlsArgs) {
   const runRefresh = async () => {
     if (args.paletteBaseMode !== "image" || !args.uploadedImageDataUrl) {
@@ -299,9 +329,25 @@ async function syncImagePaletteFromSource(args: SyncImagePaletteFromSourceArgs) 
       args.clearRecentInspiredPalettes();
     }
 
-    await args.refreshImageDerivedControls();
+    const refreshResult = await args.refreshImageDerivedControls();
     if (args.isExtractionFeedbackVisible()) {
       return;
+    }
+
+    const clusterCount = Number.isFinite(
+      (refreshResult as { clusterCount?: unknown } | null)?.clusterCount
+    )
+      ? Number((refreshResult as { clusterCount: number }).clusterCount)
+      : 0;
+    const resolvedPaletteSize = resolveImagePaletteSize(args.paletteSize, clusterCount);
+
+    if (
+      typeof args.setPaletteSize === "function" &&
+      Number.isFinite(resolvedPaletteSize) &&
+      resolvedPaletteSize > 0 &&
+      resolvedPaletteSize !== args.paletteSize
+    ) {
+      args.setPaletteSize(resolvedPaletteSize);
     }
 
     await args.generatePalette();

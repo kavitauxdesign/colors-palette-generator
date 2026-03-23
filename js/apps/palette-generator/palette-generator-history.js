@@ -1,28 +1,41 @@
 ﻿// PALETTES HISTORY
+const paletteGeneratorHistoryRuntime = window.PaletteGeneratorHistoryRuntime || {};
+
+if (
+  typeof paletteGeneratorHistoryRuntime.captureCurrentGeneratorSettings !== "function" ||
+  typeof paletteGeneratorHistoryRuntime.resolveAppliedPaletteSize !== "function" ||
+  typeof paletteGeneratorHistoryRuntime.getHistoryNavigationState !== "function" ||
+  typeof paletteGeneratorHistoryRuntime.createHistoryEntry !== "function" ||
+  typeof paletteGeneratorHistoryRuntime.formatHistoryTime !== "function" ||
+  typeof paletteGeneratorHistoryRuntime.resolveHistoryEntryForLoad !== "function" ||
+  typeof paletteGeneratorHistoryRuntime.getTargetHistoryIndex !== "function"
+) {
+  throw new Error("PaletteGeneratorHistoryRuntime is required before palette-generator-history.js loads.");
+}
 
 function captureCurrentGeneratorSettings() {
-  // Save current controls with colors
-  return {
+  return paletteGeneratorHistoryRuntime.captureCurrentGeneratorSettings({
     paletteSize,
-    baseMode: paletteBaseMode,
-    baseColor: selectedPaletteBaseColor,
-    colorPaletteType: selectedColorPaletteType,
-    monochromaticGenerationMode: selectedMonochromaticGenerationMode,
-    analogousSeparationMode: selectedAnalogousSeparationMode,
+    actualPaletteSize: Array.isArray(currentPalette) ? currentPalette.length : 0,
+    paletteBaseMode,
+    selectedPaletteBaseColor,
+    selectedColorPaletteType,
+    selectedMonochromaticGenerationMode,
+    selectedAnalogousSeparationMode,
     prioritizeImageDominantColors,
-    temperature: {
-      warm: !!temperature.warm,
-      cool: !!temperature.cool,
-    },
+    temperature,
     brightness: brightnessInput ? Number(brightnessInput.value) : DEFAULT_BRIGHTNESS,
     saturation: saturationInput ? Number(saturationInput.value) : DEFAULT_SATURATION,
-  };
+    defaultBrightness: DEFAULT_BRIGHTNESS,
+    defaultSaturation: DEFAULT_SATURATION,
+  });
 }
 
 function updateHistoryNavigationButtons() {
-  const canUndo = paletteHistoryIndex > 0;
-  const canRedo =
-    paletteHistoryIndex >= 0 && paletteHistoryIndex < paletteHistory.length - 1;
+  const { canUndo, canRedo } = paletteGeneratorHistoryRuntime.getHistoryNavigationState({
+    paletteHistoryIndex,
+    paletteHistoryLength: paletteHistory.length,
+  });
 
   if (paletteUndoBtn) {
     paletteUndoBtn.disabled = !canUndo;
@@ -37,14 +50,16 @@ function updateHistoryNavigationButtons() {
 
 function applyGeneratorSettings(settings, fallbackSize) {
   // Old history entries may miss settings
-  const nextSize = Number.isFinite(settings?.paletteSize)
-    ? settings.paletteSize
-    : fallbackSize;
+  const nextSize = paletteGeneratorHistoryRuntime.resolveAppliedPaletteSize(
+    settings,
+    fallbackSize
+  );
   setPaletteSize(nextSize);
 
   if (typeof setPaletteBaseMode === "function" && settings?.baseMode) {
     setPaletteBaseMode(settings.baseMode, {
       suppressAutomaticColorModeRefresh: true,
+      suppressAutomaticImageModeRefresh: true,
     });
   }
 
@@ -116,13 +131,16 @@ function saveHistory(colors, metadata = {}) {
     );
 
   // Save a copy so later edits do not change history
-  paletteHistory.push({
-    colors: [...colors],
-    createdAt: new Date(),
-    isAlternative: !!metadata.isAlternative,
-    pinnedIndexes: [...pinnedIndexes],
-    settings: captureCurrentGeneratorSettings(),
-  });
+  paletteHistory.push(
+    paletteGeneratorHistoryRuntime.createHistoryEntry({
+      colors,
+      metadata: {
+        isAlternative: metadata.isAlternative,
+        pinnedIndexes,
+      },
+      settings: captureCurrentGeneratorSettings(),
+    })
+  );
   paletteHistoryIndex = paletteHistory.length - 1;
   syncPaletteGeneratorStoreHistoryState({
     scope: "history-save",
@@ -133,13 +151,7 @@ function saveHistory(colors, metadata = {}) {
 }
 
 function formatHistoryTime(dateValue) {
-  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
-
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-
-  return `${hours}:${minutes}:${seconds}`;
+  return paletteGeneratorHistoryRuntime.formatHistoryTime(dateValue);
 }
 
 function renderHistory() {
@@ -274,30 +286,13 @@ function renderHistory() {
 }
 
 function loadPaletteVersionInGenerator(historyEntry, options = {}) {
-  const colors = Array.isArray(historyEntry)
-    ? historyEntry
-    : historyEntry?.colors;
-
-  if (!Array.isArray(colors)) {
+  const resolvedHistoryEntry =
+    paletteGeneratorHistoryRuntime.resolveHistoryEntryForLoad(historyEntry);
+  if (!resolvedHistoryEntry) {
     return;
   }
 
-  // Normalize and keep only valid HEX colors
-  const validColors = colors
-    .map((color) => normalizeHexColor(color))
-    .filter((hex) => isValidHexColor(hex));
-
-  if (validColors.length === 0) {
-    return;
-  }
-
-  const fallbackSize = validColors.length;
-  const settings = Array.isArray(historyEntry)
-    ? null
-    : historyEntry?.settings;
-  const pinnedIndexes = Array.isArray(historyEntry?.pinnedIndexes)
-    ? historyEntry.pinnedIndexes
-    : [];
+  const { validColors, fallbackSize, settings, pinnedIndexes } = resolvedHistoryEntry;
   applyGeneratorSettings(settings, fallbackSize);
 
   getColorCards().forEach((card) => card.remove());
@@ -338,8 +333,12 @@ function navigatePaletteHistory(direction) {
     return;
   }
 
-  const targetIndex = paletteHistoryIndex + direction;
-  if (targetIndex < 0 || targetIndex >= paletteHistory.length) {
+  const targetIndex = paletteGeneratorHistoryRuntime.getTargetHistoryIndex(
+    direction,
+    paletteHistoryIndex,
+    paletteHistory.length
+  );
+  if (!Number.isFinite(targetIndex)) {
     updateHistoryNavigationButtons();
     return;
   }

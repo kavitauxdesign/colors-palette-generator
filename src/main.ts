@@ -9,6 +9,8 @@ import "./apps/palette-generator/store";
 import "./apps/palette-generator/selectors";
 import "./apps/palette-generator/actions";
 import "./apps/palette-generator/state-runtime";
+import "./apps/palette-generator/history-runtime";
+import "./apps/palette-generator/controls-runtime";
 import "./apps/palette-generator/core-helpers";
 import "./apps/palette-generator/core-runtime";
 import "./apps/palette-generator/color-mode-helpers";

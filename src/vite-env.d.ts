@@ -23,6 +23,8 @@ declare global {
     PaletteGeneratorStateSelectors?: any;
     PaletteGeneratorStateActions?: any;
     PaletteGeneratorStateRuntime?: any;
+    PaletteGeneratorHistoryRuntime?: any;
+    PaletteGeneratorControlsRuntime?: any;
     PaletteGeneratorCoreHelpers?: any;
     PaletteGeneratorCoreRuntime?: any;
     PaletteGeneratorColorModeHelpers?: any;

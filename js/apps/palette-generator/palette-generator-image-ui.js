@@ -418,10 +418,12 @@ async function syncImagePaletteFromSource(options = {}) {
   return paletteGeneratorImageUiRuntime.syncImagePaletteFromSource({
     paletteBaseMode,
     uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
+    paletteSize,
     imagePaletteVariantIndex,
     imageInspirationVariantIndex,
     options,
     clearRecentInspiredPalettes,
+    setPaletteSize: typeof setPaletteSize === "function" ? setPaletteSize : null,
     syncVariantState(nextVariantState) {
       imagePaletteVariantIndex = nextVariantState.imagePaletteVariantIndex;
       imageInspirationVariantIndex = nextVariantState.imageInspirationVariantIndex;
@@ -574,6 +576,14 @@ function setPaletteBaseMode(nextMode, options = {}) {
   }
 
   if (transitionPlan.shouldRefreshImageDerivedControls) {
+    if (
+      transitionPlan.shouldRefreshImagePaletteFromSource &&
+      options.suppressAutomaticImageModeRefresh !== true
+    ) {
+      void syncImagePaletteFromSource();
+      return;
+    }
+
     void refreshImageDerivedControls();
     return;
   }
@@ -768,7 +778,9 @@ function handlePaletteImageFile(file) {
     isReplaceImagePending = uploadState.isReplaceImagePending;
     isPaletteImageDropzoneVisible = uploadState.isPaletteImageDropzoneVisible;
     setPaletteImageExtractionFeedback(false);
-    setPaletteBaseMode(uploadState.nextBaseMode);
+    setPaletteBaseMode(uploadState.nextBaseMode, {
+      suppressAutomaticImageModeRefresh: true,
+    });
     renderPaletteImagePreview();
     void syncImagePaletteFromSource({ resetVariant: uploadState.shouldResetVariant });
   });
