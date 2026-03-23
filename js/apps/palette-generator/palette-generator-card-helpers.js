@@ -56,6 +56,7 @@ function syncCurrentPaletteFromDom() {
     source: "palette-generator",
   });
   refreshColorCardNames();
+  refreshDeleteButtonsVisibility();
   if (typeof updateColorModeCardActionVisibility === "function") {
     updateColorModeCardActionVisibility();
   }

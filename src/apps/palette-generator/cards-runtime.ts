@@ -29,6 +29,18 @@ type ResolvedCardRoleState = {
   pinningAvailable: boolean;
 };
 
+type CardActionVisibilityArgs = CardRoleArgs & {
+  canDelete?: unknown;
+  isPinned?: unknown;
+};
+
+type RegenerateButtonStateArgs = CardRoleArgs & {
+  isMonochromaticScaleActive?: unknown;
+  isPinned?: unknown;
+  regenerateLocked?: unknown;
+  hasImageCandidate?: unknown;
+};
+
 function normalizePaletteBaseMode(value: unknown): PaletteBaseMode {
   if (value === "image") {
     return "image";
@@ -167,6 +179,106 @@ function getPinnedPaletteIndexes(args: PinnedPaletteIndexesArgs) {
     .map((entry) => entry.index);
 }
 
+function shouldHideCardRegenerateButtons(args: {
+  paletteBaseMode?: unknown;
+  effectiveType?: unknown;
+  isMonochromaticScaleActive?: unknown;
+}) {
+  if (args.isMonochromaticScaleActive) {
+    return true;
+  }
+
+  if (normalizePaletteBaseMode(args.paletteBaseMode) !== "color") {
+    return false;
+  }
+
+  const effectiveType = normalizeEffectiveType(args.effectiveType);
+  return ["complementary", "analogous", "triad", "tetrad"].includes(
+    String(effectiveType || "")
+  );
+}
+
+function getCardActionVisibilityState(args: CardActionVisibilityArgs) {
+  const roleState = resolveCardRoleState(args);
+  const canDelete = !!args.canDelete;
+  const isPinned = !!args.isPinned;
+
+  return {
+    editHidden: isPinned || roleState.isBaseCard || roleState.isComplementaryCard,
+    deleteHidden: !canDelete || isPinned || roleState.isBaseCard || roleState.isComplementaryCard,
+    pinButtonHidden: !roleState.pinningAvailable || roleState.hasReadonlyFixedPin,
+    pinOverlayHidden: !roleState.pinningAvailable && !roleState.hasReadonlyFixedPin,
+    pinOverlayAlwaysVisible: roleState.hasReadonlyFixedPin,
+    pinOverlayCorner: roleState.hasReadonlyFixedPin,
+    pinOverlayReadonly: roleState.hasReadonlyFixedPin,
+    pinOverlayFixedRole: roleState.hasReadonlyFixedPin,
+  };
+}
+
+function getRegenerateButtonState(args: RegenerateButtonStateArgs) {
+  const roleState = resolveCardRoleState(args);
+  const shouldHideRegenerateButton =
+    shouldHideCardRegenerateButtons(args) ||
+    roleState.isBaseCard ||
+    roleState.isComplementaryCard;
+
+  if (roleState.isBaseCard) {
+    return {
+      hidden: shouldHideRegenerateButton,
+      available: false,
+      tooltip: "El color base se ajusta desde el panel de controles",
+    };
+  }
+
+  if (roleState.isComplementaryCard) {
+    return {
+      hidden: shouldHideRegenerateButton,
+      available: false,
+      tooltip: "El complementario se ajusta automáticamente desde el color base",
+    };
+  }
+
+  if (shouldHideCardRegenerateButtons(args)) {
+    return {
+      hidden: shouldHideRegenerateButton,
+      available: false,
+      tooltip: "Ajusta el color base o Brillo/Saturación",
+    };
+  }
+
+  if (args.isPinned) {
+    return {
+      hidden: true,
+      available: false,
+      tooltip: "El color está fijado",
+    };
+  }
+
+  if (normalizePaletteBaseMode(args.paletteBaseMode) !== "image") {
+    return {
+      hidden: shouldHideRegenerateButton,
+      available: true,
+      tooltip: "Regenerar color",
+    };
+  }
+
+  if (args.regenerateLocked) {
+    return {
+      hidden: shouldHideRegenerateButton,
+      available: false,
+      tooltip: "No hay suficiente variedad de colores en la imagen de referencia",
+    };
+  }
+
+  return {
+    hidden: shouldHideRegenerateButton,
+    available: !!args.hasImageCandidate,
+    tooltip: !!args.hasImageCandidate
+      ? "Regenerar color"
+      : "No hay suficiente variedad de colores en la imagen de referencia",
+  };
+}
+
 export const PaletteGeneratorCardsRuntime = {
   normalizePaletteBaseMode,
   normalizeEffectiveType,
@@ -176,6 +288,9 @@ export const PaletteGeneratorCardsRuntime = {
   resolveCardRoleState,
   resolvePinnedCardState,
   getPinnedPaletteIndexes,
+  shouldHideCardRegenerateButtons,
+  getCardActionVisibilityState,
+  getRegenerateButtonState,
 };
 
 window.PaletteGeneratorCardsRuntime = PaletteGeneratorCardsRuntime;

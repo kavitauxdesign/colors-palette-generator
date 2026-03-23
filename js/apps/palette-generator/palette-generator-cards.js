@@ -4,7 +4,9 @@ const paletteGeneratorCardsRuntimeForCards = window.PaletteGeneratorCardsRuntime
 if (
   typeof paletteGeneratorCardsRuntimeForCards.isCardPinningAvailable !== "function" ||
   typeof paletteGeneratorCardsRuntimeForCards.resolveCardRoleState !== "function" ||
-  typeof paletteGeneratorCardsRuntimeForCards.resolvePinnedCardState !== "function"
+  typeof paletteGeneratorCardsRuntimeForCards.resolvePinnedCardState !== "function" ||
+  typeof paletteGeneratorCardsRuntimeForCards.getCardActionVisibilityState !== "function" ||
+  typeof paletteGeneratorCardsRuntimeForCards.getRegenerateButtonState !== "function"
 ) {
   throw new Error("PaletteGeneratorCardsRuntime is required before palette-generator-cards.js loads.");
 }
@@ -101,31 +103,35 @@ function clearUnavailablePinnedCards() {
 }
 
 function updateColorModeCardActionVisibility() {
-  Array.from(getColorCards()).forEach((card) => {
+  const cards = Array.from(getColorCards());
+
+  cards.forEach((card, index) => {
     const editBtn = card.querySelector(".action-edit");
     const pinBtn = card.querySelector(".color-pin-btn");
     const pinOverlay = card.querySelector(".color-pin-overlay");
-    const shouldShowReadonlyFixedPin =
-      shouldShowLockedColorModeBasePin(card) ||
-      shouldShowLockedComplementaryPin(card);
+    const effectiveType =
+      typeof getEffectiveColorPaletteType === "function"
+        ? getEffectiveColorPaletteType(cards.length || paletteSize)
+        : selectedColorPaletteType;
+    const actionVisibility = paletteGeneratorCardsRuntimeForCards.getCardActionVisibilityState({
+      paletteBaseMode,
+      effectiveType,
+      totalCount: cards.length,
+      cardIndex: index,
+      isPinned: isCardPinned(card),
+    });
     if (editBtn) {
-      editBtn.classList.toggle(
-        "is-hidden",
-        isLockedColorModeBaseCard(card) || isLockedComplementaryRoleCard(card)
-      );
+      editBtn.classList.toggle("is-hidden", actionVisibility.editHidden);
     }
     if (pinBtn) {
-      pinBtn.classList.toggle("is-hidden", !isCardPinningAvailable() || shouldShowReadonlyFixedPin);
+      pinBtn.classList.toggle("is-hidden", actionVisibility.pinButtonHidden);
     }
     if (pinOverlay) {
-      pinOverlay.classList.toggle(
-        "is-hidden",
-        !isCardPinningAvailable() && !shouldShowReadonlyFixedPin
-      );
-      pinOverlay.classList.toggle("is-always-visible", shouldShowReadonlyFixedPin);
-      pinOverlay.classList.toggle("is-corner", shouldShowReadonlyFixedPin);
-      pinOverlay.classList.toggle("is-readonly", shouldShowReadonlyFixedPin);
-      pinOverlay.classList.toggle("is-fixed-role", shouldShowReadonlyFixedPin);
+      pinOverlay.classList.toggle("is-hidden", actionVisibility.pinOverlayHidden);
+      pinOverlay.classList.toggle("is-always-visible", actionVisibility.pinOverlayAlwaysVisible);
+      pinOverlay.classList.toggle("is-corner", actionVisibility.pinOverlayCorner);
+      pinOverlay.classList.toggle("is-readonly", actionVisibility.pinOverlayReadonly);
+      pinOverlay.classList.toggle("is-fixed-role", actionVisibility.pinOverlayFixedRole);
     }
   });
 }
@@ -180,19 +186,27 @@ function setRegenerateButtonAvailability(button, isAvailable, tooltipText = null
 }
 // Show delete while more than 1 card exists
 function refreshDeleteButtonsVisibility() {
-  const cards = getColorCards();
+  const cards = Array.from(getColorCards());
   const canDelete = cards.length > 1;
+  const effectiveType =
+    typeof getEffectiveColorPaletteType === "function"
+      ? getEffectiveColorPaletteType(cards.length || paletteSize)
+      : selectedColorPaletteType;
 
-  cards.forEach((card) => {
+  cards.forEach((card, index) => {
     const deleteBtn = card.querySelector(".action-delete");
     if (!deleteBtn) {
       return;
     }
-    const shouldHideDelete =
-      !canDelete ||
-      isLockedColorModeBaseCard(card) ||
-      isLockedComplementaryRoleCard(card);
-    deleteBtn.classList.toggle("is-hidden", shouldHideDelete);
+    const actionVisibility = paletteGeneratorCardsRuntimeForCards.getCardActionVisibilityState({
+      paletteBaseMode,
+      effectiveType,
+      totalCount: cards.length,
+      cardIndex: index,
+      canDelete,
+      isPinned: isCardPinned(card),
+    });
+    deleteBtn.classList.toggle("is-hidden", actionVisibility.deleteHidden);
   });
 }
 // Enable or disable add button by card limit
@@ -296,77 +310,41 @@ function getAddedColorForCurrentMode(existingColors) {
 
 function updateRegenerateButtonsAvailability() {
   const cards = Array.from(getColorCards());
-  const shouldHideRegenerateButtons =
-    (
-      typeof isColorModeMonochromaticScaleActive === "function" &&
-      isColorModeMonochromaticScaleActive()
-    ) ||
-    (
-      paletteBaseMode === "color" &&
-      ["complementary", "analogous", "triad", "tetrad"].includes(selectedColorPaletteType)
-    );
+  const effectiveType =
+    typeof getEffectiveColorPaletteType === "function"
+      ? getEffectiveColorPaletteType(cards.length || paletteSize)
+      : selectedColorPaletteType;
+  const isMonochromaticScaleActive =
+    typeof isColorModeMonochromaticScaleActive === "function" &&
+    isColorModeMonochromaticScaleActive();
 
-  cards.forEach((card) => {
+  cards.forEach((card, index) => {
     const regenerateBtn = card.querySelector(".action-regenerate");
     if (!regenerateBtn) {
       return;
     }
-
-    const shouldHideRegenerateButton =
-      shouldHideRegenerateButtons ||
-      isLockedColorModeBaseCard(card) ||
-      isLockedComplementaryRoleCard(card);
-
-    regenerateBtn.classList.toggle("is-hidden", shouldHideRegenerateButton);
-
-    if (isLockedColorModeBaseCard(card)) {
-      setRegenerateButtonAvailability(
-        regenerateBtn,
-        false,
-        "El color base se ajusta desde el panel de controles"
-      );
-      return;
+    let hasImageCandidate = null;
+    if (
+      paletteBaseMode === "image" &&
+      card.dataset.regenerateLocked !== "true"
+    ) {
+      const existingColors = new Set(getCurrentPaletteHexValues());
+      hasImageCandidate = !!getRegeneratedColorForCard(card, existingColors);
     }
 
-    if (isLockedComplementaryRoleCard(card)) {
-      setRegenerateButtonAvailability(
-        regenerateBtn,
-        false,
-        "El complementario se ajusta automáticamente desde el color base"
-      );
-      return;
-    }
+    const state = paletteGeneratorCardsRuntimeForCards.getRegenerateButtonState({
+      paletteBaseMode,
+      effectiveType,
+      totalCount: cards.length,
+      cardIndex: index,
+      isMonochromaticScaleActive,
+      isPinned: isCardPinned(card),
+      regenerateLocked: card.dataset.regenerateLocked === "true",
+      hasImageCandidate,
+    });
 
-    if (shouldHideRegenerateButtons) {
-      setRegenerateButtonAvailability(
-        regenerateBtn,
-        false,
-        "Ajusta el color base o Brillo/Saturación"
-      );
-      return;
-    }
-
-    if (isCardPinned(card)) {
-      setRegenerateButtonAvailability(regenerateBtn, false, "El color está fijado");
-      return;
-    }
-
-    if (paletteBaseMode !== "image") {
-      setRegenerateButtonAvailability(regenerateBtn, true);
-      return;
-    }
-
-    if (card.dataset.regenerateLocked === "true") {
-      setRegenerateButtonAvailability(regenerateBtn, false);
-      return;
-    }
-
-    const existingColors = new Set(getCurrentPaletteHexValues());
-
-    setRegenerateButtonAvailability(
-      regenerateBtn,
-      !!getRegeneratedColorForCard(card, existingColors)
-    );
+    regenerateBtn.classList.toggle("is-hidden", state.hidden);
+    setRegenerateButtonAvailability(regenerateBtn, state.available, state.tooltip);
   });
 }
 
@@ -420,7 +398,7 @@ function attachCardActions(card) {
   editBtn.addEventListener("click", (event) => {
     event.stopPropagation();
 
-    if (isLockedColorModeBaseCard(card)) {
+    if (isLockedColorModeBaseCard(card) || isLockedComplementaryRoleCard(card) || isCardPinned(card)) {
       return;
     }
 
@@ -476,7 +454,7 @@ function attachCardActions(card) {
 
   deleteBtn.addEventListener("click", (event) => {
     event.stopPropagation();
-    if (isLockedColorModeBaseCard(card)) {
+    if (isLockedColorModeBaseCard(card) || isLockedComplementaryRoleCard(card) || isCardPinned(card)) {
       return;
     }
 
