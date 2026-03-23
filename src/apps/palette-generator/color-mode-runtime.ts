@@ -73,6 +73,21 @@ type ControlVisibilityArgs = {
   selectedColorPaletteType?: unknown;
 };
 
+type PaletteTypeControlStateArgs = {
+  selectedColorPaletteType?: unknown;
+  paletteBaseMode?: unknown;
+  paletteSize?: unknown;
+  referenceSaturation?: unknown;
+};
+
+type MonochromaticControlStateArgs = ControlVisibilityArgs & {
+  selectedMonochromaticGenerationMode?: unknown;
+};
+
+type AnalogousSeparationControlStateArgs = ControlVisibilityArgs & {
+  selectedAnalogousSeparationMode?: unknown;
+};
+
 type CurrentModeSizeArgs = {
   paletteBaseMode?: unknown;
   selectedColorPaletteType?: unknown;
@@ -268,6 +283,62 @@ function getPaletteTypeDisplayLabel(type: unknown) {
     default:
       return "Automática";
   }
+}
+
+function getPaletteTypeControlState(args: PaletteTypeControlStateArgs) {
+  const selectedType = normalizeColorPaletteType(args.selectedColorPaletteType);
+  const resolvedType = getEffectiveColorPaletteType({
+    selectedColorPaletteType: selectedType,
+    targetCount: args.paletteSize,
+    referenceSaturation: args.referenceSaturation,
+  });
+  const shouldShowResolvedType = selectedType === "automatic";
+
+  return {
+    selectedType,
+    resolvedType,
+    shouldShowResolvedType,
+    resolvedLabel: shouldShowResolvedType
+      ? `Resultado automático: ${getPaletteTypeDisplayLabel(resolvedType)}`
+      : "",
+  };
+}
+
+function getMonochromaticModeControlState(args: MonochromaticControlStateArgs) {
+  const resolvedMode = normalizeMonochromaticGenerationMode(
+    args.selectedMonochromaticGenerationMode
+  );
+
+  return {
+    resolvedMode,
+    hidden: !shouldShowMonochromaticModeControl(args),
+  };
+}
+
+function getAnalogousSeparationControlState(args: AnalogousSeparationControlStateArgs) {
+  const resolvedMode = normalizeAnalogousSeparationMode(
+    args.selectedAnalogousSeparationMode
+  );
+
+  return {
+    resolvedMode,
+    hidden: !shouldShowAnalogousSeparationControl(args),
+  };
+}
+
+function resolveColorPaletteTypeSelection(args: PaletteTypeControlStateArgs) {
+  const controlState = getPaletteTypeControlState(args);
+  const { nextSize } = resolveCurrentModePaletteSize({
+    paletteBaseMode: args.paletteBaseMode,
+    selectedColorPaletteType: controlState.selectedType,
+    paletteSize: args.paletteSize,
+  });
+
+  return {
+    ...controlState,
+    nextSize,
+    didSizeChange: nextSize !== Number(args.paletteSize),
+  };
 }
 
 function createScoredCandidate(
@@ -482,6 +553,10 @@ export const PaletteGeneratorColorModeRuntime = {
   shouldShowMonochromaticModeControl,
   shouldShowAnalogousSeparationControl,
   getPaletteTypeDisplayLabel,
+  getPaletteTypeControlState,
+  getMonochromaticModeControlState,
+  getAnalogousSeparationControlState,
+  resolveColorPaletteTypeSelection,
   createColorModePaletteCandidate,
   getColorModeRegenerationColorForCard,
 };

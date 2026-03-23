@@ -55,6 +55,10 @@ if (
   typeof paletteGeneratorColorModeRuntime.shouldShowMonochromaticModeControl !== "function" ||
   typeof paletteGeneratorColorModeRuntime.shouldShowAnalogousSeparationControl !== "function" ||
   typeof paletteGeneratorColorModeRuntime.getPaletteTypeDisplayLabel !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.getPaletteTypeControlState !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.getMonochromaticModeControlState !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.getAnalogousSeparationControlState !== "function" ||
+  typeof paletteGeneratorColorModeRuntime.resolveColorPaletteTypeSelection !== "function" ||
   typeof paletteGeneratorColorModeRuntime.createColorModePaletteCandidate !== "function" ||
   typeof paletteGeneratorColorModeRuntime.getColorModeRegenerationColorForCard !== "function"
 ) {
@@ -84,10 +88,12 @@ function shouldShowAnalogousSeparationControl() {
 }
 
 function syncMonochromaticModeControlState() {
-  const resolvedMode = normalizeMonochromaticGenerationMode(
-    selectedMonochromaticGenerationMode
-  );
-  selectedMonochromaticGenerationMode = resolvedMode;
+  const controlState = paletteGeneratorColorModeRuntime.getMonochromaticModeControlState({
+    paletteBaseMode,
+    selectedColorPaletteType,
+    selectedMonochromaticGenerationMode,
+  });
+  selectedMonochromaticGenerationMode = controlState.resolvedMode;
   syncPaletteGeneratorStoreState(
     {
       selectedMonochromaticGenerationMode,
@@ -98,19 +104,21 @@ function syncMonochromaticModeControlState() {
   );
 
   if (monochromaticModeSelect) {
-    monochromaticModeSelect.value = resolvedMode;
+    monochromaticModeSelect.value = controlState.resolvedMode;
   }
 
   if (monochromaticModeControl) {
-    monochromaticModeControl.hidden = !shouldShowMonochromaticModeControl();
+    monochromaticModeControl.hidden = controlState.hidden;
   }
 }
 
 function syncAnalogousSeparationControlState() {
-  const resolvedMode = normalizeAnalogousSeparationMode(
-    selectedAnalogousSeparationMode
-  );
-  selectedAnalogousSeparationMode = resolvedMode;
+  const controlState = paletteGeneratorColorModeRuntime.getAnalogousSeparationControlState({
+    paletteBaseMode,
+    selectedColorPaletteType,
+    selectedAnalogousSeparationMode,
+  });
+  selectedAnalogousSeparationMode = controlState.resolvedMode;
   syncPaletteGeneratorStoreState(
     {
       selectedAnalogousSeparationMode,
@@ -121,11 +129,11 @@ function syncAnalogousSeparationControlState() {
   );
 
   if (analogousSeparationSelect) {
-    analogousSeparationSelect.value = resolvedMode;
+    analogousSeparationSelect.value = controlState.resolvedMode;
   }
 
   if (analogousSeparationControl) {
-    analogousSeparationControl.hidden = !shouldShowAnalogousSeparationControl();
+    analogousSeparationControl.hidden = controlState.hidden;
   }
 }
 
@@ -347,10 +355,16 @@ function syncPaletteTypeOptionStates() {
     return;
   }
 
+  const controlState = paletteGeneratorColorModeRuntime.getPaletteTypeControlState({
+    selectedColorPaletteType,
+    paletteBaseMode,
+    paletteSize,
+    referenceSaturation: getColorModeReferenceSaturation(),
+  });
+  selectedColorPaletteType = controlState.selectedType;
   paletteTypeOptions.value = selectedColorPaletteType;
 
-  const resolvedType = getEffectiveColorPaletteType();
-  resolvedAutomaticColorPaletteType = resolvedType;
+  resolvedAutomaticColorPaletteType = controlState.resolvedType;
   syncPaletteGeneratorStoreState(
     {
       selectedColorPaletteType,
@@ -362,11 +376,8 @@ function syncPaletteTypeOptionStates() {
   );
 
   if (paletteTypeResolvedLabel) {
-    const shouldShowResolvedType = selectedColorPaletteType === "automatic";
-    paletteTypeResolvedLabel.hidden = !shouldShowResolvedType;
-    paletteTypeResolvedLabel.textContent = shouldShowResolvedType
-      ? `Resultado automático: ${getPaletteTypeDisplayLabel(resolvedType)}`
-      : "";
+    paletteTypeResolvedLabel.hidden = !controlState.shouldShowResolvedType;
+    paletteTypeResolvedLabel.textContent = controlState.resolvedLabel;
   }
 }
 
@@ -388,7 +399,14 @@ function syncColorModeBaseControls() {
 }
 
 function setSelectedColorPaletteType(nextType, options = {}) {
-  selectedColorPaletteType = paletteGeneratorColorModeRuntime.normalizeColorPaletteType(nextType);
+  const selectionState = paletteGeneratorColorModeRuntime.resolveColorPaletteTypeSelection({
+    selectedColorPaletteType: nextType,
+    paletteBaseMode,
+    paletteSize,
+    referenceSaturation: getColorModeReferenceSaturation(),
+  });
+  selectedColorPaletteType = selectionState.selectedType;
+  resolvedAutomaticColorPaletteType = selectionState.resolvedType;
   syncPaletteTypeOptionStates();
   syncMonochromaticModeControlState();
   syncAnalogousSeparationControlState();
@@ -397,13 +415,8 @@ function setSelectedColorPaletteType(nextType, options = {}) {
     clearUnavailablePinnedCards();
   }
 
-  const { nextSize } = paletteGeneratorColorModeRuntime.resolveCurrentModePaletteSize({
-    paletteBaseMode,
-    selectedColorPaletteType,
-    paletteSize,
-  });
-  const didSizeChange = nextSize !== paletteSize;
-  setPaletteSize(nextSize);
+  const didSizeChange = selectionState.didSizeChange;
+  setPaletteSize(selectionState.nextSize);
   syncPaletteGeneratorStoreState(
     {
       selectedColorPaletteType,

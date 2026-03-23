@@ -29,8 +29,9 @@ import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";
 import initializeRegisteredApps from "./app/bootstrap";
 import registerHexToFilterApp from "./apps/hex-to-filter";
-import loadLegacyScripts from "./legacy/load-legacy-scripts";
-import paletteGeneratorLegacyScripts from "./legacy/palette-generator-scripts";
+import registerPaletteGeneratorApp, {
+  loadPaletteGeneratorLegacyScripts,
+} from "./apps/palette-generator";
 
 function updateFooterYear() {
   const APP_BASE_YEAR = 2026;
@@ -51,7 +52,8 @@ async function bootstrap() {
   setupAppDom();
   initializeAppShell();
   registerHexToFilterApp();
-  loadLegacyScripts(paletteGeneratorLegacyScripts);
+  registerPaletteGeneratorApp();
+  loadPaletteGeneratorLegacyScripts();
   initializeRegisteredApps();
 }
 
