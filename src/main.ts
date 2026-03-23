@@ -7,6 +7,8 @@ import "./shared/services/shared-colors";
 import "./shared/assets/app-asset-urls";
 import "./apps/palette-generator/store";
 import "./apps/palette-generator/core-helpers";
+import "./apps/palette-generator/temperature-helpers";
+import "./apps/palette-generator/image-palette-helpers";
 
 import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";
