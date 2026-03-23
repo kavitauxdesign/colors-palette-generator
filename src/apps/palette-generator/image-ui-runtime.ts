@@ -60,6 +60,32 @@ type PaletteImageFileLoadState = {
   shouldResetVariant: boolean;
 };
 
+type PaletteImagePreviewStateArgs = {
+  uploadedImageDataUrl?: string | null;
+  isPaletteImageDropzoneVisible: boolean;
+  isReplaceImagePending: boolean;
+};
+
+type PaletteCardEntryLike = {
+  card: unknown;
+  index: number;
+  hex: string;
+  pinned?: boolean;
+};
+
+type RegeneratePinnedPaletteSlotsArgs = {
+  paletteBaseMode: PaletteBaseMode;
+  imagePaletteVariantProfileCount: number;
+  getCurrentPaletteCardEntries: () => PaletteCardEntryLike[];
+  getRegeneratedColorForCard: (
+    card: unknown,
+    existingColors: Set<string>,
+    options?: Record<string, unknown>
+  ) => string | null;
+  setCardColor: (card: unknown, color: string) => void;
+  persistCurrentPaletteSnapshot: () => void;
+};
+
 const ALLOWED_PALETTE_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -153,6 +179,24 @@ function createPaletteImageFileLoadState(file: File, dataUrl: unknown): PaletteI
     isPaletteImageDropzoneVisible: false,
     nextBaseMode: "image",
     shouldResetVariant: true,
+  };
+}
+
+function getPaletteImagePreviewState(args: PaletteImagePreviewStateArgs) {
+  const hasPreview = !!args.uploadedImageDataUrl;
+
+  return {
+    hasPreview,
+    shouldShowDropzonePanel: !hasPreview || args.isPaletteImageDropzoneVisible,
+    shouldShowPreviewPanel: hasPreview,
+    replaceButtonDisabled: !hasPreview || args.isReplaceImagePending,
+  };
+}
+
+function getOpenPaletteImageDropzoneState() {
+  return {
+    isReplaceImagePending: true,
+    isPaletteImageDropzoneVisible: true,
   };
 }
 
@@ -269,6 +313,64 @@ async function syncImagePaletteFromSource(args: SyncImagePaletteFromSourceArgs) 
   return runSync();
 }
 
+function regeneratePinnedPaletteSlots(args: RegeneratePinnedPaletteSlotsArgs) {
+  const cardEntries = args.getCurrentPaletteCardEntries();
+  const mutableEntries = cardEntries.filter((entry) => !entry.pinned);
+
+  if (mutableEntries.length === 0) {
+    return false;
+  }
+
+  const nextColors = cardEntries.map((entry) => AppColorUtils.normalizeHexColor(entry.hex));
+  let hasChanged = false;
+  const usesVariantAwareRegeneration =
+    args.paletteBaseMode === "image" || args.paletteBaseMode === "color";
+  const maxAttempts = usesVariantAwareRegeneration
+    ? Math.max(6, args.imagePaletteVariantProfileCount * 2)
+    : 1;
+
+  mutableEntries.forEach((entry) => {
+    let candidate: string | null = null;
+    const excludedColors = new Set([AppColorUtils.normalizeHexColor(entry.hex)]);
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      candidate = args.getRegeneratedColorForCard(entry.card, new Set(nextColors), {
+        excludedColors,
+        variantSeedOffset:
+          usesVariantAwareRegeneration
+            ? attempt * Math.max(1, args.imagePaletteVariantProfileCount)
+            : 0,
+        maxVariantSweeps:
+          usesVariantAwareRegeneration
+            ? Math.max(12, args.imagePaletteVariantProfileCount * 6)
+            : undefined,
+      });
+
+      if (candidate && candidate !== entry.hex && !excludedColors.has(candidate)) {
+        break;
+      }
+
+      if (candidate) {
+        excludedColors.add(AppColorUtils.normalizeHexColor(candidate));
+      }
+    }
+
+    if (!candidate || candidate === entry.hex) {
+      return;
+    }
+
+    args.setCardColor(entry.card, candidate);
+    nextColors[entry.index] = AppColorUtils.normalizeHexColor(candidate);
+    hasChanged = true;
+  });
+
+  if (hasChanged) {
+    args.persistCurrentPaletteSnapshot();
+  }
+
+  return hasChanged;
+}
+
 export const PaletteGeneratorImageUiRuntime = {
   normalizePaletteBaseMode,
   getFirstPaletteHexForColorBaseAdoption,
@@ -276,9 +378,12 @@ export const PaletteGeneratorImageUiRuntime = {
   isAcceptedPaletteImageFile,
   createUploadedBaseImage,
   createPaletteImageFileLoadState,
+  getPaletteImagePreviewState,
+  getOpenPaletteImageDropzoneState,
   getNextImageVariantState,
   refreshImageDerivedControls,
   syncImagePaletteFromSource,
+  regeneratePinnedPaletteSlots,
 };
 
 window.PaletteGeneratorImageUiRuntime = PaletteGeneratorImageUiRuntime;

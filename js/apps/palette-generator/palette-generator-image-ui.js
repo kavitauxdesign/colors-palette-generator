@@ -17,9 +17,12 @@ if (
   typeof paletteGeneratorImageUiRuntime.isAcceptedPaletteImageFile !== "function" ||
   typeof paletteGeneratorImageUiRuntime.createUploadedBaseImage !== "function" ||
   typeof paletteGeneratorImageUiRuntime.createPaletteImageFileLoadState !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.getPaletteImagePreviewState !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.getOpenPaletteImageDropzoneState !== "function" ||
   typeof paletteGeneratorImageUiRuntime.getNextImageVariantState !== "function" ||
   typeof paletteGeneratorImageUiRuntime.refreshImageDerivedControls !== "function" ||
-  typeof paletteGeneratorImageUiRuntime.syncImagePaletteFromSource !== "function"
+  typeof paletteGeneratorImageUiRuntime.syncImagePaletteFromSource !== "function" ||
+  typeof paletteGeneratorImageUiRuntime.regeneratePinnedPaletteSlots !== "function"
 ) {
   throw new Error("PaletteGeneratorImageUiRuntime is required before palette-generator-image-ui.js loads.");
 }
@@ -347,61 +350,14 @@ function regeneratePinnedPaletteSlots() {
   ) {
     return false;
   }
-
-  const cardEntries = getCurrentPaletteCardEntries();
-  const mutableEntries = cardEntries.filter((entry) => !entry.pinned);
-
-  if (mutableEntries.length === 0) {
-    return false;
-  }
-
-  const nextColors = cardEntries.map((entry) => normalizeHexColor(entry.hex));
-  let hasChanged = false;
-
-  mutableEntries.forEach((entry) => {
-    let candidate = null;
-    const excludedColors = new Set([normalizeHexColor(entry.hex)]);
-    const maxAttempts =
-      paletteBaseMode === "image" || paletteBaseMode === "color"
-        ? Math.max(6, IMAGE_PALETTE_VARIANT_PROFILES.length * 2)
-        : 1;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      candidate = getRegeneratedColorForCard(entry.card, new Set(nextColors), {
-        excludedColors,
-        variantSeedOffset:
-          paletteBaseMode === "image" || paletteBaseMode === "color"
-            ? attempt * Math.max(1, IMAGE_PALETTE_VARIANT_PROFILES.length)
-            : 0,
-        maxVariantSweeps:
-          paletteBaseMode === "image" || paletteBaseMode === "color"
-            ? Math.max(12, IMAGE_PALETTE_VARIANT_PROFILES.length * 6)
-            : undefined,
-      });
-
-      if (candidate && candidate !== entry.hex && !excludedColors.has(candidate)) {
-        break;
-      }
-
-      if (candidate) {
-        excludedColors.add(normalizeHexColor(candidate));
-      }
-    }
-
-    if (!candidate || candidate === entry.hex) {
-      return;
-    }
-
-    setCardColor(entry.card, candidate);
-    nextColors[entry.index] = normalizeHexColor(candidate);
-    hasChanged = true;
+  return paletteGeneratorImageUiRuntime.regeneratePinnedPaletteSlots({
+    paletteBaseMode,
+    imagePaletteVariantProfileCount: IMAGE_PALETTE_VARIANT_PROFILES.length,
+    getCurrentPaletteCardEntries,
+    getRegeneratedColorForCard,
+    setCardColor,
+    persistCurrentPaletteSnapshot,
   });
-
-  if (hasChanged) {
-    persistCurrentPaletteSnapshot();
-  }
-
-  return hasChanged;
 }
 
 async function syncImagePaletteFromSource(options = {}) {
@@ -617,23 +573,28 @@ function renderPaletteImagePreview() {
     return;
   }
 
-  const hasPreview = !!uploadedBaseImage?.dataUrl;
-  if (!hasPreview) {
+  const previewState = paletteGeneratorImageUiRuntime.getPaletteImagePreviewState({
+    uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
+    isPaletteImageDropzoneVisible,
+    isReplaceImagePending,
+  });
+
+  if (!previewState.hasPreview) {
     isPaletteImageDropzoneVisible = true;
   }
 
   setAnimatedImagePanelVisibility(
     paletteImageDropzonePanel,
-    !hasPreview || isPaletteImageDropzoneVisible
+    previewState.shouldShowDropzonePanel
   );
-  setAnimatedImagePanelVisibility(paletteImagePreview, hasPreview);
-  paletteImageReplaceBtn.disabled = !hasPreview || isReplaceImagePending;
+  setAnimatedImagePanelVisibility(paletteImagePreview, previewState.shouldShowPreviewPanel);
+  paletteImageReplaceBtn.disabled = previewState.replaceButtonDisabled;
   paletteImageReplaceBtn.setAttribute(
     "aria-disabled",
-    !hasPreview || isReplaceImagePending ? "true" : "false"
+    previewState.replaceButtonDisabled ? "true" : "false"
   );
 
-  if (!hasPreview) {
+  if (!previewState.hasPreview) {
     paletteImagePreviewImg.removeAttribute("src");
     paletteImageName.textContent = "";
     updatePaletteModeActionVisibility();
@@ -690,8 +651,9 @@ function openPaletteImageDropzone() {
     return;
   }
 
-  isReplaceImagePending = true;
-  isPaletteImageDropzoneVisible = true;
+  const nextState = paletteGeneratorImageUiRuntime.getOpenPaletteImageDropzoneState();
+  isReplaceImagePending = nextState.isReplaceImagePending;
+  isPaletteImageDropzoneVisible = nextState.isPaletteImageDropzoneVisible;
   renderPaletteImagePreview();
 
   paletteImageDropzonePanel.classList.remove("is-sliding-in");
