@@ -27,6 +27,10 @@ if (
   throw new Error("PaletteGeneratorImageUiRuntime is required before palette-generator-image-ui.js loads.");
 }
 
+const PALETTE_ADJUSTMENT_PREVIEW_DELAY_MS = 16;
+let paletteAdjustmentPreviewFrame = null;
+let paletteAdjustmentPreviewTimeout = null;
+
 function setPaletteAdjustPanelOpen(shouldOpen) {
   if (!paletteAdjustPanel || !paletteAdjustBtn) {
     return;
@@ -147,21 +151,66 @@ function animateSaturationControlAttention() {
   }, 420);
 }
 
-if (brightnessInput) {
-  brightnessInput.addEventListener("input", () => {
-    updateBrightnessProgress();
-    syncTemperatureControlsState();
-    syncPaletteGeneratorStoreAdjustments({
-      brightness: Number(brightnessInput.value),
-    }, {
-      scope: "brightness-input",
+function schedulePaletteAdjustmentPreview() {
+  if (paletteAdjustmentPreviewTimeout !== null || paletteAdjustmentPreviewFrame !== null) {
+    return;
+  }
+
+  paletteAdjustmentPreviewTimeout = setTimeout(() => {
+    paletteAdjustmentPreviewTimeout = null;
+    paletteAdjustmentPreviewFrame = requestAnimationFrame(() => {
+      paletteAdjustmentPreviewFrame = null;
+      applyCurrentPaletteAdjustments();
     });
-    applyCurrentPaletteAdjustments();
-  });
-  brightnessInput.addEventListener("change", () => {
-    if (currentPalette.length > 0) {
-      saveHistory(currentPalette);
-    }
+  }, PALETTE_ADJUSTMENT_PREVIEW_DELAY_MS);
+}
+
+function flushPaletteAdjustmentPreview() {
+  if (paletteAdjustmentPreviewTimeout !== null) {
+    clearTimeout(paletteAdjustmentPreviewTimeout);
+    paletteAdjustmentPreviewTimeout = null;
+  }
+
+  if (paletteAdjustmentPreviewFrame !== null) {
+    cancelAnimationFrame(paletteAdjustmentPreviewFrame);
+    paletteAdjustmentPreviewFrame = null;
+  }
+
+  applyCurrentPaletteAdjustments();
+}
+
+function bindPaletteAdjustmentInput(input, handlers = {}) {
+  if (!input) {
+    return;
+  }
+
+  if (typeof handlers.onInput === "function") {
+    input.addEventListener("input", handlers.onInput);
+  }
+
+  if (typeof handlers.onChange === "function") {
+    input.addEventListener("change", handlers.onChange);
+  }
+}
+
+if (brightnessInput) {
+  bindPaletteAdjustmentInput(brightnessInput, {
+    onInput: () => {
+      updateBrightnessProgress();
+      syncTemperatureControlsState();
+      schedulePaletteAdjustmentPreview();
+    },
+    onChange: () => {
+      flushPaletteAdjustmentPreview();
+      syncPaletteGeneratorStoreAdjustments({
+        brightness: Number(brightnessInput.value),
+      }, {
+        scope: "brightness-change",
+      });
+      if (currentPalette.length > 0) {
+        saveHistory(currentPalette);
+      }
+    },
   });
   // Apply the first visual state
   updateBrightnessProgress();
@@ -169,20 +218,23 @@ if (brightnessInput) {
 }
 
 if (saturationInput) {
-  saturationInput.addEventListener("input", () => {
-    updateSaturationProgress();
-    syncTemperatureControlsState();
-    syncPaletteGeneratorStoreAdjustments({
-      saturation: Number(saturationInput.value),
-    }, {
-      scope: "saturation-input",
-    });
-    applyCurrentPaletteAdjustments();
-  });
-  saturationInput.addEventListener("change", () => {
-    if (currentPalette.length > 0) {
-      saveHistory(currentPalette);
-    }
+  bindPaletteAdjustmentInput(saturationInput, {
+    onInput: () => {
+      updateSaturationProgress();
+      syncTemperatureControlsState();
+      schedulePaletteAdjustmentPreview();
+    },
+    onChange: () => {
+      flushPaletteAdjustmentPreview();
+      syncPaletteGeneratorStoreAdjustments({
+        saturation: Number(saturationInput.value),
+      }, {
+        scope: "saturation-change",
+      });
+      if (currentPalette.length > 0) {
+        saveHistory(currentPalette);
+      }
+    },
   });
   // Apply the first visual state
   updateSaturationProgress();

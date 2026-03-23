@@ -143,6 +143,7 @@
   height: 100%;
   border-radius: inherit;
   background: #00A4D6;
+  transition: background-color 160ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .palette-color-form {
@@ -654,7 +655,10 @@
   box-shadow: 0 var(--PX-10) 25px var(--shadow);
   transition:
     transform var(--duration-fast) ease,
-    opacity 0.3s ease;
+    opacity 0.3s ease,
+    background-color 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 180ms ease;
+  will-change: transform, background-color;
 }
 
 .palette .add-color {
@@ -673,6 +677,9 @@
   color: var(--grey);
   font-size: var(--PX-12);
   font-weight: 400;
+  transition:
+    background-color 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    color 150ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .color-name {
@@ -700,6 +707,10 @@
   line-height: 1.2;
   text-align: center;
   pointer-events: none;
+  transition:
+    color 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    text-shadow 150ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .color-complementary-indicator {
@@ -711,6 +722,10 @@
   line-height: 1.2;
   text-align: center;
   pointer-events: none;
+  transition:
+    color 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    text-shadow 150ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .color-card.is-base-color .color-base-indicator {
@@ -753,6 +768,7 @@
   transform: scale(1.05);
   z-index: 10;
 }
+
 
 .color-actions {
   position: absolute;

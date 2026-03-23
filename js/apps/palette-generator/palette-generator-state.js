@@ -147,7 +147,12 @@ let copyBtnFeedbackTimeout = null;
 let activeEditCard = null;
 let activeEditOriginalColor = "#000000";
 
-function applyPaletteGeneratorLegacyRuntimeState(nextState = null) {
+function applyPaletteGeneratorLegacyRuntimeState(
+  nextState = null,
+  options = {}
+) {
+  const shouldSyncAdjustmentBaseSettings = !!options.syncAdjustmentBaseSettings;
+
   paletteSize = Number.isFinite(nextState?.paletteSize)
     ? nextState.paletteSize
     : DEFAULT_PALETTE_SIZE;
@@ -192,13 +197,18 @@ function applyPaletteGeneratorLegacyRuntimeState(nextState = null) {
   currentPalette = Array.isArray(nextState?.currentPalette)
     ? [...nextState.currentPalette]
     : [];
-  paletteAdjustmentBaseSettings = nextState?.paletteAdjustmentBaseSettings || {
-    brightness: DEFAULT_BRIGHTNESS,
-    saturation: DEFAULT_SATURATION,
-  };
+
+  if (shouldSyncAdjustmentBaseSettings) {
+    paletteAdjustmentBaseSettings = nextState?.paletteAdjustmentBaseSettings || {
+      brightness: DEFAULT_BRIGHTNESS,
+      saturation: DEFAULT_SATURATION,
+    };
+  }
 }
 
-applyPaletteGeneratorLegacyRuntimeState(paletteGeneratorLegacyRuntimeState);
+applyPaletteGeneratorLegacyRuntimeState(paletteGeneratorLegacyRuntimeState, {
+  syncAdjustmentBaseSettings: true,
+});
 
 function getPaletteGeneratorStoreAdjustmentValues(settings = {}) {
   return (

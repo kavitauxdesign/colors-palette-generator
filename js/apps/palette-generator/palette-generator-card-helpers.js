@@ -184,7 +184,7 @@ function getPinnedPaletteIndexes() {
 function setCardColor(card, color) {
   const normalizedColor = normalizeHexColor(color);
   const overlayStyle = getAccessibleOverlayIconStyle(normalizedColor);
-  card.style.background = normalizedColor;
+  card.style.backgroundColor = normalizedColor;
   card.style.setProperty("--pin-overlay-color", overlayStyle.color);
   card.style.setProperty("--pin-overlay-shadow-color", overlayStyle.shadowColor);
   card.dataset.regenerateLocked = "false";
