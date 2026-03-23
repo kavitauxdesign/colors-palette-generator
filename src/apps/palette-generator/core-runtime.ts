@@ -7,6 +7,13 @@ type PalettePinnedEntry = {
   hex: string;
 };
 
+type PaletteCardEntry = {
+  index: number;
+  hex: string;
+  pinned?: boolean;
+  readonlyFixedPin?: boolean;
+};
+
 type UpdateRangeControlArgs = {
   input?: HTMLInputElement | null;
   valueLabel?: HTMLElement | null;
@@ -65,6 +72,35 @@ type SimilarInspiredPaletteArgs = {
   nextPalette?: unknown;
   recentPalettes?: string[][];
   arePalettesTooSimilar?: ((nextPalette: string[], referencePalette: string[]) => boolean) | null;
+};
+
+type GetPinnedPaletteEntriesSnapshotArgs = {
+  entries?: PaletteCardEntry[];
+  pinningAvailable?: unknown;
+  monochromaticScaleActive?: unknown;
+  paletteBaseMode?: unknown;
+  baseCardIndex?: unknown;
+  complementaryCardIndex?: unknown;
+};
+
+type CommitGeneratedPaletteArgs = {
+  nextPalette?: unknown;
+  previousPalette?: unknown;
+  pinnedEntries?: PalettePinnedEntry[];
+  paletteBaseMode?: unknown;
+  effectiveType?: unknown;
+  usedAlternativePalette?: unknown;
+  paletteHistoryLength?: unknown;
+  setPaletteImageExtractionFeedback: (isVisible: boolean) => void;
+  getColorCards: () => Element[] | NodeListOf<Element>;
+  capturePaletteAdjustmentBase: (colors: string[]) => void;
+  buildAdjustedPaletteFromBase: () => string[];
+  createColorCard: (color: string, options?: { pinned?: boolean }) => void;
+  syncCurrentPaletteFromDom: () => void;
+  saveHistory: (
+    colors: string[],
+    metadata?: { isAlternative?: boolean; pinnedIndexes?: number[] }
+  ) => void;
 };
 
 const { normalizeHexColor, isValidHexColor } = AppColorUtils;
@@ -334,6 +370,99 @@ function getMutablePaletteSlotCount(
   return Math.max(0, totalCount - pinnedCount);
 }
 
+function getPinnedPaletteEntriesSnapshot(args: GetPinnedPaletteEntriesSnapshotArgs = {}) {
+  if (!args.pinningAvailable || args.monochromaticScaleActive) {
+    return [] as PalettePinnedEntry[];
+  }
+
+  const entries = Array.isArray(args.entries) ? args.entries : [];
+  const baseCardIndex = Number.isFinite(args.baseCardIndex) ? Number(args.baseCardIndex) : -1;
+  const complementaryCardIndex = Number.isFinite(args.complementaryCardIndex)
+    ? Number(args.complementaryCardIndex)
+    : -1;
+
+  return entries
+    .filter((entry) => {
+      if (!entry?.pinned) {
+        return false;
+      }
+
+      if (entry.readonlyFixedPin) {
+        return false;
+      }
+
+      if (args.paletteBaseMode === "color" && entry.index === baseCardIndex) {
+        return false;
+      }
+
+      if (args.paletteBaseMode === "color" && entry.index === complementaryCardIndex) {
+        return false;
+      }
+
+      return true;
+    })
+    .map((entry) => ({
+      index: Number(entry.index),
+      hex: normalizeHexColor(entry.hex),
+    }))
+    .filter((entry) => Number.isFinite(entry.index) && entry.index >= 0 && isValidHexColor(entry.hex));
+}
+
+function commitGeneratedPalette(args: CommitGeneratedPaletteArgs) {
+  const previousPalette = normalizePaletteHexCollection(args.previousPalette);
+  const pinnedEntries = Array.isArray(args.pinnedEntries) ? args.pinnedEntries : [];
+  const mergedPalette = mergePaletteWithPinnedColors({
+    nextPalette: args.nextPalette,
+    pinnedEntries,
+  });
+  const pinnedIndexes = pinnedEntries
+    .filter(
+      (entry) =>
+        Number.isFinite(entry?.index) && entry.index >= 0 && entry.index < mergedPalette.length
+    )
+    .map((entry) => entry.index);
+  args.capturePaletteAdjustmentBase(mergedPalette);
+  const shouldRenderRawGeneratedPalette =
+    args.paletteBaseMode === "color" &&
+    ["monochromatic", "complementary", "analogous", "triad", "tetrad"].includes(
+      String(args.effectiveType || "")
+    );
+  const renderedPalette = shouldRenderRawGeneratedPalette
+    ? [...mergedPalette]
+    : mergePaletteWithPinnedColors({
+        nextPalette: args.buildAdjustedPaletteFromBase(),
+        pinnedEntries,
+      });
+
+  args.setPaletteImageExtractionFeedback(false);
+  Array.from(args.getColorCards()).forEach((card) => card.remove());
+  renderedPalette.forEach((color, index) => {
+    args.createColorCard(color, {
+      pinned: pinnedIndexes.includes(index),
+    });
+  });
+  args.syncCurrentPaletteFromDom();
+
+  const generatedPalette = normalizePaletteHexCollection(renderedPalette);
+  const hasExactPaletteChanged =
+    previousPalette.length !== generatedPalette.length ||
+    previousPalette.some((color, index) => color !== generatedPalette[index]);
+
+  if (hasExactPaletteChanged || !Number.isFinite(args.paletteHistoryLength) || Number(args.paletteHistoryLength) === 0) {
+    args.saveHistory(generatedPalette, {
+      isAlternative: !!args.usedAlternativePalette,
+      pinnedIndexes,
+    });
+  }
+
+  return {
+    mergedPalette,
+    renderedPalette,
+    pinnedIndexes,
+    hasExactPaletteChanged,
+  };
+}
+
 function clearRecentInspiredPalettes() {
   return [] as string[][];
 }
@@ -382,6 +511,8 @@ export const PaletteGeneratorCoreRuntime = {
   getComparablePaletteSlice,
   getComparableMergedPaletteSlice,
   getMutablePaletteSlotCount,
+  getPinnedPaletteEntriesSnapshot,
+  commitGeneratedPalette,
   clearRecentInspiredPalettes,
   rememberInspiredPalette,
   isPaletteTooSimilarToRecentInspiredPalettes,
