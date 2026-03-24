@@ -1,6 +1,6 @@
-# Classic·HEX — Version 2.3.0 (beta)
+# Classic·HEX — Version 2.4.0 (beta)
 
-A small suite of color tools built with Vanilla JavaScript. The current beta release includes a palette generator and a `HEX to CSS filter` converter, both mounted as mini-apps inside a shared front-end shell.
+A small suite of color tools built on `Vite + TypeScript`. The current beta release includes a palette generator and a `HEX to CSS filter` converter, both mounted as mini-apps inside a shared front-end shell.
 
 ---
 
@@ -35,7 +35,7 @@ The project currently contains two tools:
 - `Palette Generator`, focused on building and iterating on palettes with temperature, image, inspiration, and history workflows
 - `HEX to CSS filter`, focused on converting a target color into the closest CSS `filter` chain for recoloring SVG assets
 
-Both views live inside the same page and share a small shell for navigation, script bootstrapping, clipboard handling, and color state.
+Both views live inside the same page and share a small shell for navigation, module bootstrapping, clipboard handling, and color state.
 
 ---
 
@@ -87,6 +87,18 @@ Preview the production build locally:
 
 ```bash
 npm run preview
+```
+
+Run the Playwright end-to-end suite:
+
+```bash
+npm run test:e2e
+```
+
+Run the type checker:
+
+```bash
+npm run typecheck
 ```
 
 The production output is generated in:
@@ -172,43 +184,33 @@ css/
     palette-generator.css
     hex-to-filter.css
 
-assets/
-
-js/
+src/
+  main.ts
   app/
-    app-bootstrap.js
-    app-constants.js
-    app-dom.js
-    app-init.js
-    app-shell.js
-
+    bootstrap.ts
+    shell.ts
   apps/
     palette-generator/
-      palette-generator-app.js
-      palette-generator-card-helpers.js
-      palette-generator-card-names.js
-      palette-generator-cards.js
-      palette-generator-controls.js
-      palette-generator-core.js
-      palette-generator-history.js
-      palette-generator-image-analysis.js
-      palette-generator-image-palette.js
-      palette-generator-image-ui.js
-      palette-generator-state.js
-      palette-generator-temperature.js
+      index.ts
+      state.ts
+      core.ts
+      color-mode.ts
+      temperature.ts
+      image-ui.ts
+      history.ts
+      cards.ts
+      ...
     hex-to-filter/
-      hex-to-filter-app.js
-      hex-to-filter-core.js
-
+      index.ts
+      core.ts
   shared/
-    colors/
-      app-color-utils.js
-      color-names.js
+    color/
     services/
-      app-event-bus.js
-      app-registry.js
-      app-shared-colors.js
-      clipboard-service.js
+    dom/
+
+tests/
+  palette-generator.smoke.spec.ts
+  fixtures/
 
 scripts/
   build-index.js
@@ -216,9 +218,9 @@ scripts/
 
 The CSS is separated into layers: a design system, global layout, shared app styles, and app-specific stylesheets.
 
-The JavaScript is also split by responsibility so each mini-app stays more isolated and easier to expand.
+The runtime is split by responsibility so each mini-app stays more isolated and easier to expand.
 
-The project still uses pure Vanilla JavaScript without frameworks such as React or Vue.
+The project still stays framework-free on the UI side, without React or Vue, but now runs through a typed module architecture.
 
 ## HTML Structure
 
@@ -232,18 +234,20 @@ When you edit those source HTML files, regenerate the final page with:
 node scripts/build-index.js
 ```
 
-The runtime script loading was also simplified to a single entry point in `js/app/app-init.js`.
+The runtime boot now starts from `src/main.ts`.
 
 ## App Architecture
 
-The current front-end is organized around a very small shared shell:
+The current front-end is organized around a small shared shell plus typed mini-app modules:
 
-- `app-init.js` loads the script graph from one place
-- `app-shell.js` manages view changes and URL hash synchronization
-- `app-bootstrap.js` initializes each registered mini-app
-- `app-registry.js` provides a lightweight registry for those mini-apps
-- `app-event-bus.js` and `app-shared-colors.js` let tools communicate without tight coupling
-- `clipboard-service.js` keeps copy behavior consistent across tools
+- `src/main.ts` boots the application
+- `src/app/shell.ts` manages view changes and URL hash synchronization
+- `src/app/bootstrap.ts` initializes each registered mini-app
+- `src/shared/services/registry.ts` provides the lightweight mini-app registry
+- `src/shared/services/event-bus.ts` and `src/shared/services/shared-colors.ts` let tools communicate without tight coupling
+- `src/shared/services/clipboard.ts` keeps copy behavior consistent across tools
+- `src/apps/palette-generator/*` contains the palette generator logic split into focused modules
+- `tests/palette-generator.smoke.spec.ts` covers the most fragile user flows with Playwright
 
 This is much easier to maintain than the previous monolithic script structure and makes future mini-app additions more realistic.
 

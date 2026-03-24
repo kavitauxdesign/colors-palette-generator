@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.4.0 (beta) - 2026-03-24
+
+### Highlights
+- Completed the front-end migration to `Vite + TypeScript`, replacing the last raw script bridge with a module-based runtime boot.
+- Stabilized the palette generator around typed modules for `Color`, `Temperature`, `Image`, history, cards, and shared runtime helpers.
+- Added stronger automated regression coverage with `Playwright` for the most fragile palette flows.
+
+### Platform and architecture
+- Moved the palette generator boot flow to `src/main.ts` and `src/apps/palette-generator/index.ts`.
+- Removed the remaining legacy script-loading layer and cleaned up obsolete migration leftovers.
+- Synced the visible front-end version label with `package.json` through the HTML build step.
+
+### Quality and QA
+- Added end-to-end coverage for intensity sliders in `Color` and `Image`.
+- Added end-to-end coverage for `Undo / Redo` around image adjustments and mode roundtrips.
+- Added end-to-end coverage for pinned-card isolation across modes and for `COMP` switching between `6` and `2` colors.
+- Completed a focused manual QA pass for the highest-risk transitions, history flows, role pins, and image restoration behavior.
+
 ## 2.3.0 (beta) - 2026-03-22
 
 ### Highlights
@@ -24,6 +42,8 @@
 - Fixed several edge cases where color roles or pinned-state rules leaked across modes or palette sizes.
 - Stabilized complementary palette behavior when moving between `2` and `6` colors and when adjusting the base color live.
 - Improved slider behavior in harmony modes so brightness and saturation updates respect fixed role colors and regenerate derived colors more predictably.
+- Migrated the front-end workflow to `Vite + TypeScript`, replacing the old raw script boot process with a module-based app entry.
+- Added `Playwright` end-to-end coverage for the most fragile palette flows, including mode transitions, intensity sliders, copy feedback, and history behavior.
 
 ## 2.2.0 - 2026-03-20
 

@@ -35,7 +35,7 @@ import initializeAppShell from "./app/shell";
 import initializeRegisteredApps from "./app/bootstrap";
 import registerHexToFilterApp from "./apps/hex-to-filter";
 import registerPaletteGeneratorApp, {
-  loadPaletteGeneratorLegacyScripts,
+  initializePaletteGeneratorModules,
 } from "./apps/palette-generator";
 
 function updateFooterYear() {
@@ -58,7 +58,7 @@ async function bootstrap() {
   initializeAppShell();
   registerHexToFilterApp();
   registerPaletteGeneratorApp();
-  loadPaletteGeneratorLegacyScripts();
+  initializePaletteGeneratorModules();
   initializeRegisteredApps();
 }
 

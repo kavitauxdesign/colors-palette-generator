@@ -45,7 +45,7 @@ function getPaletteGeneratorStoreState() {
   return getPaletteGeneratorRuntimeWindow().PaletteGeneratorStore?.getState?.() || null;
 }
 
-export function loadPaletteGeneratorLegacyScripts() {
+export function initializePaletteGeneratorModules() {
   initializePaletteGeneratorState();
   initializePaletteGeneratorCore();
   initializePaletteGeneratorCardHelpers();
