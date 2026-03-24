@@ -11,6 +11,7 @@ const IMAGE_PANEL_TRANSITION_MS = 320;
 let saturationAttentionTimeout: ReturnType<typeof setTimeout> | null = null;
 let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
+let isPaletteImageUploadPending = false;
 let isPaletteAdjustPanelOpen = false;
 let paletteAdjustmentPreviewFrame: number | null = null;
 let paletteAdjustmentPreviewTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -856,6 +857,7 @@ export function initializePaletteGeneratorImageUi() {
       !dom.paletteImagePreviewImg ||
       !dom.paletteImageName ||
       !dom.paletteImageDropzonePanel ||
+      !dom.paletteImagePending ||
       !dom.paletteImageReplaceBtn
     ) {
       return;
@@ -866,6 +868,7 @@ export function initializePaletteGeneratorImageUi() {
       isPaletteImageDropzoneVisible,
       isReplaceImagePending,
     });
+    const shouldShowPendingPreview = isPaletteImageUploadPending;
 
     if (!previewState.hasPreview) {
       isPaletteImageDropzoneVisible = true;
@@ -873,17 +876,35 @@ export function initializePaletteGeneratorImageUi() {
 
     setAnimatedImagePanelVisibility(
       dom.paletteImageDropzonePanel,
-      previewState.shouldShowDropzonePanel
+      previewState.shouldShowDropzonePanel && !shouldShowPendingPreview
     );
+    setAnimatedImagePanelVisibility(dom.paletteImagePending, shouldShowPendingPreview);
     setAnimatedImagePanelVisibility(
       dom.paletteImagePreview,
-      previewState.shouldShowPreviewPanel
+      previewState.shouldShowPreviewPanel && !shouldShowPendingPreview
     );
-    dom.paletteImageReplaceBtn.disabled = previewState.replaceButtonDisabled;
+    if (dom.paletteImageDominantToggle) {
+      dom.paletteImageDominantToggle.disabled = shouldShowPendingPreview;
+      dom.paletteImageDominantToggle.setAttribute(
+        "aria-disabled",
+        shouldShowPendingPreview ? "true" : "false"
+      );
+    }
+    dom.paletteImageReplaceBtn.disabled =
+      previewState.replaceButtonDisabled || shouldShowPendingPreview;
     dom.paletteImageReplaceBtn.setAttribute(
       "aria-disabled",
-      previewState.replaceButtonDisabled ? "true" : "false"
+      previewState.replaceButtonDisabled || shouldShowPendingPreview ? "true" : "false"
     );
+
+    if (shouldShowPendingPreview) {
+      dom.paletteImagePreviewImg.removeAttribute("src");
+      dom.paletteImageName.textContent = "";
+      dom.paletteImagePreview.hidden = true;
+      updatePaletteModeActionVisibility();
+      updatePaletteActionButtonsAvailability();
+      return;
+    }
 
     if (!previewState.hasPreview) {
       dom.paletteImagePreviewImg.removeAttribute("src");
@@ -965,6 +986,14 @@ export function initializePaletteGeneratorImageUi() {
       return;
     }
 
+    isPaletteImageUploadPending = true;
+    isReplaceImagePending = false;
+    isPaletteImageDropzoneVisible = false;
+    setPaletteBaseMode("image", {
+      suppressAutomaticImageModeRefresh: true,
+    });
+    renderPaletteImagePreview();
+
     const reader = new FileReader();
     reader.addEventListener("load", () => {
       const uploadState = uiRuntime.createPaletteImageFileLoadState(file, reader.result);
@@ -981,14 +1010,39 @@ export function initializePaletteGeneratorImageUi() {
       isReplaceImagePending = uploadState.isReplaceImagePending;
       isPaletteImageDropzoneVisible = uploadState.isPaletteImageDropzoneVisible;
       setPaletteImageExtractionFeedback(false);
-      setPaletteBaseMode(uploadState.nextBaseMode, {
-        suppressAutomaticImageModeRefresh: true,
-      });
-      renderPaletteImagePreview();
       void syncImagePaletteFromSource({
         resetVariant: uploadState.shouldResetVariant,
-      });
+      })
+        .catch((error) => {
+          console.error(error);
+          alert("No se pudo cargar esta imagen.");
+        })
+        .finally(() => {
+          isPaletteImageUploadPending = false;
+          renderPaletteImagePreview();
+        });
     });
+    reader.addEventListener(
+      "error",
+      () => {
+        isPaletteImageUploadPending = false;
+        renderPaletteImagePreview();
+        alert("No se pudo cargar esta imagen.");
+      },
+      {
+        once: true,
+      }
+    );
+    reader.addEventListener(
+      "abort",
+      () => {
+        isPaletteImageUploadPending = false;
+        renderPaletteImagePreview();
+      },
+      {
+        once: true,
+      }
+    );
     reader.readAsDataURL(file);
   }
 

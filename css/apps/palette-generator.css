@@ -402,6 +402,27 @@
   border: 1px solid rgba(89, 77, 77, 0.08);
 }
 
+.image-upload-pending {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 84px;
+  padding-top: 4px;
+}
+
+.image-upload-pending[hidden] {
+  display: none;
+}
+
+.image-upload-pending-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(145, 111, 83, 0.12);
+  border-top-color: rgba(145, 111, 83, 0.46);
+  animation: paletteSpinnerSpin 0.84s linear infinite;
+}
+
 .image-upload-preview-header {
   display: flex;
   align-items: center;
