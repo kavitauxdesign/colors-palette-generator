@@ -4,6 +4,11 @@
   position: relative;
 }
 
+.site-body:not(.is-app-ready) .site-main {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -25,6 +30,9 @@
   margin: 0 auto;
   padding: var(--PX-20) 0;
   position: relative;
+  transition:
+    opacity 440ms ease,
+    transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .u-flex {
@@ -241,6 +249,22 @@
   display: block;
 }
 
+.view-tab.active.is-view-entering .app-view-shell {
+  animation: appViewFadeIn 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes appViewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* =============================== */
 /* Bottom Toolbar                  */
 /* =============================== */
@@ -256,6 +280,16 @@
   color: var(--secondary);
   text-align: center;
   gap: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-main {
+    transition: none;
+  }
+
+  .view-tab.active.is-view-entering .app-view-shell {
+    animation: none;
+  }
 }
 
 .bottom-toolbar-main {

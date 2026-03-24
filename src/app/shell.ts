@@ -2,15 +2,44 @@ import AppEventBus from "../shared/services/event-bus";
 
 let hasInitializedAppShell = false;
 
+const DEFAULT_VIEW_NAME = "palette_generator";
+const VIEW_ENTER_ANIMATION_MS = 380;
+
 export function initializeAppShell() {
   if (hasInitializedAppShell) {
     return window.AppShell;
   }
-
-  const DEFAULT_VIEW_NAME = "palette_generator";
   const views = Array.from(document.querySelectorAll(".view-tab"));
   const navButtons = Array.from(document.querySelectorAll("nav button"));
   const logoImage = document.querySelector(".logo img") as HTMLElement | null;
+
+  function runTransientAnimationClass(
+    element: HTMLElement | null,
+    className: string,
+    durationMs: number
+  ) {
+    if (!element) {
+      return;
+    }
+
+    const animatedElement = element as HTMLElement & {
+      __codexAnimationTimeout?: ReturnType<typeof setTimeout> | null;
+    };
+
+    if (animatedElement.__codexAnimationTimeout) {
+      clearTimeout(animatedElement.__codexAnimationTimeout);
+      animatedElement.__codexAnimationTimeout = null;
+    }
+
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+
+    animatedElement.__codexAnimationTimeout = setTimeout(() => {
+      element.classList.remove(className);
+      animatedElement.__codexAnimationTimeout = null;
+    }, durationMs);
+  }
 
   function resolveViewName(name: string) {
     const normalizedName = String(name ?? "").trim();
@@ -36,6 +65,9 @@ export function initializeAppShell() {
       view: resolvedViewName,
       metadata,
     });
+
+    const activeView = document.getElementById(resolvedViewName) as HTMLElement | null;
+    runTransientAnimationClass(activeView, "is-view-entering", VIEW_ENTER_ANIMATION_MS);
 
     return resolvedViewName;
   }
