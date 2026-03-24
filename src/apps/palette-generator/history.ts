@@ -335,6 +335,7 @@ export function initializePaletteGeneratorHistory() {
     validColors.forEach((color: string, index: number) => {
       runtimeWindow.createColorCard?.(color, {
         pinned: pinnedIndexes.includes(index),
+        suppressUiRefresh: true,
       });
       globals.currentPalette.push(color);
     });

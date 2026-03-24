@@ -1,11 +1,16 @@
 import AppRegistry from "../../shared/services/registry";
 import APP_CONSTANTS from "../../shared/constants";
-import loadLegacyScripts from "../../legacy/load-legacy-scripts";
-import paletteGeneratorLegacyScripts from "../../legacy/palette-generator-scripts";
+import initializePaletteGeneratorState from "./state";
+import initializePaletteGeneratorCore from "./core";
 import initializePaletteGeneratorControls from "./controls";
 import initializePaletteGeneratorHistory from "./history";
+import initializePaletteGeneratorCardHelpers from "./card-helpers";
+import initializePaletteGeneratorCards from "./cards";
+import initializePaletteGeneratorColorMode from "./color-mode";
+import initializePaletteGeneratorTemperature from "./temperature";
 import initializePaletteGeneratorImageAnalysis from "./image-analysis";
 import initializePaletteGeneratorImagePalette from "./image-palette";
+import initializePaletteGeneratorImageUi from "./image-ui";
 import initializePaletteGeneratorCardNames from "./card-names";
 
 type PaletteGeneratorRuntimeWindow = Window &
@@ -41,10 +46,16 @@ function getPaletteGeneratorStoreState() {
 }
 
 export function loadPaletteGeneratorLegacyScripts() {
+  initializePaletteGeneratorState();
+  initializePaletteGeneratorCore();
+  initializePaletteGeneratorCardHelpers();
+  initializePaletteGeneratorCards();
+  initializePaletteGeneratorTemperature();
   initializePaletteGeneratorImageAnalysis();
   initializePaletteGeneratorImagePalette();
   initializePaletteGeneratorCardNames();
-  loadLegacyScripts(paletteGeneratorLegacyScripts);
+  initializePaletteGeneratorColorMode();
+  initializePaletteGeneratorImageUi();
   initializePaletteGeneratorControls();
   initializePaletteGeneratorHistory();
 }

@@ -53,6 +53,16 @@ async function getPaletteHexes(page: Page) {
   return labels.map((label) => normalizeHex(label));
 }
 
+function expectValidPaletteHexes(colors: string[], expectedCount?: number) {
+  if (Number.isFinite(expectedCount)) {
+    expect(colors).toHaveLength(expectedCount as number);
+  }
+
+  colors.forEach((color) => {
+    expect(color).toMatch(/^#[0-9A-F]{6}$/);
+  });
+}
+
 async function setRangeValue(page: Page, selector: string, value: number) {
   const locator = page.locator(selector);
   await locator.evaluate((element, nextValue) => {
@@ -119,11 +129,17 @@ test("temperature to color keeps flow and undo/redo stable", async ({ page }) =>
 
   await selectPaletteBaseMode(page, "color");
   await expect(page.locator("#paletteTypeOptions")).toHaveValue("monochromatic");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(9);
   await expect
     .poll(async () =>
       normalizeHex(await page.locator("#paletteColorTextInput").inputValue())
     )
     .toBe(adjustedFirstTempColor);
+  const colorPaletteAfterTemp = await getPaletteHexes(page);
+  expect(colorPaletteAfterTemp).toHaveLength(9);
+  expect(colorPaletteAfterTemp.slice(0, adjustedTempPalette.length)).not.toEqual(
+    adjustedTempPalette
+  );
 
   await page.click("#paletteUndoBtn");
   await expect(page.locator("#paletteBaseModeSelect")).toHaveValue("temperature");
@@ -139,7 +155,7 @@ test("temperature to color keeps flow and undo/redo stable", async ({ page }) =>
   expect(dialogMessages).toEqual([]);
 });
 
-test("image mode extracts real colors and restores when returning from color", async ({ page }) => {
+test("image mode restores the last image palette when returning from color", async ({ page }) => {
   const dialogMessages = await collectUnexpectedDialogs(page);
   await gotoPaletteGenerator(page);
 
@@ -153,19 +169,29 @@ test("image mode extracts real colors and restores when returning from color", a
   expect(imagePalette).toHaveLength(3);
   expect(new Set(imagePalette).size).toBe(3);
 
+  await page.click("#surpriseBtn");
+  await expect(page.locator("#paletteLoadingOverlay")).toBeHidden();
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  const lastImagePalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(lastImagePalette, 3);
+
   await selectPaletteBaseMode(page, "color");
   await expect(page.locator("#paletteTypeOptions")).toHaveValue("monochromatic");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(9);
   const adoptedBaseColor = normalizeHex(
     await page.locator("#paletteColorTextInput").inputValue()
   );
-  expect(adoptedBaseColor).toBe(imagePalette[0]);
+  expect(adoptedBaseColor).toBe(lastImagePalette[0]);
+  const colorPaletteAfterImage = await getPaletteHexes(page);
+  expect(colorPaletteAfterImage).toHaveLength(9);
+  expect(colorPaletteAfterImage.slice(0, lastImagePalette.length)).not.toEqual(lastImagePalette);
 
   await selectPaletteBaseMode(page, "image");
   await expect.poll(() => page.locator(".color-card").count()).toBe(3);
   await expect.poll(() => getActivePaletteSize(page)).toBe(3);
 
   const imagePaletteAgain = await getPaletteHexes(page);
-  expect(imagePaletteAgain).toEqual(imagePalette);
+  expect(imagePaletteAgain).toEqual(lastImagePalette);
 
   expect(dialogMessages).toEqual([]);
 });
@@ -184,6 +210,177 @@ test("pinned cards hide edit, delete and regenerate actions outside color mode",
   await expect(firstCard.locator(".action-regenerate")).toBeHidden();
   await expect(firstCard.locator(".action-copy")).toBeVisible();
   await expect(firstCard.locator(".color-pin-btn")).toBeVisible();
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("individual card copy shows copied feedback", async ({ page, context }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await gotoPaletteGenerator(page);
+
+  const firstCopyButton = page.locator(".color-card .action-copy").first();
+  await firstCopyButton.click();
+
+  await expect(firstCopyButton).toHaveClass(/show-feedback/);
+  await expect(firstCopyButton.locator(".tooltip")).toHaveText("¡Copiado!");
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("color base input updates palette and keeps base role placement", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await page.locator("#paletteColorTextInput").fill("#FF537E");
+  await page.locator("#paletteColorTextInput").dispatchEvent("change");
+
+  await expect
+    .poll(async () =>
+      normalizeHex(await page.locator("#paletteColorTextInput").inputValue())
+    )
+    .toBe("#FF537E");
+  await expect
+    .poll(async () => (await getPaletteHexes(page))[0])
+    .toBe("#FF537E");
+
+  await page.selectOption("#paletteTypeOptions", "analogous");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect(page.locator(".color-card").nth(1).locator(".color-base-indicator")).toBeVisible();
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("temperature sliders update labels and palette colors", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "temperature");
+  const beforePalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(beforePalette);
+
+  await setRangeValue(page, "#brightness", 35);
+  await setRangeValue(page, "#saturation", 75);
+
+  await expect(page.locator("#brightnessValue")).toHaveText("35%");
+  await expect(page.locator("#saturationValue")).toHaveText("75%");
+
+  const afterPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(afterPalette, beforePalette.length);
+  expect(afterPalette).not.toEqual(beforePalette);
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("color intensity sliders keep the base fixed and adjust the rest of the palette", async ({
+  page,
+}) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await page.locator("#paletteColorTextInput").fill("#FF537E");
+  await page.locator("#paletteColorTextInput").dispatchEvent("change");
+
+  await expect
+    .poll(async () => normalizeHex(await page.locator("#paletteColorTextInput").inputValue()))
+    .toBe("#FF537E");
+  await expect.poll(async () => (await getPaletteHexes(page))[0]).toBe("#FF537E");
+
+  const beforePalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(beforePalette, 9);
+
+  await setRangeValue(page, "#brightness", 55);
+  await setRangeValue(page, "#saturation", 82);
+
+  await expect(page.locator("#brightnessValue")).toHaveText("55%");
+  await expect(page.locator("#saturationValue")).toHaveText("82%");
+
+  const afterPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(afterPalette, beforePalette.length);
+  expect(afterPalette[0]).toBe("#FF537E");
+  expect(afterPalette.slice(1)).not.toEqual(beforePalette.slice(1));
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("image intensity sliders keep extracted color count stable and restore adjusted palette", async ({
+  page,
+}) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "image");
+  await page.setInputFiles("#paletteImageInput", IMAGE_FIXTURE_PATH);
+
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect.poll(() => getActivePaletteSize(page)).toBe(3);
+
+  const beforePalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(beforePalette, 3);
+
+  await setRangeValue(page, "#brightness", 45);
+  await setRangeValue(page, "#saturation", 72);
+
+  await expect(page.locator("#brightnessValue")).toHaveText("45%");
+  await expect(page.locator("#saturationValue")).toHaveText("72%");
+
+  const adjustedPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(adjustedPalette, 3);
+  expect(adjustedPalette).not.toEqual(beforePalette);
+
+  await selectPaletteBaseMode(page, "color");
+  await expect(page.locator("#paletteTypeOptions")).toHaveValue("monochromatic");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(9);
+
+  await selectPaletteBaseMode(page, "image");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect.poll(() => getActivePaletteSize(page)).toBe(3);
+  await expect
+    .poll(async () => await getPaletteHexes(page))
+    .toEqual(adjustedPalette);
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("image surprise keeps palette generation stable", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "image");
+  await page.setInputFiles("#paletteImageInput", IMAGE_FIXTURE_PATH);
+
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect(page.locator("#surpriseBtn")).toBeVisible();
+  await expect(page.locator("#paletteInspirationBtn")).toBeVisible();
+
+  const initialPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(initialPalette, 3);
+
+  await page.click("#surpriseBtn");
+  await expect(page.locator("#paletteLoadingOverlay")).toBeHidden();
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  const surprisePalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(surprisePalette, 3);
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("image inspiration keeps palette generation stable", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "image");
+  await page.setInputFiles("#paletteImageInput", IMAGE_FIXTURE_PATH);
+
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect(page.locator("#paletteInspirationBtn")).toBeVisible();
+  await expect(page.locator("#paletteInspirationBtn")).toBeEnabled();
+
+  await page.click("#paletteInspirationBtn");
+  await expect(page.locator("#paletteLoadingOverlay")).toBeHidden();
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  const inspiredPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(inspiredPalette, 3);
 
   expect(dialogMessages).toEqual([]);
 });

@@ -54,7 +54,10 @@ type RenderAdjustedPaletteArgs = {
   pinnedEntries?: PalettePinnedEntry[];
   previewOnly?: boolean;
   getColorCards: () => Element[] | NodeListOf<Element>;
-  createColorCard: (color: string, options?: { pinned?: boolean }) => void;
+  createColorCard: (
+    color: string,
+    options?: { pinned?: boolean; suppressUiRefresh?: boolean }
+  ) => void;
   setCardColor: (card: Element, color: string) => void;
   setCardPinnedState: (card: Element, isPinned: boolean) => void;
   refreshDeleteButtonsVisibility: () => void;
@@ -95,7 +98,10 @@ type CommitGeneratedPaletteArgs = {
   getColorCards: () => Element[] | NodeListOf<Element>;
   capturePaletteAdjustmentBase: (colors: string[]) => void;
   buildAdjustedPaletteFromBase: () => string[];
-  createColorCard: (color: string, options?: { pinned?: boolean }) => void;
+  createColorCard: (
+    color: string,
+    options?: { pinned?: boolean; suppressUiRefresh?: boolean }
+  ) => void;
   syncCurrentPaletteFromDom: () => void;
   saveHistory: (
     colors: string[],
@@ -306,6 +312,7 @@ function renderAdjustedPalette(args: RenderAdjustedPaletteArgs) {
     mergedColors.forEach((color, index) => {
       args.createColorCard(color, {
         pinned: pinnedIndexes.includes(index),
+        suppressUiRefresh: true,
       });
     });
   } else {
@@ -439,8 +446,10 @@ function commitGeneratedPalette(args: CommitGeneratedPaletteArgs) {
   renderedPalette.forEach((color, index) => {
     args.createColorCard(color, {
       pinned: pinnedIndexes.includes(index),
+      suppressUiRefresh: true,
     });
   });
+  args.capturePaletteAdjustmentBase(renderedPalette);
   args.syncCurrentPaletteFromDom();
 
   const generatedPalette = normalizePaletteHexCollection(renderedPalette);

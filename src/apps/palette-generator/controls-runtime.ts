@@ -19,7 +19,10 @@ type ApplyPaletteSizeChangeArgs = {
   capturePaletteAdjustmentBase: (colors?: string[]) => void;
   getCurrentPaletteHexValues: () => string[];
   getAddedColorForCurrentMode: (existingColors: Set<string>) => AddedColorResult;
-  createColorCard: (color: string) => Element | null | undefined;
+  createColorCard: (
+    color: string,
+    options?: Record<string, unknown>
+  ) => Element | null | undefined;
   saveHistory: (colors: string[]) => void;
   syncImagePaletteFromSource: () => Promise<unknown>;
   getAllowedPaletteSizesForCurrentMode?: (() => number[]) | null;
@@ -85,7 +88,10 @@ function addColorsToPaletteEnd(args: {
   count: number;
   getCurrentPaletteHexValues: () => string[];
   getAddedColorForCurrentMode: (existingColors: Set<string>) => AddedColorResult;
-  createColorCard: (color: string) => Element | null | undefined;
+  createColorCard: (
+    color: string,
+    options?: Record<string, unknown>
+  ) => Element | null | undefined;
   syncCurrentPaletteFromDom: () => void;
   capturePaletteAdjustmentBase: (colors?: string[]) => void;
 }) {
@@ -103,7 +109,9 @@ function addColorsToPaletteEnd(args: {
       break;
     }
 
-    const card = args.createColorCard(color);
+    const card = args.createColorCard(color, {
+      suppressUiRefresh: true,
+    });
     if (!card) {
       break;
     }
