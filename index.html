@@ -36,11 +36,11 @@
           loadMetrica();
       }
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/108151182" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
   <!-- /Metrika counter -->
 </head>
 
 <body class="site-body">
+  <noscript><div><img src="https://mc.yandex.ru/watch/108151182" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
   <header class="site-header">
     <div class="header-inner">
       <div class="logo">
@@ -251,7 +251,7 @@
 
             <div class="range-labels brightness-labels">
               <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
-              <input type="range" id="brightness" class="range-input--brightness" min="0" max="100" step="5"
+              <input type="range" id="brightness" class="range-input--brightness" min="0" max="100" step="1"
                 value="65" />
               <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
             </div>
@@ -266,7 +266,7 @@
             <div class="range-labels saturation-labels">
               <img class="range-icon saturation-icon" src="assets/saturation-low.svg"
                 alt="Icono de saturación mínima" />
-              <input type="range" id="saturation" class="range-input--saturation" min="0" max="100" step="5"
+              <input type="range" id="saturation" class="range-input--saturation" min="0" max="100" step="1"
                 value="100" />
               <img class="range-icon saturation-icon" src="assets/saturation-high.svg"
                 alt="Icono de saturación máxima" />
@@ -516,10 +516,10 @@
       © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
         id="footerYear"></span> · Reportar un bug o comentario en <a class="footer-report-link" href="https://github.com/kavitauxdesign/colors-palette-generator/issues" target="_blank" rel="noopener noreferrer">GitHub</a> o <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">DM</a>
     </div>
-    <span class="bottom-toolbar-version">Version 2.3.0 (beta).</span>
+    <span class="bottom-toolbar-version">Version 2.4.0 (beta).</span>
   </footer>
 
-  <script src="js/app/app-init.js"></script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 
 </html>

@@ -1,7 +1,24 @@
 // SIZE SELECTOR
+const paletteGeneratorControlsRuntime = window.PaletteGeneratorControlsRuntime || {};
+
+if (
+  typeof paletteGeneratorControlsRuntime.applyPaletteSizeChange !== "function" ||
+  typeof paletteGeneratorControlsRuntime.setTemperatureSelection !== "function" ||
+  typeof paletteGeneratorControlsRuntime.toggleTemperatureSelection !== "function"
+) {
+  throw new Error("PaletteGeneratorControlsRuntime is required before palette-generator-controls.js loads.");
+}
 
 function setPaletteSize(size) {
   paletteSize = size;
+  syncPaletteGeneratorStoreState(
+    {
+      paletteSize,
+    },
+    {
+      scope: "palette-size",
+    }
+  );
   sizeButtons.forEach((button) => {
     button.classList.toggle("active", Number.parseInt(button.dataset.size, 10) === size);
   });
@@ -61,97 +78,75 @@ function addColorsToPaletteEnd(count) {
 }
 
 async function applyPaletteSizeChange(nextSize) {
-  if (paletteBaseMode === "color") {
-    const allowedSizes = getAllowedPaletteSizesForCurrentMode();
-    const resolvedSize = getNearestAllowedPaletteSize(nextSize, allowedSizes);
-    const previousPalette = [...currentPalette];
+  const result = await paletteGeneratorControlsRuntime.applyPaletteSizeChange({
+    paletteBaseMode,
+    nextSize,
+    paletteSize,
+    currentPalette,
+    uploadedImageDataUrl: uploadedBaseImage?.dataUrl,
+    setPaletteSize,
+    getColorCards,
+    refreshDeleteButtonsVisibility,
+    syncCurrentPaletteFromDom,
+    capturePaletteAdjustmentBase,
+    getCurrentPaletteHexValues,
+    getAddedColorForCurrentMode,
+    createColorCard,
+    saveHistory,
+    syncImagePaletteFromSource,
+    getAllowedPaletteSizesForCurrentMode:
+      typeof getAllowedPaletteSizesForCurrentMode === "function"
+        ? getAllowedPaletteSizesForCurrentMode
+        : null,
+    getNearestAllowedPaletteSize:
+      typeof getNearestAllowedPaletteSize === "function"
+        ? getNearestAllowedPaletteSize
+        : null,
+    updatePaletteModeActionVisibility:
+      typeof updatePaletteModeActionVisibility === "function"
+        ? updatePaletteModeActionVisibility
+        : null,
+    updatePaletteActionButtonsAvailability:
+      typeof updatePaletteActionButtonsAvailability === "function"
+        ? updatePaletteActionButtonsAvailability
+        : null,
+    updateRegenerateButtonsAvailability:
+      typeof updateRegenerateButtonsAvailability === "function"
+        ? updateRegenerateButtonsAvailability
+        : null,
+    getEffectiveColorPaletteType:
+      typeof getEffectiveColorPaletteType === "function"
+        ? getEffectiveColorPaletteType
+        : null,
+    selectedColorPaletteType,
+    buildColorModePaletteForSettings:
+      typeof buildColorModePaletteForSettings === "function"
+        ? buildColorModePaletteForSettings
+        : null,
+    getCurrentPaletteAdjustmentSnapshot,
+    getPaletteBaseColorSnapshot:
+      typeof getPaletteBaseColorSnapshot === "function"
+        ? getPaletteBaseColorSnapshot
+        : null,
+    colorPaletteVariantIndex,
+    commitGeneratedPalette:
+      typeof commitGeneratedPalette === "function"
+        ? commitGeneratedPalette
+        : null,
+    withPaletteLoadingOverlay:
+      typeof withPaletteLoadingOverlay === "function"
+        ? withPaletteLoadingOverlay
+        : null,
+  });
 
-    if (resolvedSize !== paletteSize) {
-      setPaletteSize(resolvedSize);
-    }
-
-    if (typeof updatePaletteModeActionVisibility === "function") {
-      updatePaletteModeActionVisibility();
-    }
-
-    if (typeof updatePaletteActionButtonsAvailability === "function") {
-      updatePaletteActionButtonsAvailability();
-    }
-
-    if (typeof updateRegenerateButtonsAvailability === "function") {
-      updateRegenerateButtonsAvailability();
-    }
-
-    const applyRecalculatedColorPalette = () => {
-      const effectiveType = typeof getEffectiveColorPaletteType === "function"
-        ? getEffectiveColorPaletteType(resolvedSize)
-        : selectedColorPaletteType;
-      const nextPalette =
-        typeof buildColorModePaletteForSettings === "function"
-          ? buildColorModePaletteForSettings(
-              resolvedSize,
-              getCurrentPaletteAdjustmentSnapshot(),
-              {
-                baseColor:
-                  typeof getPaletteBaseColorSnapshot === "function"
-                    ? getPaletteBaseColorSnapshot()
-                    : null,
-                effectiveType,
-                variantIndex:
-                  effectiveType === "monochromatic" || effectiveType === "complementary"
-                    ? 0
-                    : colorPaletteVariantIndex,
-              }
-            )
-          : [];
-
-      if (!Array.isArray(nextPalette) || nextPalette.length !== resolvedSize) {
-        alert("No se pudo recalcular una paleta válida para esta cantidad de colores.");
-        return;
-      }
-
-      if (effectiveType === "monochromatic" || effectiveType === "complementary") {
-        colorPaletteVariantIndex = 0;
-      }
-
-      if (typeof commitGeneratedPalette === "function") {
-        commitGeneratedPalette(nextPalette, {
-          effectiveType,
-          previousPalette,
-        });
-      }
-    };
-
-    if (typeof withPaletteLoadingOverlay === "function") {
-      await withPaletteLoadingOverlay(async () => {
-        applyRecalculatedColorPalette();
-      });
-    } else {
-      applyRecalculatedColorPalette();
-    }
-    return;
-  }
-
-  const currentCount = getColorCards().length;
-  const difference = nextSize - currentCount;
-
-  if (difference === 0) {
-    return;
-  }
-
-  if (currentCount === 0) {
-    if (paletteBaseMode === "image" && uploadedBaseImage?.dataUrl) {
-      await syncImagePaletteFromSource();
-    }
-    return;
-  }
-
-  const hasChanged = difference < 0
-    ? removeColorsFromPaletteEnd(Math.abs(difference))
-    : addColorsToPaletteEnd(difference);
-
-  if (hasChanged) {
-    saveHistory(currentPalette);
+  if (
+    Number.isFinite(result?.nextColorPaletteVariantIndex) &&
+    result.nextColorPaletteVariantIndex !== colorPaletteVariantIndex
+  ) {
+    colorPaletteVariantIndex = result.nextColorPaletteVariantIndex;
+    syncPaletteGeneratorStoreColorVariantIndex(colorPaletteVariantIndex, {
+      scope: "color-variant",
+    });
   }
 }
 
@@ -185,15 +180,21 @@ sizeButtons.forEach((button) => {
 // TEMPERATURE
 
 function setTemperatureSelection(nextSelection) {
-  const warmSelected = !!nextSelection.warm;
-  const coolSelected = !!nextSelection.cool;
+  temperature = paletteGeneratorControlsRuntime.setTemperatureSelection({
+    nextSelection,
+  });
 
-  // Keep at least one temperature active
-  if (!warmSelected && !coolSelected) {
-    temperature = { warm: true, cool: false };
-  } else {
-    temperature = { warm: warmSelected, cool: coolSelected };
-  }
+  syncPaletteGeneratorStoreState(
+    {
+      temperature: {
+        warm: !!temperature.warm,
+        cool: !!temperature.cool,
+      },
+    },
+    {
+      scope: "temperature-selection",
+    }
+  );
 
   syncTemperatureControlsState();
 }
@@ -204,19 +205,12 @@ function toggleTemperature(type) {
     return;
   }
 
-  const nextSelection = {
-    warm: temperature.warm,
-    cool: temperature.cool,
-  };
-
-  nextSelection[type] = !nextSelection[type];
-
-  // If both become off, turn back the clicked one
-  if (!nextSelection.warm && !nextSelection.cool) {
-    nextSelection[type] = true;
-  }
-
-  setTemperatureSelection(nextSelection);
+  setTemperatureSelection(
+    paletteGeneratorControlsRuntime.toggleTemperatureSelection({
+      type,
+      temperature,
+    })
+  );
 }
 
 function handleTemperatureButtonClick(type, button) {
