@@ -501,14 +501,14 @@
   display: flex;
   align-items: center;
   gap: var(--PX-14);
+  min-height: 84px;
 }
 
 .image-upload-thumb {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 108px;
-  max-height: 84px;
+  width: 108px;
+  height: 84px;
+  flex: 0 0 108px;
   object-fit: contain;
   border-radius: var(--PX-14);
   background: var(--surface);

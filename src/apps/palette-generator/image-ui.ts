@@ -13,6 +13,7 @@ let saturationAttentionTimeout: ReturnType<typeof setTimeout> | null = null;
 let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
 let isPaletteImageUploadPending = false;
+let isPaletteImageModeTransitionPending = false;
 let isPaletteAdjustPanelOpen = false;
 let paletteAdjustmentPreviewFrame: number | null = null;
 let paletteAdjustmentPreviewTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -738,6 +739,17 @@ export function initializePaletteGeneratorImageUi() {
         dom.imageBasePanel.hidden = !panelVisibilityState.showImagePanel;
       }
 
+      const shouldShowImageTransitionPending =
+        transitionPlan.shouldRefreshImageDerivedControls &&
+        options.suppressAutomaticImageModeRefresh !== true;
+      isPaletteImageModeTransitionPending = shouldShowImageTransitionPending;
+      renderPaletteImagePreview();
+
+      if (shouldShowImageTransitionPending) {
+        animateModeChangeSurfaces(panelVisibilityState);
+        await waitForModeTransitionPaint();
+      }
+
       if (transitionPlan.shouldClearLeakedColorModeFixedPins) {
         clearLeakedColorModeFixedPins();
       }
@@ -760,26 +772,32 @@ export function initializePaletteGeneratorImageUi() {
       }
 
       if (transitionPlan.shouldRefreshImageDerivedControls) {
-        if (
-          transitionPlan.shouldRefreshImagePaletteFromSource &&
-          options.suppressAutomaticImageModeRefresh !== true
-        ) {
-          if (restoreLastImageModeSnapshot()) {
-            animateModeChangeSurfaces(panelVisibilityState);
+        try {
+          if (
+            transitionPlan.shouldRefreshImagePaletteFromSource &&
+            options.suppressAutomaticImageModeRefresh !== true
+          ) {
+            if (restoreLastImageModeSnapshot()) {
+              return;
+            }
+
+            await syncImagePaletteFromSource();
             return;
           }
 
-          await syncImagePaletteFromSource();
-          animateModeChangeSurfaces(panelVisibilityState);
+          await refreshImageDerivedControls();
           return;
+        } finally {
+          isPaletteImageModeTransitionPending = false;
+          renderPaletteImagePreview();
         }
-
-        await refreshImageDerivedControls();
-        animateModeChangeSurfaces(panelVisibilityState);
-        return;
       }
 
-      animateModeChangeSurfaces(panelVisibilityState);
+      isPaletteImageModeTransitionPending = false;
+      renderPaletteImagePreview();
+      if (!shouldShowImageTransitionPending) {
+        animateModeChangeSurfaces(panelVisibilityState);
+      }
 
       if (transitionPlan.colorModeAdoption.shouldSyncColorModeControls) {
         if (
@@ -858,6 +876,14 @@ export function initializePaletteGeneratorImageUi() {
     void runBaseModeTransition();
   }
 
+  function waitForModeTransitionPaint() {
+    return new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+  }
+
   function isAcceptedPaletteImageFile(file: unknown) {
     return uiRuntime.isAcceptedPaletteImageFile(file);
   }
@@ -879,21 +905,37 @@ export function initializePaletteGeneratorImageUi() {
       isPaletteImageDropzoneVisible,
       isReplaceImagePending,
     });
-    const shouldShowPendingPreview = isPaletteImageUploadPending;
+    const shouldShowPendingPreview =
+      isPaletteImageUploadPending || isPaletteImageModeTransitionPending;
 
     if (!previewState.hasPreview) {
       isPaletteImageDropzoneVisible = true;
     }
 
-    setAnimatedImagePanelVisibility(
-      dom.paletteImageDropzonePanel,
-      previewState.shouldShowDropzonePanel && !shouldShowPendingPreview
-    );
-    setAnimatedImagePanelVisibility(dom.paletteImagePending, shouldShowPendingPreview);
-    setAnimatedImagePanelVisibility(
-      dom.paletteImagePreview,
-      previewState.shouldShowPreviewPanel && !shouldShowPendingPreview
-    );
+    const shouldSwapPendingForPreview =
+      previewState.shouldShowPreviewPanel &&
+      !shouldShowPendingPreview &&
+      !dom.paletteImagePending.hidden;
+
+    if (shouldShowPendingPreview) {
+      setImagePanelVisibilityInstantly(dom.paletteImageDropzonePanel, false);
+      setImagePanelVisibilityInstantly(dom.paletteImagePreview, false);
+      setImagePanelVisibilityInstantly(dom.paletteImagePending, true);
+    } else if (shouldSwapPendingForPreview) {
+      setImagePanelVisibilityInstantly(dom.paletteImagePending, false);
+      setImagePanelVisibilityInstantly(dom.paletteImagePreview, true);
+      setImagePanelVisibilityInstantly(dom.paletteImageDropzonePanel, false);
+    } else {
+      setAnimatedImagePanelVisibility(
+        dom.paletteImageDropzonePanel,
+        previewState.shouldShowDropzonePanel && !shouldShowPendingPreview
+      );
+      setAnimatedImagePanelVisibility(dom.paletteImagePending, shouldShowPendingPreview);
+      setAnimatedImagePanelVisibility(
+        dom.paletteImagePreview,
+        previewState.shouldShowPreviewPanel && !shouldShowPendingPreview
+      );
+    }
     if (dom.paletteImageDominantToggle) {
       dom.paletteImageDominantToggle.disabled = shouldShowPendingPreview;
       dom.paletteImageDominantToggle.setAttribute(
@@ -974,6 +1016,27 @@ export function initializePaletteGeneratorImageUi() {
       element.hidden = true;
       elementWithTimeout.__hideTimeout = null;
     }, IMAGE_PANEL_TRANSITION_MS);
+  }
+
+  function setImagePanelVisibilityInstantly(
+    element: HTMLElement | null,
+    shouldShow: boolean
+  ) {
+    if (!element) {
+      return;
+    }
+
+    const elementWithTimeout = element as HTMLElement & {
+      __hideTimeout?: ReturnType<typeof setTimeout> | null;
+    };
+
+    if (elementWithTimeout.__hideTimeout) {
+      clearTimeout(elementWithTimeout.__hideTimeout);
+      elementWithTimeout.__hideTimeout = null;
+    }
+
+    element.hidden = !shouldShow;
+    element.classList.remove("is-collapsed");
   }
 
   function runTransientAnimationClass(
