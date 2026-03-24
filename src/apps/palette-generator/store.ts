@@ -257,7 +257,7 @@ let paletteGeneratorState: PaletteGeneratorState = {
   resolvedAutomaticColorPaletteType: "triad",
   temperature: normalizeTemperatureSelection(
     APP_CONSTANTS.DEFAULT_TEMPERATURE,
-    { warm: true, cool: false }
+    { warm: true, cool: true }
   ),
   currentPalette: [],
   adjustments: {
