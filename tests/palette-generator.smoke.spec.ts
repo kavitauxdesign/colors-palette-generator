@@ -342,6 +342,110 @@ test("image intensity sliders keep extracted color count stable and restore adju
   expect(dialogMessages).toEqual([]);
 });
 
+test("image slider changes survive undo and redo through a color-mode roundtrip", async ({
+  page,
+}) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "image");
+  await page.setInputFiles("#paletteImageInput", IMAGE_FIXTURE_PATH);
+
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  const initialPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(initialPalette, 3);
+
+  await setRangeValue(page, "#brightness", 42);
+  await setRangeValue(page, "#saturation", 78);
+  await expect(page.locator("#brightnessValue")).toHaveText("42%");
+  await expect(page.locator("#saturationValue")).toHaveText("78%");
+
+  const adjustedPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(adjustedPalette, 3);
+  expect(adjustedPalette).not.toEqual(initialPalette);
+
+  await selectPaletteBaseMode(page, "color");
+  await expect(page.locator("#paletteBaseModeSelect")).toHaveValue("color");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(9);
+
+  await page.click("#paletteUndoBtn");
+  await expect(page.locator("#paletteBaseModeSelect")).toHaveValue("image");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect.poll(async () => await getPaletteHexes(page)).toEqual(adjustedPalette);
+
+  await page.click("#paletteRedoBtn");
+  await expect(page.locator("#paletteBaseModeSelect")).toHaveValue("color");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(9);
+  await expect(page.locator("#brightnessValue")).toHaveText("42%");
+  await expect(page.locator("#saturationValue")).toHaveText("78%");
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("user pins in temperature do not leak into color mode", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "temperature");
+  const firstTempCard = page.locator(".color-card").first();
+  await firstTempCard.locator(".color-pin-btn").click();
+
+  await expect(firstTempCard.locator(".action-edit")).toBeHidden();
+  await expect(firstTempCard.locator(".action-delete")).toBeHidden();
+
+  await selectPaletteBaseMode(page, "color");
+  await expect(page.locator("#paletteTypeOptions")).toHaveValue("monochromatic");
+  await expect.poll(() => page.locator(".color-card").count()).toBe(9);
+
+  const secondColorCard = page.locator(".color-card").nth(1);
+  await expect(secondColorCard.locator(".action-copy")).toBeVisible();
+  await expect(secondColorCard.locator(".action-edit")).toBeVisible();
+  await expect(secondColorCard.locator(".action-delete")).toBeVisible();
+
+  expect(dialogMessages).toEqual([]);
+});
+
+test("complementary palette switches cleanly between 6 and 2 colors", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await page.locator("#paletteColorTextInput").fill("#00A4D6");
+  await page.locator("#paletteColorTextInput").dispatchEvent("change");
+  await page.selectOption("#paletteTypeOptions", "complementary");
+
+  await expect.poll(() => page.locator(".color-card").count()).toBe(6);
+  await page.locator('.palette-size .size[data-size="6"]').click();
+  await expect.poll(() => page.locator(".color-card").count()).toBe(6);
+
+  const complementarySixPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(complementarySixPalette, 6);
+  expect(new Set(complementarySixPalette).size).toBeGreaterThan(3);
+
+  await expect(page.locator(".color-card").nth(1).locator(".color-base-indicator")).toBeVisible();
+  await expect(
+    page.locator(".color-card").nth(4).locator(".color-complementary-indicator")
+  ).toBeVisible();
+
+  await page.locator('.palette-size .size[data-size="2"]').click();
+  await expect.poll(() => page.locator(".color-card").count()).toBe(2);
+  const complementaryTwoPalette = await getPaletteHexes(page);
+  expectValidPaletteHexes(complementaryTwoPalette, 2);
+  expect(complementaryTwoPalette[0]).toBe("#00A4D6");
+  expect(complementaryTwoPalette[1]).not.toBe("#00A4D6");
+
+  await page.locator('.palette-size .size[data-size="6"]').click();
+  await expect.poll(() => page.locator(".color-card").count()).toBe(6);
+  const complementarySixPaletteAgain = await getPaletteHexes(page);
+  expectValidPaletteHexes(complementarySixPaletteAgain, 6);
+  expect(complementarySixPaletteAgain[1]).toBe("#00A4D6");
+  await expect(page.locator(".color-card").nth(1).locator(".color-base-indicator")).toBeVisible();
+  await expect(
+    page.locator(".color-card").nth(4).locator(".color-complementary-indicator")
+  ).toBeVisible();
+
+  expect(dialogMessages).toEqual([]);
+});
+
 test("image surprise keeps palette generation stable", async ({ page }) => {
   const dialogMessages = await collectUnexpectedDialogs(page);
   await gotoPaletteGenerator(page);
