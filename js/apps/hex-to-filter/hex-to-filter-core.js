@@ -160,35 +160,61 @@
     }
 
     solve() {
-      const wideResult = this.solveWide();
-      const bestNarrow = this.solveNarrow(wideResult);
-      const bestAdaptive = this.solveAdaptive(bestNarrow);
-      const filteredColor = this.colorFromFilters(bestAdaptive.values);
+      const wideCandidates = this.solveWideCandidates();
+      let best = this.createResult([50, 20, 3750, 50, 100, 100]);
+      const refinedCandidates = [];
+
+      wideCandidates.forEach((candidate) => {
+        best = this.pickBetterResult(best, candidate);
+
+        const narrowResult = this.solveNarrow(candidate);
+        refinedCandidates.push(narrowResult);
+        best = this.pickBetterResult(best, narrowResult);
+
+        const adaptiveResult = this.solveAdaptive(narrowResult);
+        refinedCandidates.push(adaptiveResult);
+        best = this.pickBetterResult(best, adaptiveResult);
+      });
+
+      const polishingSeeds = this.pickTopCandidates(
+        [best, ...wideCandidates, ...refinedCandidates],
+        4
+      );
+
+      polishingSeeds.forEach((candidate) => {
+        best = this.pickBetterResult(best, this.solvePolish(candidate));
+      });
+
+      const filteredColor = this.colorFromFilters(best.values);
 
       return {
-        values: bestAdaptive.values,
-        loss: bestAdaptive.loss,
-        filterValue: this.filterValue(bestAdaptive.values),
-        css: this.css(bestAdaptive.values),
+        values: best.values,
+        loss: best.loss,
+        filterValue: this.filterValue(best.values),
+        css: this.css(best.values),
         colorCss: filteredColor.toCssRgb(),
       };
     }
 
-    solveWide() {
+    solveWideCandidates() {
       const A = 5;
       const c = 15;
       const a = [60, 180, 18000, 600, 1.2, 1.2];
-      const initial = [50, 20, 3750, 50, 100, 100];
-      let best = { loss: Number.POSITIVE_INFINITY, values: initial };
+      const candidates = [];
+      const searchSeeds = this.createWideSearchSeeds();
 
-      for (let attempt = 0; attempt < 7 && best.loss > 2.5; attempt++) {
-        const result = this.spsa(A, a, c, initial.slice(), 1200);
-        if (result.loss < best.loss) {
-          best = result;
+      for (let attempt = 0; attempt < searchSeeds.length; attempt++) {
+        const result = this.spsa(A, a, c, searchSeeds[attempt].slice(), 1200);
+        this.rememberCandidate(candidates, result, 4);
+
+        if (attempt >= 7 && (candidates[0]?.loss ?? Number.POSITIVE_INFINITY) < 1.2) {
+          break;
         }
       }
 
-      return best;
+      return candidates.length > 0
+        ? candidates
+        : [this.createResult([50, 20, 3750, 50, 100, 100])];
     }
 
     solveNarrow(seed) {
@@ -206,6 +232,33 @@
         }
 
         if (best.loss < 0.8) {
+          break;
+        }
+      }
+
+      return best;
+    }
+
+    solvePolish(seed) {
+      let best = { ...seed, values: seed.values.slice() };
+      const attempts = best.loss > 8 ? 5 : 3;
+      const iterations = best.loss > 8 ? 900 : 550;
+
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        const A = Math.max(0.5, best.loss * 0.75 + 0.5);
+        const c = best.loss > 6 ? 1.2 : 0.8;
+        const a = [0.18 * A, 0.18 * A, 0.75 * A, 0.18 * A, 0.14 * A, 0.14 * A];
+        const seedValues =
+          attempt === 0
+            ? best.values.slice()
+            : this.jitterValues(best.values, best.loss > 10 ? 1 : 0.55);
+        const result = this.spsa(A, a, c, seedValues, iterations);
+
+        if (result.loss < best.loss) {
+          best = result;
+        }
+
+        if (best.loss < 0.5) {
           break;
         }
       }
@@ -275,6 +328,102 @@
       }
 
       return { values: bestValues, loss: bestLoss };
+    }
+
+    createWideSearchSeeds() {
+      const targetSeed = [
+        45,
+        35,
+        1200 + this.targetHsl.s / 100 * 5200,
+        this.targetHsl.h,
+        70 + this.targetHsl.l / 100 * 70,
+        135 - this.targetHsl.l / 100 * 45,
+      ];
+      const curatedSeeds = [
+        [50, 20, 3750, 50, 100, 100],
+        targetSeed,
+        [35, 15, 2200, targetSeed[3], 90, 110],
+        [60, 45, 5400, targetSeed[3], 112, 88],
+        [25, 65, 6800, targetSeed[3], 125, 82],
+        [70, 10, 1500, targetSeed[3], 82, 118],
+      ];
+      const randomSeeds = [];
+
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const baseSeed = curatedSeeds[attempt % curatedSeeds.length];
+        randomSeeds.push(this.jitterValues(baseSeed, attempt < 3 ? 0.85 : 1.25));
+      }
+
+      return [...curatedSeeds, ...randomSeeds].map((seed) =>
+        seed.map((value, index) => this.fix(value, index))
+      );
+    }
+
+    jitterValues(values, magnitude = 1) {
+      const offsets = [24, 28, 1600, 18, 30, 30];
+
+      return values.map((value, index) => {
+        const jitter =
+          (Math.random() * 2 - 1) *
+          offsets[index] *
+          magnitude *
+          (index === 3 ? 1.6 : 1);
+        return this.fix(value + jitter, index);
+      });
+    }
+
+    createResult(values) {
+      const safeValues = values.map((value, index) => this.fix(value, index));
+      return {
+        values: safeValues,
+        loss: this.loss(safeValues),
+      };
+    }
+
+    pickBetterResult(currentBest, candidate) {
+      return candidate.loss < currentBest.loss
+        ? { values: candidate.values.slice(), loss: candidate.loss }
+        : currentBest;
+    }
+
+    rememberCandidate(candidates, candidate, limit) {
+      const nextCandidate = { values: candidate.values.slice(), loss: candidate.loss };
+      const nextSignature = this.getResultSignature(nextCandidate.values);
+      const existingIndex = candidates.findIndex(
+        (entry) => this.getResultSignature(entry.values) === nextSignature
+      );
+
+      if (existingIndex >= 0) {
+        if (nextCandidate.loss < candidates[existingIndex].loss) {
+          candidates[existingIndex] = nextCandidate;
+        }
+      } else {
+        candidates.push(nextCandidate);
+      }
+
+      candidates.sort((left, right) => left.loss - right.loss);
+      if (candidates.length > limit) {
+        candidates.length = limit;
+      }
+    }
+
+    pickTopCandidates(candidates, limit) {
+      const nextCandidates = [];
+      candidates.forEach((candidate) => {
+        this.rememberCandidate(nextCandidates, candidate, limit);
+      });
+      return nextCandidates;
+    }
+
+    getResultSignature(values) {
+      return values
+        .map((value, index) => {
+          if (index === 3) {
+            return String(Math.round(value * 2) / 2);
+          }
+          return String(Math.round(value));
+        })
+        .join("|");
     }
 
     fix(value, index) {
