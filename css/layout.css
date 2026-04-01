@@ -200,6 +200,7 @@
   gap: var(--PX-8);
   margin-top: var(--PX-4);
   font-size: var(--PX-18);
+  text-decoration: none;
 }
 
 .logo-icon {
