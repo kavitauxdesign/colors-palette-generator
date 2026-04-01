@@ -289,7 +289,7 @@ export function initializePaletteGeneratorTemperature() {
     const nextPriorityPreference = Math.random() < 0.5;
     globals.prioritizeImageDominantColors = nextPriorityPreference;
     if (dom.paletteImageDominantToggle) {
-      dom.paletteImageDominantToggle.checked = nextPriorityPreference;
+      dom.paletteImageDominantToggle.checked = !nextPriorityPreference;
     }
     runtimeWindow.syncPaletteGeneratorStoreState?.(
       {
@@ -396,7 +396,7 @@ export function initializePaletteGeneratorTemperature() {
 
       globals.prioritizeImageDominantColors = bestCandidate.prioritizeDominant;
       if (dom.paletteImageDominantToggle) {
-        dom.paletteImageDominantToggle.checked = bestCandidate.prioritizeDominant;
+        dom.paletteImageDominantToggle.checked = !bestCandidate.prioritizeDominant;
       }
       runtimeWindow.syncPaletteGeneratorStoreState?.(
         {

@@ -1343,9 +1343,9 @@ export function initializePaletteGeneratorImageUi() {
   }
 
   if (dom.paletteImageDominantToggle) {
-    dom.paletteImageDominantToggle.checked = !!globals.prioritizeImageDominantColors;
+    dom.paletteImageDominantToggle.checked = !globals.prioritizeImageDominantColors;
     dom.paletteImageDominantToggle.addEventListener("change", () => {
-      globals.prioritizeImageDominantColors = !!dom.paletteImageDominantToggle?.checked;
+      globals.prioritizeImageDominantColors = !dom.paletteImageDominantToggle?.checked;
       runtimeWindow.syncPaletteGeneratorStoreState?.(
         {
           prioritizeImageDominantColors: globals.prioritizeImageDominantColors,

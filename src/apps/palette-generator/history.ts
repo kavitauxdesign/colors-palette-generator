@@ -90,7 +90,7 @@ export function initializePaletteGeneratorHistory() {
     if (typeof settings?.prioritizeImageDominantColors === "boolean") {
       globals.prioritizeImageDominantColors = settings.prioritizeImageDominantColors;
       if (dom.paletteImageDominantToggle) {
-        dom.paletteImageDominantToggle.checked = globals.prioritizeImageDominantColors;
+        dom.paletteImageDominantToggle.checked = !globals.prioritizeImageDominantColors;
       }
     }
 

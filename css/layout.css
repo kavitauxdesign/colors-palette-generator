@@ -17,9 +17,14 @@
   width: 100%;
   height: 64px;
   z-index: 1;
-  background-color: var(--on-accent);
-  box-shadow: 0 0 var(--PX-2) var(--PX-2) var(--shadow);
+  background-color: var(--page-bg);
+  box-shadow: none;
   backdrop-filter: blur(14px);
+  transition: box-shadow var(--duration-ui) ease;
+}
+
+.site-header.is-scrolled {
+  box-shadow: 0 10px 24px rgba(32, 26, 23, 0.06);
 }
 
 .site-main {
@@ -192,39 +197,24 @@
 .logo {
   display: inline-flex;
   align-items: center;
+  gap: var(--PX-8);
   margin-top: var(--PX-4);
   font-size: var(--PX-18);
 }
 
-.logo-images {
-  position: relative;
-}
-
-.logo-images .logo-ink {
-  position: absolute;
-  left: 28%;
-  width: 28px;
-  top: 13%;
-}
-
-.logo img {
-  --scroll-rotate: 0deg;
-  --hover-rotate: 0deg;
-  width: 48px;
-  margin-right: var(--PX-8);
-  transform-origin: center;
-  will-change: transform;
-  transform: rotate(calc(var(--scroll-rotate) + var(--hover-rotate)));
-}
-
-.logo:hover img {
-  --hover-rotate: 360deg;
-  transition: transform 0.45s ease;
+.logo-icon {
+  width: 20px;
+  height: auto;
+  flex: 0 0 auto;
+  color: var(--accent);
+  filter: invert(31%) sepia(5%) saturate(700%) hue-rotate(297deg) brightness(91%) contrast(90%);
 }
 
 .logo span:first-of-type {
-  font-weight: 600;
+  font-weight: 500;
   margin-right: 2px;
+  font-size: var(--PX-20);
+  color: var(--primary);
 }
 
 .logo span:last-of-type {
@@ -249,14 +239,39 @@
   display: block;
 }
 
-.view-tab.active.is-view-entering .app-view-shell {
-  animation: appViewFadeIn 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+.view-tab.active.is-view-cascade-revealing .app-view-hero,
+.view-tab.active.is-view-cascade-revealing .app-workspace,
+.view-tab.active.is-view-cascade-revealing .app-stack,
+.view-tab.active.is-view-cascade-revealing .filter-tool,
+.view-tab.active.is-view-cascade-revealing .filter-tool-panel,
+.view-tab.active.is-view-cascade-revealing .filter-tool-previews,
+.view-tab.active.is-view-cascade-revealing .filter-tool-details {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: cascadeRevealIn 440ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
-@keyframes appViewFadeIn {
+.view-tab.active.is-view-cascade-revealing .app-view-hero {
+  animation-delay: 0ms;
+}
+
+.view-tab.active.is-view-cascade-revealing .app-workspace,
+.view-tab.active.is-view-cascade-revealing .filter-tool-panel {
+  animation-delay: 70ms;
+}
+
+.view-tab.active.is-view-cascade-revealing .filter-tool-previews {
+  animation-delay: 130ms;
+}
+
+.view-tab.active.is-view-cascade-revealing .filter-tool-details {
+  animation-delay: 190ms;
+}
+
+@keyframes cascadeRevealIn {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(16px);
   }
 
   to {
@@ -287,7 +302,15 @@
     transition: none;
   }
 
-  .view-tab.active.is-view-entering .app-view-shell {
+  .view-tab.active.is-view-cascade-revealing .app-view-hero,
+  .view-tab.active.is-view-cascade-revealing .app-workspace,
+  .view-tab.active.is-view-cascade-revealing .app-stack,
+  .view-tab.active.is-view-cascade-revealing .filter-tool,
+  .view-tab.active.is-view-cascade-revealing .filter-tool-panel,
+  .view-tab.active.is-view-cascade-revealing .filter-tool-previews,
+  .view-tab.active.is-view-cascade-revealing .filter-tool-details {
+    opacity: 1;
+    transform: none;
     animation: none;
   }
 }

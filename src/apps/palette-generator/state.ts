@@ -46,7 +46,10 @@ export function initializePaletteGeneratorState() {
   const bindings =
     stateActions.createLegacyStoreBindings({
       store: runtimeWindow.PaletteGeneratorStore || null,
-      getDominantToggleChecked: () => dom.paletteImageDominantToggle?.checked ?? true,
+      getDominantToggleChecked: () =>
+        dom.paletteImageDominantToggle
+          ? !dom.paletteImageDominantToggle.checked
+          : false,
       getSharedActiveColor: () =>
         runtimeWindow.AppSharedColors?.getDefaultActiveColor?.() ||
         runtimeWindow.AppSharedColors?.getState?.().activeColor ||
@@ -63,7 +66,9 @@ export function initializePaletteGeneratorState() {
     paletteHistoryIndex: -1,
     paletteBaseMode: constants.DEFAULT_PALETTE_BASE_MODE,
     uploadedBaseImage: null as any,
-    prioritizeImageDominantColors: dom.paletteImageDominantToggle?.checked ?? true,
+    prioritizeImageDominantColors: dom.paletteImageDominantToggle
+      ? !dom.paletteImageDominantToggle.checked
+      : false,
     imagePaletteVariantIndex: 0,
     imageInspirationVariantIndex: 0,
     recentInspiredPalettes: [] as string[][],
@@ -229,7 +234,9 @@ export function initializePaletteGeneratorState() {
   ) {
     const normalizedState = stateRuntime.normalizeLegacyRuntimeState({
       nextState,
-      prioritizeImageDominantColorsFallback: dom.paletteImageDominantToggle?.checked ?? true,
+      prioritizeImageDominantColorsFallback: dom.paletteImageDominantToggle
+        ? !dom.paletteImageDominantToggle.checked
+        : false,
     });
 
     runtimeState.paletteSize = normalizedState.paletteSize;

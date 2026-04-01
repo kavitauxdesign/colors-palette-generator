@@ -1,9 +1,33 @@
 // Shared shell for view navigation and cross-app page-level behavior.
 (function initializeAppShell() {
   const DEFAULT_VIEW_NAME = "palette_generator";
+  const VIEW_CASCADE_REVEAL_MS = 520;
   const views = Array.from(document.querySelectorAll(".view-tab"));
   const navButtons = Array.from(document.querySelectorAll("nav button"));
-  const logoImage = document.querySelector(".logo img");
+  const siteHeader = document.querySelector(".site-header");
+  const initialHashViewName = location.hash.replace("#", "");
+  const shouldResetInitialHashScroll = views.some((view) => view.id === initialHashViewName);
+  let hasCompletedInitialViewSync = false;
+
+  function runTransientAnimationClass(element, className, durationMs) {
+    if (!element || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    if (element.__codexAnimationTimeout) {
+      clearTimeout(element.__codexAnimationTimeout);
+      element.__codexAnimationTimeout = null;
+    }
+
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+
+    element.__codexAnimationTimeout = setTimeout(() => {
+      element.classList.remove(className);
+      element.__codexAnimationTimeout = null;
+    }, durationMs);
+  }
 
   function resolveViewName(name) {
     const normalizedName = String(name ?? "").trim();
@@ -29,6 +53,19 @@
       view: resolvedViewName,
       metadata,
     });
+
+    const shouldAnimateViewChange =
+      hasCompletedInitialViewSync &&
+      (metadata.source === "nav" || metadata.source === "location");
+
+    if (shouldAnimateViewChange) {
+      runTransientAnimationClass(
+        document.getElementById(resolvedViewName),
+        "is-view-cascade-revealing",
+        VIEW_CASCADE_REVEAL_MS
+      );
+    }
+
     return resolvedViewName;
   }
 
@@ -59,15 +96,22 @@
   } else {
     syncViewFromLocation();
   }
+  hasCompletedInitialViewSync = true;
 
-  if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    const rotateLogoOnScroll = () => {
-      logoImage.style.setProperty("--scroll-rotate", `${window.scrollY * 0.2}deg`);
-    };
-
-    window.addEventListener("scroll", rotateLogoOnScroll, { passive: true });
-    rotateLogoOnScroll();
+  if (shouldResetInitialHashScroll) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      });
+    });
   }
+
+  function syncHeaderShadow() {
+    siteHeader?.classList.toggle("is-scrolled", window.scrollY > 0);
+  }
+
+  window.addEventListener("scroll", syncHeaderShadow, { passive: true });
+  syncHeaderShadow();
 
   window.AppShell = {
     showView,

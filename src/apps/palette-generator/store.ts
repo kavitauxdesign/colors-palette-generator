@@ -237,7 +237,7 @@ let paletteGeneratorState: PaletteGeneratorState = {
   paletteHistoryIndex: -1,
   paletteBaseMode: normalizeBaseMode(APP_CONSTANTS.DEFAULT_PALETTE_BASE_MODE),
   uploadedBaseImage: null,
-  prioritizeImageDominantColors: true,
+  prioritizeImageDominantColors: false,
   imagePaletteVariantIndex: 0,
   imageInspirationVariantIndex: 0,
   colorPaletteVariantIndex: 0,
