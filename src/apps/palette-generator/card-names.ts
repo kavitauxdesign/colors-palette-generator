@@ -52,15 +52,49 @@ function getRepetitionSuffixByIndex(index: number) {
   return `Alt ${index - REPETITION_SUFFIXES.length + 2}`;
 }
 
-function buildPaletteShareUrl(hexValues: string[]) {
+function normalizePaletteShareMode(value: unknown) {
+  const normalizedValue = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedValue === "temp") {
+    return "temperature";
+  }
+
+  if (
+    normalizedValue === "color" ||
+    normalizedValue === "temperature" ||
+    normalizedValue === "image"
+  ) {
+    return normalizedValue;
+  }
+
+  return null;
+}
+
+function getCurrentPaletteShareMode(runtimeWindow: any) {
+  const storeMode = runtimeWindow.PaletteGeneratorStore?.getState?.()?.paletteBaseMode;
+  return (
+    normalizePaletteShareMode(storeMode) ||
+    normalizePaletteShareMode(runtimeWindow.PaletteGeneratorLegacyGlobals?.paletteBaseMode) ||
+    normalizePaletteShareMode(runtimeWindow.paletteBaseMode) ||
+    "color"
+  );
+}
+
+function buildPaletteShareUrl(hexValues: string[], paletteBaseMode?: unknown) {
   const normalizedHexValues = hexValues
     .map((hex) => AppColorUtils.normalizeHexColor(hex))
     .filter((hex) => AppColorUtils.isValidHexColor(hex));
+  const normalizedMode = normalizePaletteShareMode(paletteBaseMode);
 
   const shareUrl = new URL(window.location.href);
   shareUrl.search = "";
   shareUrl.hash = "";
   shareUrl.searchParams.set("view", "palette_generator");
+  if (normalizedMode) {
+    shareUrl.searchParams.set("mode", normalizedMode);
+  }
   shareUrl.searchParams.set("palette", normalizedHexValues.join(","));
 
   return shareUrl.toString();
@@ -240,7 +274,9 @@ export function initializePaletteGeneratorCardNames() {
     }
 
     try {
-      await AppClipboard.writeText(buildPaletteShareUrl(hexValues));
+      await AppClipboard.writeText(
+        buildPaletteShareUrl(hexValues, getCurrentPaletteShareMode(runtimeWindow))
+      );
 
       if (runtimeWindow.copyPaletteUrlBtnFeedbackTimeout) {
         clearTimeout(runtimeWindow.copyPaletteUrlBtnFeedbackTimeout);

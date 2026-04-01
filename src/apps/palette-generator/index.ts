@@ -13,6 +13,7 @@ import initializePaletteGeneratorImageAnalysis from "./image-analysis";
 import initializePaletteGeneratorImagePalette from "./image-palette";
 import initializePaletteGeneratorImageUi from "./image-ui";
 import initializePaletteGeneratorCardNames from "./card-names";
+import type { PaletteBaseMode } from "./types";
 
 type PaletteGeneratorRuntimeWindow = Window &
   typeof globalThis & {
@@ -29,6 +30,7 @@ type PaletteGeneratorRuntimeWindow = Window &
     updateAddColorButtonState?: () => void;
     setupSurpriseButton?: () => void;
     syncColorModeBaseControls?: () => void;
+    setPaletteBaseMode?: (mode: unknown, options?: Record<string, unknown>) => void;
     setSelectedPaletteBaseColor?: (
       value: unknown,
       options?: Record<string, unknown>
@@ -52,6 +54,11 @@ const SHARED_PALETTE_ALERT_DURATION_MS = 4000;
 const SHARED_PALETTE_ALERT_EXIT_MS = 260;
 const SHARED_PALETTE_ALERT_ID = "sharedPaletteLoadSnackbar";
 
+type SharedPaletteLocationState = {
+  colors: string[];
+  mode: PaletteBaseMode | null;
+};
+
 function getPaletteGeneratorRuntimeWindow(): PaletteGeneratorRuntimeWindow {
   return window as PaletteGeneratorRuntimeWindow;
 }
@@ -60,23 +67,55 @@ function getPaletteGeneratorStoreState() {
   return getPaletteGeneratorRuntimeWindow().PaletteGeneratorStore?.getState?.() || null;
 }
 
-function getSharedPaletteFromLocation() {
+function normalizeSharedPaletteMode(value: unknown): PaletteBaseMode | null {
+  const normalizedValue = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalizedValue === "temp") {
+    return "temperature";
+  }
+
+  if (
+    normalizedValue === "color" ||
+    normalizedValue === "temperature" ||
+    normalizedValue === "image"
+  ) {
+    return normalizedValue;
+  }
+
+  return null;
+}
+
+function getSharedPaletteFromLocation(): SharedPaletteLocationState {
   const searchParams = new URLSearchParams(window.location.search);
   const targetView = String(searchParams.get("view") || "").trim();
   const rawPalette = String(searchParams.get("palette") || "").trim();
+  const mode = normalizeSharedPaletteMode(searchParams.get("mode"));
 
   if (!rawPalette) {
-    return [];
+    return {
+      colors: [],
+      mode: null,
+    };
   }
 
   if (targetView && targetView !== "palette_generator") {
-    return [];
+    return {
+      colors: [],
+      mode: null,
+    };
   }
 
-  return rawPalette
+  const colors = rawPalette
     .split(",")
     .map((value) => AppColorUtils.normalizeHexColor(value))
     .filter((hex) => AppColorUtils.isValidHexColor(hex));
+
+  return {
+    colors,
+    mode: colors.length > 0 ? mode : null,
+  };
 }
 
 function getSharedPaletteLoadedAlertElement() {
@@ -193,12 +232,22 @@ export function registerPaletteGeneratorApp() {
         storeState?.temperature && typeof storeState.temperature === "object"
           ? storeState.temperature
           : APP_CONSTANTS.DEFAULT_TEMPERATURE;
-      const sharedPalette = getSharedPaletteFromLocation();
+      const sharedPaletteState = getSharedPaletteFromLocation();
+      const sharedPalette = sharedPaletteState.colors;
 
       runtimeWindow.setPaletteSize(
         sharedPalette.length > 0 ? sharedPalette.length : initialPaletteSize
       );
       runtimeWindow.setTemperatureSelection(initialTemperature);
+      if (
+        sharedPaletteState.mode &&
+        typeof runtimeWindow.setPaletteBaseMode === "function"
+      ) {
+        runtimeWindow.setPaletteBaseMode(sharedPaletteState.mode, {
+          suppressAutomaticColorModeRefresh: true,
+          suppressAutomaticImageModeRefresh: true,
+        });
+      }
       if (typeof runtimeWindow.syncColorModeBaseControls === "function") {
         runtimeWindow.syncColorModeBaseControls();
       }
