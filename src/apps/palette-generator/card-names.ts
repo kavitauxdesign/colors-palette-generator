@@ -52,6 +52,20 @@ function getRepetitionSuffixByIndex(index: number) {
   return `Alt ${index - REPETITION_SUFFIXES.length + 2}`;
 }
 
+function buildPaletteShareUrl(hexValues: string[]) {
+  const normalizedHexValues = hexValues
+    .map((hex) => AppColorUtils.normalizeHexColor(hex))
+    .filter((hex) => AppColorUtils.isValidHexColor(hex));
+
+  const shareUrl = new URL(window.location.href);
+  shareUrl.search = "";
+  shareUrl.hash = "";
+  shareUrl.searchParams.set("view", "palette_generator");
+  shareUrl.searchParams.set("palette", normalizedHexValues.join(","));
+
+  return shareUrl.toString();
+}
+
 export function initializePaletteGeneratorCardNames() {
   if (hasInitializedPaletteGeneratorCardNames) {
     return;
@@ -214,6 +228,33 @@ export function initializePaletteGeneratorCardNames() {
       );
     } catch (error) {
       alert("No se han podido copiar los valores de la paleta.");
+    }
+  });
+
+  dom.copyPaletteUrlBtn?.addEventListener("click", async () => {
+    const hexValues = runtimeWindow.getCurrentPaletteHexValues?.() || [];
+
+    if (hexValues.length === 0) {
+      alert("No hay colores en la paleta actual.");
+      return;
+    }
+
+    try {
+      await AppClipboard.writeText(buildPaletteShareUrl(hexValues));
+
+      if (runtimeWindow.copyPaletteUrlBtnFeedbackTimeout) {
+        clearTimeout(runtimeWindow.copyPaletteUrlBtnFeedbackTimeout);
+      }
+
+      runtimeWindow.copyPaletteUrlBtnFeedbackTimeout = runtimeWindow.showButtonCopyFeedback?.(
+        dom.copyPaletteUrlBtn,
+        {
+          defaultTooltipText:
+            dom.copyPaletteUrlBtnTooltip?.textContent || "Copiar URL de la paleta",
+        }
+      );
+    } catch (error) {
+      alert("No se ha podido copiar la URL de la paleta.");
     }
   });
 

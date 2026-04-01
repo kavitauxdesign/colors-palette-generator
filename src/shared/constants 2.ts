@@ -1,0 +1,41 @@
+export const APP_CONSTANTS = {
+  DISALLOWED_COLORS: new Set<string>(),
+  HEX_6_REGEX: /^#[0-9A-F]{6}$/,
+  MAX_UNIQUE_COLOR_ATTEMPTS: 500,
+  MAX_PALETTE_COLORS: 24,
+  DEFAULT_TARGET_COLORS: [
+    "#9EBB89",
+    "#6EC5CE",
+    "#E7AA6E",
+    "#B1BDCD",
+    "#6BBDB6",
+    "#B88965",
+    "#DCC9B3",
+    "#A8AA98",
+    "#6B8F71",
+    "#29A9CA",
+    "#B86346",
+    "#5BAB9C",
+  ],
+  CARD_COPY_TOOLTIP_DEFAULT: "Copiar HEX",
+  HISTORY_COPY_TOOLTIP_DEFAULT: "Copiar paleta",
+  ADD_DISABLED_LABEL:
+    "Esperemos, que con 24 colores la paleta esté completa\u261D\uFE0F",
+  DEFAULT_PALETTE_SIZE: 9,
+  DEFAULT_PALETTE_BASE_MODE: "color",
+  DEFAULT_TEMPERATURE: { warm: true, cool: true },
+  DEFAULT_COLOR_BASE: "#9EBB89",
+  DEFAULT_COLOR_PALETTE_TYPE: "monochromatic",
+  DEFAULT_MONOCHROMATIC_GENERATION_MODE: "automatic",
+  DEFAULT_ANALOGOUS_SEPARATION_MODE: "medium",
+  DEFAULT_BRIGHTNESS: 70,
+  DEFAULT_SATURATION: 70,
+  LOW_SATURATION_FALLBACK_THRESHOLD: 15,
+  LOW_SATURATION_TEMPERATURE_UNLOCK_BRIGHTNESS: 30,
+};
+
+export type AppConstants = typeof APP_CONSTANTS;
+
+window.AppConstants = APP_CONSTANTS;
+
+export default APP_CONSTANTS;

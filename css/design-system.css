@@ -445,6 +445,7 @@ button[hidden] {
 .secondary-btn#paletteRedoBtn,
 .secondary-btn#resetPaletteBtn,
 .secondary-btn#copyHexBtn,
+.secondary-btn#copyPaletteUrlBtn,
 .secondary-btn#paletteRegenerateBtn,
 .secondary-btn#paletteInspirationBtn {
   position: relative;
@@ -461,6 +462,7 @@ button[hidden] {
   .secondary-btn#paletteRedoBtn,
   .secondary-btn#resetPaletteBtn,
   .secondary-btn#copyHexBtn,
+  .secondary-btn#copyPaletteUrlBtn,
   .secondary-btn#paletteRegenerateBtn,
   .secondary-btn#paletteInspirationBtn
 ):is(:hover, :focus-visible, :focus-within, .show-feedback) .tooltip {
@@ -469,13 +471,22 @@ button[hidden] {
   transform: var(--tooltip-visible-transform);
 }
 
-.secondary-btn#copyHexBtn .tooltip.is-copied-feedback {
+.secondary-btn#copyHexBtn .tooltip.is-copied-feedback,
+.secondary-btn#copyPaletteUrlBtn .tooltip.is-copied-feedback {
   background-color: var(--accent);
   color: var(--on-accent);
 }
 
-.secondary-btn#copyHexBtn .tooltip.is-copied-feedback::after {
+.secondary-btn#copyHexBtn .tooltip.is-copied-feedback::after,
+.secondary-btn#copyPaletteUrlBtn .tooltip.is-copied-feedback::after {
   border-top-color: var(--accent);
+}
+
+.secondary-btn#copyPaletteUrlBtn .secondary-btn-icon-asset {
+  width: 24px;
+  height: auto;
+  margin-left: -2px;
+  filter: invert(50%) sepia(5%) saturate(889%) hue-rotate(314deg) brightness(94%) contrast(91%);
 }
 
 .secondary-btn#resetPaletteBtn .tooltip {

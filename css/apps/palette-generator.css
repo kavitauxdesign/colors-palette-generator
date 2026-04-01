@@ -669,6 +669,13 @@
   box-sizing: border-box;
 }
 
+.palette-alert-success {
+  color: #1f5b46;
+  background: linear-gradient(180deg, #eefbf5 0%, #e2f4eb 100%);
+  border-color: rgba(31, 91, 70, 0.2);
+  box-shadow: 0 8px 20px rgba(31, 91, 70, 0.08);
+}
+
 .palette-alert-warning {
   color: #7a4b00;
   background: linear-gradient(180deg, #fff8db 0%, #fff1bf 100%);
