@@ -1,7 +1,7 @@
 {
   "name": "classic-hex",
   "private": true,
-  "version": "2.4.0-beta.0",
+  "version": "2.4.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

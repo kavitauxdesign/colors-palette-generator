@@ -1,11 +1,16 @@
 # Changelog
 
-## 2.4.0 (beta) - 2026-03-24
+## 2.4.0 - 2026-04-01
 
 ### Highlights
 - Completed the front-end migration to `Vite + TypeScript`, replacing the last raw script bridge with a module-based runtime boot.
 - Stabilized the palette generator around typed modules for `Color`, `Temperature`, `Image`, history, cards, and shared runtime helpers.
 - Added stronger automated regression coverage with `Playwright` for the most fragile palette flows.
+
+### Release polish
+- Replaced the previous Classic HEX logo with the new palette icon and linked the full header brand back to the homepage.
+- Refined the shared header behavior with scroll-only shadow treatment and smoother cross-app cascade reveal transitions.
+- Promoted the visible front-end version label from beta to the stable `2.4.0` release.
 
 ### Platform and architecture
 - Moved the palette generator boot flow to `src/main.ts` and `src/apps/palette-generator/index.ts`.
