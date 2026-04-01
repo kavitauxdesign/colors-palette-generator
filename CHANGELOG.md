@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.5.0 - 2026-04-01
+
+### Highlights
+- Added shareable palette URLs that reopen `Palette Generator` with the saved colors and the correct creation mode.
+- Improved `HEX to CSS filter` accuracy by exploring more solver candidates and selecting the lowest-loss result before rendering it.
+- Optimized `Image mode` to stay much more responsive with complex or very large uploads.
+
+### Palette sharing and filter quality
+- Added a dedicated palette URL action, loading feedback via top snackbar, and shared-link restoration for `Color`, `Temperature`, and `Image` modes.
+- Strengthened the filter solver so it tries more search paths, refines the best candidates, and reduces cases with visibly high `Loss`.
+
+### Image mode performance
+- Replaced the expensive exact harmony ordering on large image-cluster sets with a faster approximate fallback to avoid browser freezes.
+- Switched large image uploads to browser `blob:` URLs and revoke stale preview URLs to reduce retained memory.
+- Downscaled oversized images more aggressively before sampling and release canvas memory immediately after extraction.
+
 ## 2.4.0 - 2026-04-01
 
 ### Highlights
