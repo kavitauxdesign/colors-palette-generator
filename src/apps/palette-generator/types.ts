@@ -28,6 +28,8 @@ export interface PaletteGeneratorUploadedImage {
   name: string;
   type: string;
   dataUrl: string;
+  byteSize?: number | null;
+  isObjectUrl?: boolean | null;
   analysisCache: UploadedImageAnalysisCache | null;
 }
 

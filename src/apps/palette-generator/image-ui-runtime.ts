@@ -182,16 +182,43 @@ function isAcceptedPaletteImageFile(file: unknown) {
   );
 }
 
-function createUploadedBaseImage(file: File, dataUrl: unknown): PaletteGeneratorUploadedImage {
+function isRevocablePaletteImageUrl(value: unknown) {
+  return typeof value === "string" && value.startsWith("blob:");
+}
+
+function revokeUploadedBaseImageUrl(image?: PaletteGeneratorUploadedImage | null) {
+  const dataUrl = String(image?.dataUrl || "").trim();
+  if (!isRevocablePaletteImageUrl(dataUrl)) {
+    return;
+  }
+
+  try {
+    URL.revokeObjectURL(dataUrl);
+  } catch (error) {
+    // Ignore revocation failures so they never interrupt image-mode interactions.
+  }
+}
+
+function createUploadedBaseImage(file: File, dataUrl?: unknown): PaletteGeneratorUploadedImage {
+  const resolvedDataUrl =
+    typeof dataUrl === "string" && dataUrl.trim()
+      ? dataUrl.trim()
+      : URL.createObjectURL(file);
+
   return {
     name: file.name,
     type: file.type,
-    dataUrl: String(dataUrl || ""),
+    dataUrl: resolvedDataUrl,
+    byteSize: Number.isFinite(file.size) ? Number(file.size) : null,
+    isObjectUrl: isRevocablePaletteImageUrl(resolvedDataUrl),
     analysisCache: null,
   };
 }
 
-function createPaletteImageFileLoadState(file: File, dataUrl: unknown): PaletteImageFileLoadState {
+function createPaletteImageFileLoadState(
+  file: File,
+  dataUrl?: unknown
+): PaletteImageFileLoadState {
   return {
     uploadedBaseImage: createUploadedBaseImage(file, dataUrl),
     isReplaceImagePending: false,
@@ -501,6 +528,7 @@ export const PaletteGeneratorImageUiRuntime = {
   getPaletteBasePanelVisibilityState,
   isAcceptedPaletteImageFile,
   createUploadedBaseImage,
+  revokeUploadedBaseImageUrl,
   createPaletteImageFileLoadState,
   getPaletteImagePreviewState,
   getOpenPaletteImageDropzoneState,

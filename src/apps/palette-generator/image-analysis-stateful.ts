@@ -26,10 +26,41 @@ const {
 function loadImageElement(dataUrl: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
+    image.decoding = "async";
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("Could not load image for palette extraction."));
     image.src = dataUrl;
   });
+}
+
+function resolveImageAnalysisMaxDimension(
+  image: HTMLImageElement,
+  options: ImageAnalysisStatefulOptions = {}
+) {
+  const fallbackMaxDimension = Number.isFinite(options.maxDimension)
+    ? Math.max(1, Number(options.maxDimension))
+    : 56;
+  const naturalWidth = image.naturalWidth || image.width || 0;
+  const naturalHeight = image.naturalHeight || image.height || 0;
+  const longestEdge = Math.max(naturalWidth, naturalHeight);
+  const totalPixels = Math.max(0, naturalWidth * naturalHeight);
+  const byteSize = Number.isFinite(options.uploadedBaseImage?.byteSize)
+    ? Number(options.uploadedBaseImage?.byteSize)
+    : 0;
+
+  if (totalPixels >= 20_000_000 || byteSize >= 14 * 1024 * 1024 || longestEdge >= 6000) {
+    return Math.min(fallbackMaxDimension, 36);
+  }
+
+  if (totalPixels >= 12_000_000 || byteSize >= 8 * 1024 * 1024 || longestEdge >= 4200) {
+    return Math.min(fallbackMaxDimension, 44);
+  }
+
+  if (totalPixels >= 6_000_000 || byteSize >= 4 * 1024 * 1024 || longestEdge >= 3200) {
+    return Math.min(fallbackMaxDimension, 48);
+  }
+
+  return fallbackMaxDimension;
 }
 
 async function getUploadedImageSamplePoints(options: ImageAnalysisStatefulOptions = {}) {
@@ -43,9 +74,7 @@ async function getUploadedImageSamplePoints(options: ImageAnalysisStatefulOption
   }
 
   const image = await loadImageElement(uploadedBaseImage.dataUrl);
-  const maxDimension = Number.isFinite(options.maxDimension)
-    ? Math.max(1, Number(options.maxDimension))
-    : 56;
+  const maxDimension = resolveImageAnalysisMaxDimension(image, options);
   const scale = Math.min(
     1,
     maxDimension / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height)
@@ -99,6 +128,9 @@ async function getUploadedImageSamplePoints(options: ImageAnalysisStatefulOption
       height,
     });
   }
+
+  canvas.width = 0;
+  canvas.height = 0;
 
   return points;
 }
