@@ -49,12 +49,14 @@ export function setupAppDom() {
   const addColorElement = document.querySelector(".add-color");
   const paletteGenerationButtons = document.getElementById("paletteGenerationButtons");
   const copyHexBtn = document.getElementById("copyHexBtn");
+  const copyPaletteUrlBtn = document.getElementById("copyPaletteUrlBtn");
   const paletteRegenerateBtn = document.getElementById("paletteRegenerateBtn");
   const paletteInspirationBtn = document.getElementById("paletteInspirationBtn");
   const generateBtn = document.getElementById("generateBtn");
   const surpriseBtn = document.getElementById("surpriseBtn");
   const copyHexBtnTooltip = copyHexBtn?.querySelector(".tooltip") ?? null;
   const copyHexBtnLabel = copyHexBtn?.querySelector("span") ?? null;
+  const copyPaletteUrlBtnTooltip = copyPaletteUrlBtn?.querySelector(".tooltip") ?? null;
   const resetPaletteBtn = document.getElementById("resetPaletteBtn");
   const warmBtn = document.getElementById("warmBtn");
   const coolBtn = document.getElementById("coolBtn");
@@ -131,12 +133,14 @@ export function setupAppDom() {
     addColorElement,
     paletteGenerationButtons,
     copyHexBtn,
+    copyPaletteUrlBtn,
     paletteRegenerateBtn,
     paletteInspirationBtn,
     generateBtn,
     surpriseBtn,
     copyHexBtnTooltip,
     copyHexBtnLabel,
+    copyPaletteUrlBtnTooltip,
     resetPaletteBtn,
     warmBtn,
     coolBtn,
