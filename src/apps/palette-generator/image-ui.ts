@@ -7,10 +7,13 @@ const PALETTE_ADJUSTMENT_PREVIEW_DELAY_MS = 16;
 const IMAGE_EXTRACTION_ERROR_MESSAGE =
   "No se ha podido extraer colores. Has de intentar subir otra imagen.";
 const IMAGE_PANEL_TRANSITION_MS = 320;
+const MODE_PANEL_ENTER_ANIMATION_MS = 360;
 
 let saturationAttentionTimeout: ReturnType<typeof setTimeout> | null = null;
 let isPaletteImageDropzoneVisible = true;
 let isReplaceImagePending = false;
+let isPaletteImageUploadPending = false;
+let isPaletteImageModeTransitionPending = false;
 let isPaletteAdjustPanelOpen = false;
 let paletteAdjustmentPreviewFrame: number | null = null;
 let paletteAdjustmentPreviewTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -694,156 +697,191 @@ export function initializePaletteGeneratorImageUi() {
       adoptedBaseColor:
         previousBaseMode !== "color" ? getFirstPaletteHexForColorBaseAdoption() : null,
     });
-    globals.paletteBaseMode = transitionPlan.nextMode;
+    const runBaseModeTransition = async () => {
+      globals.paletteBaseMode = transitionPlan.nextMode;
 
-    runtimeWindow.syncPaletteGeneratorStoreState?.(
-      {
-        paletteBaseMode: globals.paletteBaseMode,
-      },
-      {
-        scope: "palette-base-mode",
-      }
-    );
-
-    if (transitionPlan.shouldClearImageExtractionFeedback) {
-      setPaletteImageExtractionFeedback(false);
-    }
-
-    if (dom.paletteBaseModeSelect) {
-      dom.paletteBaseModeSelect.value = globals.paletteBaseMode;
-    }
-
-    const panelVisibilityState = uiRuntime.getPaletteBasePanelVisibilityState(
-      globals.paletteBaseMode
-    );
-
-    if (dom.colorBasePanel) {
-      dom.colorBasePanel.classList.toggle("active", panelVisibilityState.showColorPanel);
-      dom.colorBasePanel.hidden = !panelVisibilityState.showColorPanel;
-    }
-
-    if (dom.temperatureBasePanel) {
-      dom.temperatureBasePanel.classList.toggle(
-        "active",
-        panelVisibilityState.showTemperaturePanel
-      );
-      dom.temperatureBasePanel.hidden = !panelVisibilityState.showTemperaturePanel;
-    }
-
-    if (dom.imageBasePanel) {
-      dom.imageBasePanel.classList.toggle("active", panelVisibilityState.showImagePanel);
-      dom.imageBasePanel.hidden = !panelVisibilityState.showImagePanel;
-    }
-
-    if (transitionPlan.shouldClearLeakedColorModeFixedPins) {
-      clearLeakedColorModeFixedPins();
-    }
-
-    runtimeWindow.syncCurrentPaletteFromDom?.();
-
-    updatePaletteModeActionVisibility();
-    updatePaletteActionButtonsAvailability();
-    updatePaletteStickyState();
-    updatePaletteSizeButtonsAvailability();
-
-    if (typeof runtimeWindow.updateRegenerateButtonsAvailability === "function") {
-      runtimeWindow.updateRegenerateButtonsAvailability();
-    }
-    if (typeof runtimeWindow.updateColorModeCardActionVisibility === "function") {
-      runtimeWindow.updateColorModeCardActionVisibility();
-    }
-    if (typeof runtimeWindow.updateAddColorButtonState === "function") {
-      runtimeWindow.updateAddColorButtonState();
-    }
-
-    if (transitionPlan.shouldRefreshImageDerivedControls) {
-      if (
-        transitionPlan.shouldRefreshImagePaletteFromSource &&
-        options.suppressAutomaticImageModeRefresh !== true
-      ) {
-        if (restoreLastImageModeSnapshot()) {
-          return;
+      runtimeWindow.syncPaletteGeneratorStoreState?.(
+        {
+          paletteBaseMode: globals.paletteBaseMode,
+        },
+        {
+          scope: "palette-base-mode",
         }
-        void syncImagePaletteFromSource();
-        return;
+      );
+
+      if (transitionPlan.shouldClearImageExtractionFeedback) {
+        setPaletteImageExtractionFeedback(false);
       }
 
-      void refreshImageDerivedControls();
-      return;
-    }
+      if (dom.paletteBaseModeSelect) {
+        dom.paletteBaseModeSelect.value = globals.paletteBaseMode;
+      }
 
-    if (transitionPlan.colorModeAdoption.shouldSyncColorModeControls) {
-      if (
-        transitionPlan.colorModeAdoption.adoptedBaseColor &&
-        typeof runtimeWindow.setSelectedPaletteBaseColor === "function"
-      ) {
-        runtimeWindow.setSelectedPaletteBaseColor(
-          transitionPlan.colorModeAdoption.adoptedBaseColor,
-          {
-            generate: false,
-            publish: true,
-            syncTextInput: true,
-          }
+      const panelVisibilityState = uiRuntime.getPaletteBasePanelVisibilityState(
+        globals.paletteBaseMode
+      );
+
+      if (dom.colorBasePanel) {
+        dom.colorBasePanel.classList.toggle("active", panelVisibilityState.showColorPanel);
+        dom.colorBasePanel.hidden = !panelVisibilityState.showColorPanel;
+      }
+
+      if (dom.temperatureBasePanel) {
+        dom.temperatureBasePanel.classList.toggle(
+          "active",
+          panelVisibilityState.showTemperaturePanel
         );
+        dom.temperatureBasePanel.hidden = !panelVisibilityState.showTemperaturePanel;
       }
 
-      if (
-        transitionPlan.colorModeAdoption.nextColorPaletteType &&
-        typeof runtimeWindow.setSelectedColorPaletteType === "function"
-      ) {
-        runtimeWindow.setSelectedColorPaletteType(
-          transitionPlan.colorModeAdoption.nextColorPaletteType,
-          {
-            generate: false,
+      if (dom.imageBasePanel) {
+        dom.imageBasePanel.classList.toggle("active", panelVisibilityState.showImagePanel);
+        dom.imageBasePanel.hidden = !panelVisibilityState.showImagePanel;
+      }
+
+      const shouldShowImageTransitionPending =
+        transitionPlan.shouldRefreshImageDerivedControls &&
+        options.suppressAutomaticImageModeRefresh !== true;
+      isPaletteImageModeTransitionPending = shouldShowImageTransitionPending;
+      renderPaletteImagePreview();
+
+      if (shouldShowImageTransitionPending) {
+        animateModeChangeSurfaces(panelVisibilityState);
+        await waitForModeTransitionPaint();
+      }
+
+      if (transitionPlan.shouldClearLeakedColorModeFixedPins) {
+        clearLeakedColorModeFixedPins();
+      }
+
+      runtimeWindow.syncCurrentPaletteFromDom?.();
+
+      updatePaletteModeActionVisibility();
+      updatePaletteActionButtonsAvailability();
+      updatePaletteStickyState();
+      updatePaletteSizeButtonsAvailability();
+
+      if (typeof runtimeWindow.updateRegenerateButtonsAvailability === "function") {
+        runtimeWindow.updateRegenerateButtonsAvailability();
+      }
+      if (typeof runtimeWindow.updateColorModeCardActionVisibility === "function") {
+        runtimeWindow.updateColorModeCardActionVisibility();
+      }
+      if (typeof runtimeWindow.updateAddColorButtonState === "function") {
+        runtimeWindow.updateAddColorButtonState();
+      }
+
+      if (transitionPlan.shouldRefreshImageDerivedControls) {
+        try {
+          if (
+            transitionPlan.shouldRefreshImagePaletteFromSource &&
+            options.suppressAutomaticImageModeRefresh !== true
+          ) {
+            if (restoreLastImageModeSnapshot()) {
+              return;
+            }
+
+            await syncImagePaletteFromSource();
+            return;
           }
-        );
+
+          await refreshImageDerivedControls();
+          return;
+        } finally {
+          isPaletteImageModeTransitionPending = false;
+          renderPaletteImagePreview();
+        }
       }
 
-      if (
-        transitionPlan.colorModeAdoption.nextMonochromaticGenerationMode &&
-        typeof runtimeWindow.setSelectedMonochromaticGenerationMode === "function"
-      ) {
-        runtimeWindow.setSelectedMonochromaticGenerationMode(
-          transitionPlan.colorModeAdoption.nextMonochromaticGenerationMode,
-          {
-            generate: false,
-          }
-        );
+      isPaletteImageModeTransitionPending = false;
+      renderPaletteImagePreview();
+      if (!shouldShowImageTransitionPending) {
+        animateModeChangeSurfaces(panelVisibilityState);
       }
 
-      if (transitionPlan.colorModeAdoption.resetColorVariantIndex) {
-        globals.colorPaletteVariantIndex = 0;
-        runtimeWindow.syncPaletteGeneratorStoreColorVariantIndex?.(
-          globals.colorPaletteVariantIndex,
-          {
-            scope: "color-variant",
-          }
-        );
-      }
+      if (transitionPlan.colorModeAdoption.shouldSyncColorModeControls) {
+        if (
+          transitionPlan.colorModeAdoption.adoptedBaseColor &&
+          typeof runtimeWindow.setSelectedPaletteBaseColor === "function"
+        ) {
+          runtimeWindow.setSelectedPaletteBaseColor(
+            transitionPlan.colorModeAdoption.adoptedBaseColor,
+            {
+              generate: false,
+              publish: true,
+              syncTextInput: true,
+            }
+          );
+        }
 
-      if (
-        transitionPlan.colorModeAdoption.shouldClearUnavailablePinnedCards &&
-        typeof runtimeWindow.clearUnavailablePinnedCards === "function"
-      ) {
-        runtimeWindow.clearUnavailablePinnedCards();
-      }
+        if (
+          transitionPlan.colorModeAdoption.nextColorPaletteType &&
+          typeof runtimeWindow.setSelectedColorPaletteType === "function"
+        ) {
+          runtimeWindow.setSelectedColorPaletteType(
+            transitionPlan.colorModeAdoption.nextColorPaletteType,
+            {
+              generate: false,
+            }
+          );
+        }
 
-      runtimeWindow.syncColorModeBaseControls?.();
-      runtimeWindow.syncColorModeSizeSelection?.();
+        if (
+          transitionPlan.colorModeAdoption.nextMonochromaticGenerationMode &&
+          typeof runtimeWindow.setSelectedMonochromaticGenerationMode === "function"
+        ) {
+          runtimeWindow.setSelectedMonochromaticGenerationMode(
+            transitionPlan.colorModeAdoption.nextMonochromaticGenerationMode,
+            {
+              generate: false,
+            }
+          );
+        }
 
-      if (
-        transitionPlan.colorModeAdoption.shouldRefreshMonochromaticPalette &&
-        options.suppressAutomaticColorModeRefresh !== true &&
-        typeof runtimeWindow.generatePalette === "function"
-      ) {
-        resetPaletteBeforeColorModeRegeneration();
-        void runtimeWindow.generatePalette({
-          recalculateFromScratch: true,
-          effectiveType: "monochromatic",
-          referencePalette: [],
-        });
+        if (transitionPlan.colorModeAdoption.resetColorVariantIndex) {
+          globals.colorPaletteVariantIndex = 0;
+          runtimeWindow.syncPaletteGeneratorStoreColorVariantIndex?.(
+            globals.colorPaletteVariantIndex,
+            {
+              scope: "color-variant",
+            }
+          );
+        }
+
+        if (
+          transitionPlan.colorModeAdoption.shouldClearUnavailablePinnedCards &&
+          typeof runtimeWindow.clearUnavailablePinnedCards === "function"
+        ) {
+          runtimeWindow.clearUnavailablePinnedCards();
+        }
+
+        runtimeWindow.syncColorModeBaseControls?.();
+        runtimeWindow.syncColorModeSizeSelection?.();
+
+        if (
+          transitionPlan.colorModeAdoption.shouldRefreshMonochromaticPalette &&
+          options.suppressAutomaticColorModeRefresh !== true &&
+          typeof runtimeWindow.generatePalette === "function"
+        ) {
+          resetPaletteBeforeColorModeRegeneration();
+          void runtimeWindow.generatePalette({
+            recalculateFromScratch: true,
+            effectiveType: "monochromatic",
+            referencePalette: [],
+          });
+        }
       }
-    }
+    };
+
+    void runBaseModeTransition();
+  }
+
+  function waitForModeTransitionPaint() {
+    return new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
   }
 
   function isAcceptedPaletteImageFile(file: unknown) {
@@ -856,6 +894,7 @@ export function initializePaletteGeneratorImageUi() {
       !dom.paletteImagePreviewImg ||
       !dom.paletteImageName ||
       !dom.paletteImageDropzonePanel ||
+      !dom.paletteImagePending ||
       !dom.paletteImageReplaceBtn
     ) {
       return;
@@ -866,24 +905,59 @@ export function initializePaletteGeneratorImageUi() {
       isPaletteImageDropzoneVisible,
       isReplaceImagePending,
     });
+    const shouldShowPendingPreview =
+      isPaletteImageUploadPending || isPaletteImageModeTransitionPending;
 
     if (!previewState.hasPreview) {
       isPaletteImageDropzoneVisible = true;
     }
 
-    setAnimatedImagePanelVisibility(
-      dom.paletteImageDropzonePanel,
-      previewState.shouldShowDropzonePanel
-    );
-    setAnimatedImagePanelVisibility(
-      dom.paletteImagePreview,
-      previewState.shouldShowPreviewPanel
-    );
-    dom.paletteImageReplaceBtn.disabled = previewState.replaceButtonDisabled;
+    const shouldSwapPendingForPreview =
+      previewState.shouldShowPreviewPanel &&
+      !shouldShowPendingPreview &&
+      !dom.paletteImagePending.hidden;
+
+    if (shouldShowPendingPreview) {
+      setImagePanelVisibilityInstantly(dom.paletteImageDropzonePanel, false);
+      setImagePanelVisibilityInstantly(dom.paletteImagePreview, false);
+      setImagePanelVisibilityInstantly(dom.paletteImagePending, true);
+    } else if (shouldSwapPendingForPreview) {
+      setImagePanelVisibilityInstantly(dom.paletteImagePending, false);
+      setImagePanelVisibilityInstantly(dom.paletteImagePreview, true);
+      setImagePanelVisibilityInstantly(dom.paletteImageDropzonePanel, false);
+    } else {
+      setAnimatedImagePanelVisibility(
+        dom.paletteImageDropzonePanel,
+        previewState.shouldShowDropzonePanel && !shouldShowPendingPreview
+      );
+      setAnimatedImagePanelVisibility(dom.paletteImagePending, shouldShowPendingPreview);
+      setAnimatedImagePanelVisibility(
+        dom.paletteImagePreview,
+        previewState.shouldShowPreviewPanel && !shouldShowPendingPreview
+      );
+    }
+    if (dom.paletteImageDominantToggle) {
+      dom.paletteImageDominantToggle.disabled = shouldShowPendingPreview;
+      dom.paletteImageDominantToggle.setAttribute(
+        "aria-disabled",
+        shouldShowPendingPreview ? "true" : "false"
+      );
+    }
+    dom.paletteImageReplaceBtn.disabled =
+      previewState.replaceButtonDisabled || shouldShowPendingPreview;
     dom.paletteImageReplaceBtn.setAttribute(
       "aria-disabled",
-      previewState.replaceButtonDisabled ? "true" : "false"
+      previewState.replaceButtonDisabled || shouldShowPendingPreview ? "true" : "false"
     );
+
+    if (shouldShowPendingPreview) {
+      dom.paletteImagePreviewImg.removeAttribute("src");
+      dom.paletteImageName.textContent = "";
+      dom.paletteImagePreview.hidden = true;
+      updatePaletteModeActionVisibility();
+      updatePaletteActionButtonsAvailability();
+      return;
+    }
 
     if (!previewState.hasPreview) {
       dom.paletteImagePreviewImg.removeAttribute("src");
@@ -944,6 +1018,83 @@ export function initializePaletteGeneratorImageUi() {
     }, IMAGE_PANEL_TRANSITION_MS);
   }
 
+  function setImagePanelVisibilityInstantly(
+    element: HTMLElement | null,
+    shouldShow: boolean
+  ) {
+    if (!element) {
+      return;
+    }
+
+    const elementWithTimeout = element as HTMLElement & {
+      __hideTimeout?: ReturnType<typeof setTimeout> | null;
+    };
+
+    if (elementWithTimeout.__hideTimeout) {
+      clearTimeout(elementWithTimeout.__hideTimeout);
+      elementWithTimeout.__hideTimeout = null;
+    }
+
+    element.hidden = !shouldShow;
+    element.classList.remove("is-collapsed");
+  }
+
+  function runTransientAnimationClass(
+    element: HTMLElement | null,
+    className: string,
+    durationMs: number
+  ) {
+    if (!element) {
+      return;
+    }
+
+    const animatedElement = element as HTMLElement & {
+      __codexAnimationTimeout?: ReturnType<typeof setTimeout> | null;
+    };
+
+    if (animatedElement.__codexAnimationTimeout) {
+      clearTimeout(animatedElement.__codexAnimationTimeout);
+      animatedElement.__codexAnimationTimeout = null;
+    }
+
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+
+    animatedElement.__codexAnimationTimeout = setTimeout(() => {
+      element.classList.remove(className);
+      animatedElement.__codexAnimationTimeout = null;
+    }, durationMs);
+  }
+
+  function animateModeChangeSurfaces(panelVisibilityState: {
+    showColorPanel: boolean;
+    showTemperaturePanel: boolean;
+    showImagePanel: boolean;
+  }) {
+    const activeBasePanel = panelVisibilityState.showColorPanel
+      ? dom.colorBasePanel
+      : panelVisibilityState.showTemperaturePanel
+        ? dom.temperatureBasePanel
+        : dom.imageBasePanel;
+
+    runTransientAnimationClass(
+      activeBasePanel || null,
+      "is-mode-panel-entering",
+      MODE_PANEL_ENTER_ANIMATION_MS
+    );
+    runTransientAnimationClass(
+      dom.paletteSection || null,
+      "is-mode-panel-entering",
+      MODE_PANEL_ENTER_ANIMATION_MS
+    );
+    runTransientAnimationClass(
+      dom.paletteViewport || null,
+      "is-mode-panel-entering",
+      MODE_PANEL_ENTER_ANIMATION_MS
+    );
+  }
+
   function openPaletteImageDropzone() {
     if (!dom.paletteImageDropzonePanel) {
       return;
@@ -965,6 +1116,14 @@ export function initializePaletteGeneratorImageUi() {
       return;
     }
 
+    isPaletteImageUploadPending = true;
+    isReplaceImagePending = false;
+    isPaletteImageDropzoneVisible = false;
+    setPaletteBaseMode("image", {
+      suppressAutomaticImageModeRefresh: true,
+    });
+    renderPaletteImagePreview();
+
     const reader = new FileReader();
     reader.addEventListener("load", () => {
       const uploadState = uiRuntime.createPaletteImageFileLoadState(file, reader.result);
@@ -981,14 +1140,39 @@ export function initializePaletteGeneratorImageUi() {
       isReplaceImagePending = uploadState.isReplaceImagePending;
       isPaletteImageDropzoneVisible = uploadState.isPaletteImageDropzoneVisible;
       setPaletteImageExtractionFeedback(false);
-      setPaletteBaseMode(uploadState.nextBaseMode, {
-        suppressAutomaticImageModeRefresh: true,
-      });
-      renderPaletteImagePreview();
       void syncImagePaletteFromSource({
         resetVariant: uploadState.shouldResetVariant,
-      });
+      })
+        .catch((error) => {
+          console.error(error);
+          alert("No se pudo cargar esta imagen.");
+        })
+        .finally(() => {
+          isPaletteImageUploadPending = false;
+          renderPaletteImagePreview();
+        });
     });
+    reader.addEventListener(
+      "error",
+      () => {
+        isPaletteImageUploadPending = false;
+        renderPaletteImagePreview();
+        alert("No se pudo cargar esta imagen.");
+      },
+      {
+        once: true,
+      }
+    );
+    reader.addEventListener(
+      "abort",
+      () => {
+        isPaletteImageUploadPending = false;
+        renderPaletteImagePreview();
+      },
+      {
+        once: true,
+      }
+    );
     reader.readAsDataURL(file);
   }
 
@@ -1159,9 +1343,9 @@ export function initializePaletteGeneratorImageUi() {
   }
 
   if (dom.paletteImageDominantToggle) {
-    dom.paletteImageDominantToggle.checked = !!globals.prioritizeImageDominantColors;
+    dom.paletteImageDominantToggle.checked = !globals.prioritizeImageDominantColors;
     dom.paletteImageDominantToggle.addEventListener("change", () => {
-      globals.prioritizeImageDominantColors = !!dom.paletteImageDominantToggle?.checked;
+      globals.prioritizeImageDominantColors = !dom.paletteImageDominantToggle?.checked;
       runtimeWindow.syncPaletteGeneratorStoreState?.(
         {
           prioritizeImageDominantColors: globals.prioritizeImageDominantColors,

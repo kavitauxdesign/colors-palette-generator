@@ -26,6 +26,7 @@ export function setupAppDom() {
   const paletteImageInput = document.getElementById("paletteImageInput");
   const paletteImageDropzonePanel = document.getElementById("paletteImageDropzonePanel");
   const paletteImageDropzone = document.getElementById("paletteImageDropzone");
+  const paletteImagePending = document.getElementById("paletteImagePending");
   const paletteImagePreview = document.getElementById("paletteImagePreview");
   const paletteImagePreviewImg = document.getElementById("paletteImagePreviewImg");
   const paletteImageName = document.getElementById("paletteImageName");
@@ -107,6 +108,7 @@ export function setupAppDom() {
     paletteImageInput,
     paletteImageDropzonePanel,
     paletteImageDropzone,
+    paletteImagePending,
     paletteImagePreview,
     paletteImagePreviewImg,
     paletteImageName,

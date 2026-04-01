@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
     content="Classic HEX reúne mini-herramientas de color como el generador de paletas y la conversión de HEX a CSS filter." />
-  <title>Classic HEX - Herramienta de trabajo con color</title>
+  <title>Classic HEX - Herramientas de trabajo con color</title>
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/apps/shared.css" />
@@ -43,14 +43,11 @@
   <noscript><div><img src="https://mc.yandex.ru/watch/108151182" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
   <header class="site-header">
     <div class="header-inner">
-      <div class="logo">
-        <div class="logo-images">
-          <img src="assets/logo_pastel.png" alt="Color Wheel" />
-          <img src="assets/botella-de-tinta.png" alt="Ink Bottle" class="logo-ink" />
-        </div>
-        <span>Classic</span>
-        <span>HEX <span class="sw-subtitle">— Herramienta de trabajo con color</span></span>
-      </div>
+      <a class="logo" href="https://kavita.es/classic-hex/" aria-label="Recargar Classic HEX">
+        <img src="assets/icon-palette.svg" alt="Icono de paleta de color" class="logo-icon" />
+        <span>Classic HEX</span>
+        <span class="sw-subtitle">— Herramientas de trabajo con color</span>
+      </a>
       <nav class="site-nav" aria-label="Seleccionar mini-app">
         <button class="site-nav-button" type="button" data-view="palette_generator">Generar Paletas</button>
         <button class="site-nav-button" type="button" data-view="hex_to_filter">HEX to CSS filter</button>
@@ -79,7 +76,7 @@
           </button>
         </div>
         <p class="description app-view-description">
-          <b>Generación de paletas</b> en distintos modos (Color, Temperatura e Imagen), con exploración de variaciones o inspiración a partir de una imagen.✨
+          Generación de paletas en distintos modos (Color, Temperatura e Imagen), con exploración de variaciones o inspiración a partir de una imagen.✨
           Posibilidad de fijar colores para construir una paleta propia poco a poco, con guardado automático de cada resultado en el historial.
         </p>
       </div>
@@ -166,7 +163,7 @@
               <span> Cálidos</span>
             </button>
 
-            <button id="coolBtn" class="temp" type="button">
+            <button id="coolBtn" class="temp active" type="button">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m10 20-1.25-2.5L6 18"></path>
@@ -197,6 +194,10 @@
               </label>
             </div>
 
+            <div id="paletteImagePending" class="image-upload-pending" hidden aria-hidden="true">
+              <div class="image-upload-pending-spinner" aria-hidden="true"></div>
+            </div>
+
             <div id="paletteImagePreview" class="image-upload-preview" hidden>
               <div class="image-upload-preview-header">
                 <span class="image-upload-preview-title">Miniatura de la imagen subida</span>
@@ -220,8 +221,8 @@
               </div>
 
               <label class="image-priority-toggle" for="paletteImageDominantToggle">
-                <input id="paletteImageDominantToggle" class="image-priority-toggle-input" type="checkbox" checked />
-                <span class="image-priority-toggle-label">Priorizar colores dominantes vs acentos</span>
+                <input id="paletteImageDominantToggle" class="image-priority-toggle-input" type="checkbox" />
+                <span class="image-priority-toggle-label">Priorizar acentos vs colores dominantes</span>
               </label>
             </div>
           </div>
@@ -246,13 +247,13 @@
           <div id="brightnessControlGroup" class="control-group palette-adjust-control control-group-spaced">
             <h4 class="control-group-title">
               <span>Brillo</span>
-              <span id="brightnessValue" class="control-value">65%</span>
+              <span id="brightnessValue" class="control-value">90%</span>
             </h4>
 
             <div class="range-labels brightness-labels">
               <img class="range-icon brightness-icon" src="assets/night.svg" alt="Icono de brillo mínimo" />
               <input type="range" id="brightness" class="range-input--brightness" min="0" max="100" step="1"
-                value="65" />
+                value="90" />
               <img class="range-icon brightness-icon" src="assets/day.svg" alt="Icono de brillo máximo" />
             </div>
           </div>
@@ -260,14 +261,14 @@
           <div id="saturationControlGroup" class="control-group palette-adjust-control">
             <h4 class="control-group-title">
               <span>Saturación</span>
-              <span id="saturationValue" class="control-value">100%</span>
+              <span id="saturationValue" class="control-value">70%</span>
             </h4>
 
             <div class="range-labels saturation-labels">
               <img class="range-icon saturation-icon" src="assets/saturation-low.svg"
                 alt="Icono de saturación mínima" />
               <input type="range" id="saturation" class="range-input--saturation" min="0" max="100" step="1"
-                value="100" />
+                value="70" />
               <img class="range-icon saturation-icon" src="assets/saturation-high.svg"
                 alt="Icono de saturación máxima" />
             </div>
@@ -516,7 +517,7 @@
       © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
         id="footerYear"></span> · Reportar un bug o comentario en <a class="footer-report-link" href="https://github.com/kavitauxdesign/colors-palette-generator/issues" target="_blank" rel="noopener noreferrer">GitHub</a> o <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">DM</a>
     </div>
-    <span class="bottom-toolbar-version">Version 2.4.0 (beta).</span>
+    <span class="bottom-toolbar-version">Version 2.4.0.</span>
   </footer>
 
   <script type="module" src="/src/main.ts"></script>

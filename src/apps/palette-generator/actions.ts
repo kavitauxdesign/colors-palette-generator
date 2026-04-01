@@ -115,7 +115,7 @@ function createLegacyStoreBindings(args: LegacyStoreBindingsArgs) {
   function getLegacyRuntimeStateFromStore() {
     return PaletteGeneratorStateSelectors.getLegacyRuntimeState({
       storeState: store?.getState?.() || null,
-      dominantToggleChecked: resolveGetterValue(args.getDominantToggleChecked, true),
+      dominantToggleChecked: resolveGetterValue(args.getDominantToggleChecked, false),
       sharedActiveColor: resolveGetterValue(args.getSharedActiveColor, null),
     });
   }
@@ -198,7 +198,7 @@ function createLegacyStoreBindings(args: LegacyStoreBindingsArgs) {
       listener(
         PaletteGeneratorStateSelectors.getLegacyRuntimeState({
           storeState: state,
-          dominantToggleChecked: resolveGetterValue(args.getDominantToggleChecked, true),
+          dominantToggleChecked: resolveGetterValue(args.getDominantToggleChecked, false),
           sharedActiveColor: resolveGetterValue(args.getSharedActiveColor, null),
         }),
         metadata

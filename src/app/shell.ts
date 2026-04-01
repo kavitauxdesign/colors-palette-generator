@@ -2,15 +2,47 @@ import AppEventBus from "../shared/services/event-bus";
 
 let hasInitializedAppShell = false;
 
+const DEFAULT_VIEW_NAME = "palette_generator";
+const VIEW_CASCADE_REVEAL_MS = 520;
+
 export function initializeAppShell() {
   if (hasInitializedAppShell) {
     return window.AppShell;
   }
-
-  const DEFAULT_VIEW_NAME = "palette_generator";
   const views = Array.from(document.querySelectorAll(".view-tab"));
   const navButtons = Array.from(document.querySelectorAll("nav button"));
-  const logoImage = document.querySelector(".logo img") as HTMLElement | null;
+  const siteHeader = document.querySelector(".site-header");
+  const initialHashViewName = location.hash.replace("#", "");
+  const shouldResetInitialHashScroll = views.some((view) => view.id === initialHashViewName);
+  let hasCompletedInitialViewSync = false;
+
+  function runTransientAnimationClass(
+    element: HTMLElement | null,
+    className: string,
+    durationMs: number
+  ) {
+    if (!element || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const animatedElement = element as HTMLElement & {
+      __codexAnimationTimeout?: ReturnType<typeof setTimeout> | null;
+    };
+
+    if (animatedElement.__codexAnimationTimeout) {
+      clearTimeout(animatedElement.__codexAnimationTimeout);
+      animatedElement.__codexAnimationTimeout = null;
+    }
+
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+
+    animatedElement.__codexAnimationTimeout = setTimeout(() => {
+      element.classList.remove(className);
+      animatedElement.__codexAnimationTimeout = null;
+    }, durationMs);
+  }
 
   function resolveViewName(name: string) {
     const normalizedName = String(name ?? "").trim();
@@ -36,6 +68,18 @@ export function initializeAppShell() {
       view: resolvedViewName,
       metadata,
     });
+
+    const shouldAnimateViewChange =
+      hasCompletedInitialViewSync &&
+      (metadata.source === "nav" || metadata.source === "location");
+
+    if (shouldAnimateViewChange) {
+      runTransientAnimationClass(
+        document.getElementById(resolvedViewName) as HTMLElement | null,
+        "is-view-cascade-revealing",
+        VIEW_CASCADE_REVEAL_MS
+      );
+    }
 
     return resolvedViewName;
   }
@@ -63,15 +107,22 @@ export function initializeAppShell() {
 
   window.addEventListener("hashchange", syncViewFromLocation);
   syncViewFromLocation();
+  hasCompletedInitialViewSync = true;
 
-  if (logoImage && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    const rotateLogoOnScroll = () => {
-      logoImage.style.setProperty("--scroll-rotate", `${window.scrollY * 0.2}deg`);
-    };
-
-    window.addEventListener("scroll", rotateLogoOnScroll, { passive: true });
-    rotateLogoOnScroll();
+  if (shouldResetInitialHashScroll) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      });
+    });
   }
+
+  function syncHeaderShadow() {
+    siteHeader?.classList.toggle("is-scrolled", window.scrollY > 0);
+  }
+
+  window.addEventListener("scroll", syncHeaderShadow, { passive: true });
+  syncHeaderShadow();
 
   const appShell = {
     showView,

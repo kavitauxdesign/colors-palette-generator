@@ -237,7 +237,7 @@ let paletteGeneratorState: PaletteGeneratorState = {
   paletteHistoryIndex: -1,
   paletteBaseMode: normalizeBaseMode(APP_CONSTANTS.DEFAULT_PALETTE_BASE_MODE),
   uploadedBaseImage: null,
-  prioritizeImageDominantColors: true,
+  prioritizeImageDominantColors: false,
   imagePaletteVariantIndex: 0,
   imageInspirationVariantIndex: 0,
   colorPaletteVariantIndex: 0,
@@ -257,7 +257,7 @@ let paletteGeneratorState: PaletteGeneratorState = {
   resolvedAutomaticColorPaletteType: "triad",
   temperature: normalizeTemperatureSelection(
     APP_CONSTANTS.DEFAULT_TEMPERATURE,
-    { warm: true, cool: false }
+    { warm: true, cool: true }
   ),
   currentPalette: [],
   adjustments: {

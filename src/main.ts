@@ -65,6 +65,12 @@ async function bootstrap() {
 function startApp() {
   updateFooterYear();
   void bootstrap();
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.body.classList.add("is-app-ready");
+    });
+  });
 }
 
 if (document.readyState === "loading") {
