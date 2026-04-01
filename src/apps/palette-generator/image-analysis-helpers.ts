@@ -21,6 +21,8 @@ const {
   oklchToHex,
 } = AppColorUtils;
 const { clampControlValue, normalizePaletteHexCollection } = PaletteGeneratorCoreHelpers;
+const MAX_EXACT_HARMONY_CLUSTER_COUNT = 10;
+const MAX_APPROXIMATE_HARMONY_STARTS = 6;
 
 function isDisallowedColorFactory(
   predicate: ImageAnalysisHelperOptions["isDisallowedColor"]
@@ -447,15 +449,28 @@ function getImageClusterHarmonyDistance(
   return wrappedHueDifference * 0.6 + saturationDifference * 0.2 + lightnessDifference * 0.2;
 }
 
-function orderImageClustersByHarmony(
-  clusters: ImagePaletteCluster[],
+function getImageClusterHarmonyPathCost(
+  orderedClusters: ImagePaletteCluster[],
+  allClusters: ImagePaletteCluster[],
   options: ImageAnalysisHelperOptions = {}
 ) {
-  const safeClusters = Array.isArray(clusters) ? clusters : [];
-  if (safeClusters.length <= 2) {
-    return [...safeClusters];
+  if (!Array.isArray(orderedClusters) || orderedClusters.length === 0) {
+    return Infinity;
   }
 
+  let cost = getImageClusterStartPenalty(orderedClusters[0], allClusters, options);
+
+  for (let index = 1; index < orderedClusters.length; index += 1) {
+    cost += getImageClusterHarmonyDistance(orderedClusters[index - 1], orderedClusters[index]);
+  }
+
+  return cost;
+}
+
+function orderImageClustersByHarmonyExact(
+  safeClusters: ImagePaletteCluster[],
+  options: ImageAnalysisHelperOptions = {}
+) {
   const totalClusters = safeClusters.length;
   const totalMasks = 1 << totalClusters;
   const pathCosts = Array.from({ length: totalMasks }, () =>
@@ -517,6 +532,97 @@ function orderImageClustersByHarmony(
   }
 
   return orderedClusters;
+}
+
+function buildApproximateHarmonyOrder(
+  safeClusters: ImagePaletteCluster[],
+  startIndex: number,
+  options: ImageAnalysisHelperOptions = {}
+) {
+  const orderedClusters = [safeClusters[startIndex]];
+  const remainingClusters = safeClusters.filter((_, index) => index !== startIndex);
+
+  while (remainingClusters.length > 0) {
+    const previousCluster = orderedClusters[orderedClusters.length - 1];
+    let bestNextIndex = 0;
+    let bestNextScore = Infinity;
+
+    remainingClusters.forEach((candidateCluster, candidateIndex) => {
+      const transitionCost = getImageClusterHarmonyDistance(previousCluster, candidateCluster);
+      const startPenalty = getImageClusterStartPenalty(candidateCluster, safeClusters, options);
+      const score = transitionCost + startPenalty * 0.18;
+
+      if (score < bestNextScore) {
+        bestNextScore = score;
+        bestNextIndex = candidateIndex;
+      }
+    });
+
+    orderedClusters.push(remainingClusters.splice(bestNextIndex, 1)[0]);
+  }
+
+  return orderedClusters;
+}
+
+function orderImageClustersByHarmonyApproximate(
+  safeClusters: ImagePaletteCluster[],
+  options: ImageAnalysisHelperOptions = {}
+) {
+  const rankedStarts = safeClusters
+    .map((cluster, index) => ({
+      index,
+      cost: getImageClusterStartPenalty(cluster, safeClusters, options),
+    }))
+    .sort((left, right) => left.cost - right.cost)
+    .slice(0, Math.min(MAX_APPROXIMATE_HARMONY_STARTS, safeClusters.length));
+
+  let bestOrder = [...safeClusters];
+  let bestCost = getImageClusterHarmonyPathCost(bestOrder, safeClusters, options);
+
+  rankedStarts.forEach(({ index }) => {
+    const candidateOrder = buildApproximateHarmonyOrder(safeClusters, index, options);
+    const candidateCost = getImageClusterHarmonyPathCost(
+      candidateOrder,
+      safeClusters,
+      options
+    );
+
+    if (candidateCost < bestCost) {
+      bestOrder = candidateOrder;
+      bestCost = candidateCost;
+    }
+
+    const reversedOrder = [...candidateOrder].reverse();
+    const reversedCost = getImageClusterHarmonyPathCost(
+      reversedOrder,
+      safeClusters,
+      options
+    );
+
+    if (reversedCost < bestCost) {
+      bestOrder = reversedOrder;
+      bestCost = reversedCost;
+    }
+  });
+
+  return bestOrder;
+}
+
+function orderImageClustersByHarmony(
+  clusters: ImagePaletteCluster[],
+  options: ImageAnalysisHelperOptions = {}
+) {
+  const safeClusters = Array.isArray(clusters) ? clusters : [];
+  if (safeClusters.length <= 2) {
+    return [...safeClusters];
+  }
+
+  // The exact path solver grows exponentially and can lock the browser on large image palettes.
+  if (safeClusters.length > MAX_EXACT_HARMONY_CLUSTER_COUNT) {
+    return orderImageClustersByHarmonyApproximate(safeClusters, options);
+  }
+
+  return orderImageClustersByHarmonyExact(safeClusters, options);
 }
 
 function expandImagePalette(

@@ -63,5 +63,7 @@ export type UploadedImageAnalysisCache = {
 
 export type UploadedImageLike = {
   dataUrl?: string | null;
+  byteSize?: number | null;
+  isObjectUrl?: boolean | null;
   analysisCache?: UploadedImageAnalysisCache | null;
 };

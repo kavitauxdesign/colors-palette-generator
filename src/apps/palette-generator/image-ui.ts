@@ -59,6 +59,7 @@ export function initializePaletteGeneratorImageUi() {
     typeof uiRuntime.getPaletteBaseModeTransitionPlan !== "function" ||
     typeof uiRuntime.isAcceptedPaletteImageFile !== "function" ||
     typeof uiRuntime.createPaletteImageFileLoadState !== "function" ||
+    typeof uiRuntime.revokeUploadedBaseImageUrl !== "function" ||
     typeof uiRuntime.getPaletteImagePreviewState !== "function" ||
     typeof uiRuntime.getOpenPaletteImageDropzoneState !== "function" ||
     typeof uiRuntime.getPaletteBasePanelVisibilityState !== "function" ||
@@ -72,6 +73,14 @@ export function initializePaletteGeneratorImageUi() {
       "PaletteGeneratorImageUiRuntime is required before image-ui.ts initializes."
     );
   }
+
+  window.addEventListener(
+    "beforeunload",
+    () => {
+      uiRuntime.revokeUploadedBaseImageUrl(globals.uploadedBaseImage || null);
+    },
+    { once: true }
+  );
 
   function setPaletteAdjustPanelOpen(shouldOpen: boolean) {
     if (!dom.paletteAdjustPanel || !dom.paletteAdjustBtn) {
@@ -1123,10 +1132,12 @@ export function initializePaletteGeneratorImageUi() {
       suppressAutomaticImageModeRefresh: true,
     });
     renderPaletteImagePreview();
+    const previousUploadedBaseImage = globals.uploadedBaseImage || null;
+    let nextUploadedBaseImage: any = null;
 
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      const uploadState = uiRuntime.createPaletteImageFileLoadState(file, reader.result);
+    try {
+      const uploadState = uiRuntime.createPaletteImageFileLoadState(file);
+      nextUploadedBaseImage = uploadState.uploadedBaseImage;
       globals.uploadedBaseImage = uploadState.uploadedBaseImage;
       runtimeWindow.syncPaletteGeneratorStoreState?.(
         {
@@ -1136,6 +1147,10 @@ export function initializePaletteGeneratorImageUi() {
           scope: "uploaded-image",
         }
       );
+
+      if (previousUploadedBaseImage && previousUploadedBaseImage !== globals.uploadedBaseImage) {
+        uiRuntime.revokeUploadedBaseImageUrl(previousUploadedBaseImage);
+      }
 
       isReplaceImagePending = uploadState.isReplaceImagePending;
       isPaletteImageDropzoneVisible = uploadState.isPaletteImageDropzoneVisible;
@@ -1151,29 +1166,23 @@ export function initializePaletteGeneratorImageUi() {
           isPaletteImageUploadPending = false;
           renderPaletteImagePreview();
         });
-    });
-    reader.addEventListener(
-      "error",
-      () => {
-        isPaletteImageUploadPending = false;
-        renderPaletteImagePreview();
-        alert("No se pudo cargar esta imagen.");
-      },
-      {
-        once: true,
+    } catch (error) {
+      if (nextUploadedBaseImage) {
+        uiRuntime.revokeUploadedBaseImageUrl(nextUploadedBaseImage);
       }
-    );
-    reader.addEventListener(
-      "abort",
-      () => {
-        isPaletteImageUploadPending = false;
-        renderPaletteImagePreview();
-      },
-      {
-        once: true,
-      }
-    );
-    reader.readAsDataURL(file);
+      globals.uploadedBaseImage = previousUploadedBaseImage;
+      runtimeWindow.syncPaletteGeneratorStoreState?.(
+        {
+          uploadedBaseImage: globals.uploadedBaseImage,
+        },
+        {
+          scope: "uploaded-image-rollback",
+        }
+      );
+      isPaletteImageUploadPending = false;
+      renderPaletteImagePreview();
+      alert("No se pudo cargar esta imagen.");
+    }
   }
 
   function updatePaletteSizeButtonsAvailability(

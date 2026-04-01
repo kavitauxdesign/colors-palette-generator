@@ -116,6 +116,8 @@ function normalizeUploadedBaseImage(
     name: String(value.name || ""),
     type: String(value.type || ""),
     dataUrl,
+    byteSize: Number.isFinite(value.byteSize) ? Number(value.byteSize) : null,
+    isObjectUrl: value.isObjectUrl === true,
     analysisCache: value.analysisCache ?? null,
   };
 }
