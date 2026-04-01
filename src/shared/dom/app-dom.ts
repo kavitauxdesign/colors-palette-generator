@@ -43,7 +43,6 @@ export function setupAppDom() {
   const paletteRedoBtn = document.getElementById("paletteRedoBtn");
   const paletteViewport = document.getElementById("paletteViewport");
   const paletteLoadingOverlay = document.getElementById("paletteLoadingOverlay");
-  const paletteSharedLoadAlert = document.getElementById("paletteSharedLoadAlert");
   const paletteImageExtractionAlert = document.getElementById("paletteImageExtractionAlert");
   const addColorBtn = document.getElementById("addColorBtn");
   const colorPicker = document.getElementById("colorPicker") as HTMLInputElement | null;
@@ -128,7 +127,6 @@ export function setupAppDom() {
     paletteRedoBtn,
     paletteViewport,
     paletteLoadingOverlay,
-    paletteSharedLoadAlert,
     paletteImageExtractionAlert,
     addColorBtn,
     colorPicker,

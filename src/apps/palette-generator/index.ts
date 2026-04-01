@@ -48,7 +48,9 @@ type PaletteGeneratorRuntimeWindow = Window &
   };
 
 let hasPaletteGeneratorAppInitialized = false;
-const SHARED_PALETTE_ALERT_DURATION_MS = 3200;
+const SHARED_PALETTE_ALERT_DURATION_MS = 4000;
+const SHARED_PALETTE_ALERT_EXIT_MS = 260;
+const SHARED_PALETTE_ALERT_ID = "sharedPaletteLoadSnackbar";
 
 function getPaletteGeneratorRuntimeWindow(): PaletteGeneratorRuntimeWindow {
   return window as PaletteGeneratorRuntimeWindow;
@@ -77,11 +79,35 @@ function getSharedPaletteFromLocation() {
     .filter((hex) => AppColorUtils.isValidHexColor(hex));
 }
 
+function getSharedPaletteLoadedAlertElement() {
+  let alertElement = document.getElementById(SHARED_PALETTE_ALERT_ID) as
+    | (HTMLElement & {
+        __codexHideTimeout?: ReturnType<typeof setTimeout> | null;
+        __codexHideCommitTimeout?: ReturnType<typeof setTimeout> | null;
+      })
+    | null;
+
+  if (alertElement) {
+    return alertElement;
+  }
+
+  alertElement = document.createElement("div") as HTMLElement & {
+    __codexHideTimeout?: ReturnType<typeof setTimeout> | null;
+    __codexHideCommitTimeout?: ReturnType<typeof setTimeout> | null;
+  };
+  alertElement.id = SHARED_PALETTE_ALERT_ID;
+  alertElement.className = "app-top-snackbar";
+  alertElement.setAttribute("role", "status");
+  alertElement.setAttribute("aria-live", "polite");
+  alertElement.hidden = true;
+  alertElement.innerHTML = '<h4 class="app-top-snackbar-title">Paleta cargada desde URL</h4>';
+  document.body.appendChild(alertElement);
+
+  return alertElement;
+}
+
 function showSharedPaletteLoadedAlert(runtimeWindow: PaletteGeneratorRuntimeWindow) {
-  const alertElement = runtimeWindow.AppDom?.paletteSharedLoadAlert as
-    | (HTMLElement & { __codexHideTimeout?: ReturnType<typeof setTimeout> | null })
-    | null
-    | undefined;
+  const alertElement = getSharedPaletteLoadedAlertElement();
 
   if (!alertElement) {
     return;
@@ -91,11 +117,26 @@ function showSharedPaletteLoadedAlert(runtimeWindow: PaletteGeneratorRuntimeWind
     clearTimeout(alertElement.__codexHideTimeout);
     alertElement.__codexHideTimeout = null;
   }
+  if (alertElement.__codexHideCommitTimeout) {
+    clearTimeout(alertElement.__codexHideCommitTimeout);
+    alertElement.__codexHideCommitTimeout = null;
+  }
 
   alertElement.hidden = false;
+  alertElement.classList.remove("is-visible");
+  void alertElement.offsetWidth;
+
+  requestAnimationFrame(() => {
+    alertElement.classList.add("is-visible");
+  });
+
   alertElement.__codexHideTimeout = setTimeout(() => {
-    alertElement.hidden = true;
+    alertElement.classList.remove("is-visible");
     alertElement.__codexHideTimeout = null;
+    alertElement.__codexHideCommitTimeout = setTimeout(() => {
+      alertElement.hidden = true;
+      alertElement.__codexHideCommitTimeout = null;
+    }, SHARED_PALETTE_ALERT_EXIT_MS);
   }, SHARED_PALETTE_ALERT_DURATION_MS);
 }
 
