@@ -1,5 +1,7 @@
 import APP_CONSTANTS from "../../shared/constants";
+import getAppColorNames from "../../shared/color/color-names";
 import AppColorUtils from "../../shared/color/color-utils";
+import AppClipboard from "../../shared/services/clipboard";
 import AppRegistry from "../../shared/services/registry";
 import AppSharedColors from "../../shared/services/shared-colors";
 
@@ -7,13 +9,14 @@ type ConvertColorFormat =
   | "hex"
   | "hsl"
   | "rgb"
+  | "hwb"
+  | "hsv"
+  | "ncol"
   | "oklch"
   | "oklab"
-  | "css-oklch"
-  | "css-color"
+  | "lab"
+  | "lch"
   | "cmyk";
-
-type CssColorFunctionPreference = "rgb" | "hsl";
 
 type ConvertColorSnapshot = {
   hex: string;
@@ -21,11 +24,15 @@ type ConvertColorSnapshot = {
 };
 
 type ConvertColorElements = {
+  sidebarCard: HTMLElement;
   swatchButton: HTMLButtonElement;
   swatchFill: HTMLElement;
+  swatchLabel: HTMLElement;
   colorPicker: HTMLInputElement;
+  insertButton: HTMLButtonElement;
   feedback: HTMLElement;
   inputs: HTMLInputElement[];
+  copyButtons: HTMLButtonElement[];
   inputByFormat: Record<ConvertColorFormat, HTMLInputElement>;
 };
 
@@ -33,21 +40,27 @@ const CONVERT_COLOR_FORMATS: ConvertColorFormat[] = [
   "hex",
   "hsl",
   "rgb",
+  "hwb",
+  "hsv",
+  "ncol",
   "oklch",
   "oklab",
-  "css-oklch",
-  "css-color",
+  "lab",
+  "lch",
   "cmyk",
 ];
 
 const FORMAT_EXAMPLES: Record<ConvertColorFormat, string> = {
   hex: "#A1B2C3 o red",
-  hsl: "210, 68%, 52%",
-  rgb: "64, 128, 255",
-  oklch: "0.72, 0.14, 244.5",
+  hsl: "hsl(220 100% 63%)",
+  rgb: "rgb(64 128 255)",
+  hwb: "hwb(220deg 10% 15%)",
+  hsv: "hsv(220deg 75% 100%)",
+  ncol: "G13.4, 53.7%, 26.7%",
+  oklch: "oklch(72% 0.14 244.5)",
   oklab: "0.72, -0.03, -0.12",
-  "css-oklch": "oklch(72% 0.14 244.5)",
-  "css-color": "rgb(64 128 255) o hsl(220 100% 63%)",
+  lab: "lab(72.7% -17.1 22)",
+  lch: "lch(72.7% 27.9 127.8)",
   cmyk: "75%, 50%, 0%, 0%",
 };
 
@@ -56,6 +69,12 @@ let applyExternalColorValue: (
   nextColorValue: string,
   options?: { publish?: boolean; source?: string }
 ) => boolean = () => false;
+
+type ColorNameReference = {
+  name: string;
+  hex: string;
+  color: ReturnType<typeof AppColorUtils.createColor>;
+};
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -195,10 +214,111 @@ function formatCssHslValue(hsl: { h: number; s: number; l: number }) {
   return `hsl(${formatNumber(hsl.h, 1)}deg ${formatNumber(hsl.s, 1)}% ${formatNumber(hsl.l, 1)}%)`;
 }
 
-function buildSnapshot(
-  colorInput: unknown,
-  cssFunctionPreference: CssColorFunctionPreference
-): ConvertColorSnapshot | null {
+function formatCssHwbValue(hwb: { h: number; w: number; b: number }) {
+  return `hwb(${formatNumber(hwb.h, 1)}deg ${formatNumber(hwb.w, 1)}% ${formatNumber(hwb.b, 1)}%)`;
+}
+
+function formatHsvValue(hsv: { h: number; s: number; v: number }) {
+  return `hsv(${formatNumber(hsv.h, 1)}deg ${formatNumber(hsv.s, 1)}% ${formatNumber(hsv.v, 1)}%)`;
+}
+
+function formatCssLabValue(lab: { l: number; a: number; b: number }) {
+  return `lab(${formatNumber(lab.l, 1)}% ${formatNumber(lab.a, 3)} ${formatNumber(lab.b, 3)})`;
+}
+
+function formatCssLchValue(lch: { l: number; c: number; h: number }) {
+  return `lch(${formatNumber(lch.l, 1)}% ${formatNumber(lch.c, 3)} ${formatNumber(lch.h, 2)})`;
+}
+
+function formatNcolValue(ncol: { ncol: string; w: number; b: number }) {
+  return `${ncol.ncol}, ${formatNumber(ncol.w, 1)}%, ${formatNumber(ncol.b, 1)}%`;
+}
+
+function normalizePercentInput(
+  entry: { raw: number; isPercent: boolean },
+  options: { allowFraction?: boolean } = {}
+) {
+  const allowFraction = options.allowFraction !== false;
+
+  if (entry.isPercent) {
+    return clamp(entry.raw, 0, 100);
+  }
+
+  if (allowFraction && Math.abs(entry.raw) <= 1) {
+    return clamp(entry.raw * 100, 0, 100);
+  }
+
+  return clamp(entry.raw, 0, 100);
+}
+
+function hueToNcol(hue: number) {
+  const baseLetters = ["R", "Y", "G", "C", "B", "M"];
+  const normalizedHue = normalizeHueDegrees(hue);
+  const segmentIndex = Math.floor(normalizedHue / 60) % baseLetters.length;
+  const segmentOffset = ((normalizedHue % 60) / 60) * 100;
+
+  return `${baseLetters[segmentIndex]}${formatNumber(segmentOffset, 1)}`;
+}
+
+function parseNcolHue(value: string) {
+  const match = String(value ?? "")
+    .trim()
+    .match(/^([RYGCBM])\s*(-?(?:\d+\.?\d*|\.\d+))$/i);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, letter, amountValue] = match;
+  const baseLetters = ["R", "Y", "G", "C", "B", "M"];
+  const baseIndex = baseLetters.indexOf(letter.toUpperCase());
+  if (baseIndex < 0) {
+    return null;
+  }
+
+  const amount = Number(amountValue);
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+
+  return normalizeHueDegrees(baseIndex * 60 + (amount / 100) * 60);
+}
+
+function getColorNameReferences(): ColorNameReference[] {
+  return getAppColorNames().map((entry) => ({
+    ...entry,
+    color: AppColorUtils.createColor(entry.hex),
+  }));
+}
+
+function getNearestColorName(hex: string, references: ColorNameReference[]) {
+  const normalizedHex = AppColorUtils.normalizeHexColor(hex);
+  if (normalizedHex === "#FFFFFF") {
+    return "Pure white";
+  }
+
+  let closestName = "Unknown";
+  let minDistance = Infinity;
+
+  references.forEach((entry) => {
+    if (!entry.color) {
+      return;
+    }
+
+    const distance = AppColorUtils.getColorDistance(normalizedHex, entry.color, {
+      method: "deltae2000",
+    });
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestName = entry.name;
+    }
+  });
+
+  return closestName;
+}
+
+function buildSnapshot(colorInput: unknown): ConvertColorSnapshot | null {
   const parsedColor = toSrgbSafeColor(AppColorUtils.createColor(colorInput));
   const hex = AppColorUtils.colorToHex(parsedColor);
   if (!parsedColor || !hex) {
@@ -207,20 +327,45 @@ function buildSnapshot(
 
   const rgb = AppColorUtils.hexToRgb(hex);
   const hsl = AppColorUtils.hexToHsl(hex);
+  const hwbColor = parsedColor.to("hwb");
+  const hsvColor = parsedColor.to("hsv");
   const oklchColor = parsedColor.to("oklch");
   const oklabColor = parsedColor.to("oklab");
+  const labColor = parsedColor.to("lab");
+  const lchColor = parsedColor.to("lch");
+  const [hwbHue = 0, whiteness = 0, blackness = 0] = hwbColor.coords || [];
+  const [hsvHue = 0, saturationValue = 0, value = 0] = hsvColor.coords || [];
   const [oklchLightness = 0, oklchChroma = 0, rawOklchHue = Number.NaN] = oklchColor.coords || [];
   const [oklabLightness = 0, oklabA = 0, oklabB = 0] = oklabColor.coords || [];
+  const [labLightness = 0, labA = 0, labB = 0] = labColor.coords || [];
+  const [lchLightness = 0, lchChroma = 0, rawLchHue = Number.NaN] = lchColor.coords || [];
   const resolvedOklchHue = normalizeHueDegrees(rawOklchHue, hsl.h);
+  const resolvedLchHue = normalizeHueDegrees(rawLchHue, hsl.h);
   const cmyk = rgbToCmyk(rgb);
+  const ncol = hueToNcol(hwbHue);
 
   return {
     hex,
     values: {
       hex,
-      rgb: formatRgbValue(rgb),
-      hsl: formatHslValue(hsl),
-      oklch: formatOklchValue({
+      rgb: formatCssRgbValue(rgb),
+      hsl: formatCssHslValue(hsl),
+      hwb: formatCssHwbValue({
+        h: hwbHue,
+        w: whiteness,
+        b: blackness,
+      }),
+      hsv: formatHsvValue({
+        h: hsvHue,
+        s: saturationValue,
+        v: value,
+      }),
+      ncol: formatNcolValue({
+        ncol,
+        w: whiteness,
+        b: blackness,
+      }),
+      oklch: formatCssOklchValue({
         l: clamp(oklchLightness, 0, 1),
         c: Math.max(0, oklchChroma),
         h: resolvedOklchHue,
@@ -230,28 +375,31 @@ function buildSnapshot(
         a: oklabA,
         b: oklabB,
       }),
-      "css-oklch": formatCssOklchValue({
-        l: clamp(oklchLightness, 0, 1),
-        c: Math.max(0, oklchChroma),
-        h: resolvedOklchHue,
+      lab: formatCssLabValue({
+        l: labLightness,
+        a: labA,
+        b: labB,
       }),
-      "css-color":
-        cssFunctionPreference === "hsl" ? formatCssHslValue(hsl) : formatCssRgbValue(rgb),
+      lch: formatCssLchValue({
+        l: lchLightness,
+        c: lchChroma,
+        h: resolvedLchHue,
+      }),
       cmyk: formatCmykValue(cmyk),
     },
   };
 }
 
-function parseGenericColor(value: string, cssFunctionPreference: CssColorFunctionPreference) {
+function parseGenericColor(value: string) {
   const normalizedValue = String(value ?? "").trim();
   if (!normalizedValue) {
     return null;
   }
 
-  return buildSnapshot(normalizedValue, cssFunctionPreference);
+  return buildSnapshot(normalizedValue);
 }
 
-function parseRgbField(value: string, cssFunctionPreference: CssColorFunctionPreference) {
+function parseRgbField(value: string) {
   const tokens = getNumericTokens(value);
   if (tokens.length < 3) {
     return null;
@@ -268,12 +416,57 @@ function parseRgbField(value: string, cssFunctionPreference: CssColorFunctionPre
       r: red.isPercent ? (red.raw / 100) * 255 : red.raw,
       g: green.isPercent ? (green.raw / 100) * 255 : green.raw,
       b: blue.isPercent ? (blue.raw / 100) * 255 : blue.raw,
-    },
-    cssFunctionPreference
+    }
   );
 }
 
-function parseHslField(value: string, cssFunctionPreference: CssColorFunctionPreference) {
+function parseHwbField(value: string) {
+  const tokens = getNumericTokens(value);
+  if (tokens.length < 3) {
+    return null;
+  }
+
+  const hueToken = parseTokenValue(tokens[0]);
+  const whitenessToken = parseTokenValue(tokens[1]);
+  const blacknessToken = parseTokenValue(tokens[2]);
+  if (!hueToken || !whitenessToken || !blacknessToken) {
+    return null;
+  }
+
+  return buildSnapshot({
+    space: "hwb",
+    coords: [
+      normalizeHueDegrees(hueToken.raw),
+      normalizePercentInput(whitenessToken),
+      normalizePercentInput(blacknessToken),
+    ],
+  });
+}
+
+function parseHsvField(value: string) {
+  const tokens = getNumericTokens(value);
+  if (tokens.length < 3) {
+    return null;
+  }
+
+  const hueToken = parseTokenValue(tokens[0]);
+  const saturationToken = parseTokenValue(tokens[1]);
+  const valueToken = parseTokenValue(tokens[2]);
+  if (!hueToken || !saturationToken || !valueToken) {
+    return null;
+  }
+
+  return buildSnapshot({
+    space: "hsv",
+    coords: [
+      normalizeHueDegrees(hueToken.raw),
+      normalizePercentInput(saturationToken),
+      normalizePercentInput(valueToken),
+    ],
+  });
+}
+
+function parseHslField(value: string) {
   const tokens = getNumericTokens(value);
   if (tokens.length < 3) {
     return null;
@@ -294,12 +487,38 @@ function parseHslField(value: string, cssFunctionPreference: CssColorFunctionPre
         clamp(saturationToken.raw, 0, 100),
         clamp(lightnessToken.raw, 0, 100),
       ],
-    },
-    cssFunctionPreference
+    }
   );
 }
 
-function parseOklchField(value: string, cssFunctionPreference: CssColorFunctionPreference) {
+function parseNcolField(value: string) {
+  const parts = String(value ?? "")
+    .trim()
+    .split(/[\s,]+/)
+    .filter(Boolean);
+
+  if (parts.length < 3) {
+    return null;
+  }
+
+  const hue = parseNcolHue(parts[0]);
+  const whitenessToken = parseTokenValue(parts[1]);
+  const blacknessToken = parseTokenValue(parts[2]);
+  if (!Number.isFinite(hue) || !whitenessToken || !blacknessToken) {
+    return null;
+  }
+
+  return buildSnapshot({
+    space: "hwb",
+    coords: [
+      hue,
+      normalizePercentInput(whitenessToken),
+      normalizePercentInput(blacknessToken),
+    ],
+  });
+}
+
+function parseOklchField(value: string) {
   const tokens = getNumericTokens(value);
   if (tokens.length < 3) {
     return null;
@@ -325,12 +544,11 @@ function parseOklchField(value: string, cssFunctionPreference: CssColorFunctionP
         Math.max(0, chromaToken.raw),
         normalizeHueDegrees(hueToken.raw),
       ],
-    },
-    cssFunctionPreference
+    }
   );
 }
 
-function parseOklabField(value: string, cssFunctionPreference: CssColorFunctionPreference) {
+function parseOklabField(value: string) {
   const tokens = getNumericTokens(value);
   if (tokens.length < 3) {
     return null;
@@ -352,12 +570,53 @@ function parseOklabField(value: string, cssFunctionPreference: CssColorFunctionP
     {
       space: "oklab",
       coords: [clamp(lightness, 0, 1), aToken.raw, bToken.raw],
-    },
-    cssFunctionPreference
+    }
   );
 }
 
-function parseCmykField(value: string, cssFunctionPreference: CssColorFunctionPreference) {
+function parseLabField(value: string) {
+  const tokens = getNumericTokens(value);
+  if (tokens.length < 3) {
+    return null;
+  }
+
+  const lightnessToken = parseTokenValue(tokens[0]);
+  const aToken = parseTokenValue(tokens[1]);
+  const bToken = parseTokenValue(tokens[2]);
+  if (!lightnessToken || !aToken || !bToken) {
+    return null;
+  }
+
+  const lightness = normalizePercentInput(lightnessToken);
+
+  return buildSnapshot({
+    space: "lab",
+    coords: [lightness, aToken.raw, bToken.raw],
+  });
+}
+
+function parseLchField(value: string) {
+  const tokens = getNumericTokens(value);
+  if (tokens.length < 3) {
+    return null;
+  }
+
+  const lightnessToken = parseTokenValue(tokens[0]);
+  const chromaToken = parseTokenValue(tokens[1]);
+  const hueToken = parseTokenValue(tokens[2]);
+  if (!lightnessToken || !chromaToken || !hueToken) {
+    return null;
+  }
+
+  const lightness = normalizePercentInput(lightnessToken);
+
+  return buildSnapshot({
+    space: "lch",
+    coords: [lightness, Math.max(0, chromaToken.raw), normalizeHueDegrees(hueToken.raw)],
+  });
+}
+
+function parseCmykField(value: string) {
   const tokens = getNumericTokens(value);
   if (tokens.length < 4) {
     return null;
@@ -381,24 +640,18 @@ function parseCmykField(value: string, cssFunctionPreference: CssColorFunctionPr
       m: toFraction(magenta),
       y: toFraction(yellow),
       k: toFraction(key),
-    }),
-    cssFunctionPreference
+    })
   );
 }
 
-function parseColorFromFormat(
-  format: ConvertColorFormat,
-  value: string,
-  cssFunctionPreference: CssColorFunctionPreference
-) {
+function parseColorFromFormat(format: ConvertColorFormat, value: string) {
   const trimmedValue = String(value ?? "").trim();
   if (!trimmedValue) {
     return null;
   }
 
   const genericSnapshot = parseGenericColor(
-    format === "hex" ? normalizeHexCandidate(trimmedValue) : trimmedValue,
-    cssFunctionPreference
+    format === "hex" ? normalizeHexCandidate(trimmedValue) : trimmedValue
   );
   if (genericSnapshot) {
     return genericSnapshot;
@@ -406,47 +659,114 @@ function parseColorFromFormat(
 
   switch (format) {
     case "rgb":
-      return parseRgbField(trimmedValue, cssFunctionPreference);
+      return parseRgbField(trimmedValue);
+    case "hwb":
+      return parseHwbField(trimmedValue);
+    case "hsv":
+      return parseHsvField(trimmedValue);
     case "hsl":
-      return parseHslField(trimmedValue, cssFunctionPreference);
+      return parseHslField(trimmedValue);
+    case "ncol":
+      return parseNcolField(trimmedValue);
     case "oklch":
-    case "css-oklch":
-      return parseOklchField(trimmedValue, cssFunctionPreference);
+      return parseOklchField(trimmedValue);
     case "oklab":
-      return parseOklabField(trimmedValue, cssFunctionPreference);
+      return parseOklabField(trimmedValue);
+    case "lab":
+      return parseLabField(trimmedValue);
+    case "lch":
+      return parseLchField(trimmedValue);
     case "cmyk":
-      return parseCmykField(trimmedValue, cssFunctionPreference);
+      return parseCmykField(trimmedValue);
     default:
       return null;
   }
 }
 
-function resolveCssFunctionPreference(value: string, fallback: CssColorFunctionPreference) {
-  const normalizedValue = String(value ?? "")
-    .trim()
-    .toLowerCase();
-
-  if (normalizedValue.startsWith("hsl")) {
-    return "hsl";
+function parseColorFromAnySupportedFormat(value: string) {
+  const trimmedValue = String(value ?? "").trim();
+  if (!trimmedValue) {
+    return null;
   }
 
-  if (normalizedValue.startsWith("rgb")) {
-    return "rgb";
+  const genericSnapshot = parseGenericColor(normalizeHexCandidate(trimmedValue));
+  if (genericSnapshot) {
+    return genericSnapshot;
   }
 
-  return fallback;
+  if (parseNcolHue(trimmedValue.split(/[\s,]+/)[0] || "")) {
+    return parseNcolField(trimmedValue);
+  }
+
+  const tokens = getNumericTokens(trimmedValue);
+  if (tokens.length === 4) {
+    return parseCmykField(trimmedValue);
+  }
+
+  if (tokens.length !== 3) {
+    return null;
+  }
+
+  const parsedTokens = tokens
+    .map((token) => parseTokenValue(token))
+    .filter(Boolean) as Array<NonNullable<ReturnType<typeof parseTokenValue>>>;
+
+  if (parsedTokens.length !== 3) {
+    return null;
+  }
+
+  const [firstToken, secondToken, thirdToken] = parsedTokens;
+
+  if (secondToken.isPercent && thirdToken.isPercent) {
+    return parseHslField(trimmedValue);
+  }
+
+  if (
+    Math.abs(firstToken.raw) <= 1 &&
+    Math.abs(secondToken.raw) <= 1 &&
+    Math.abs(thirdToken.raw) <= 1
+  ) {
+    return parseOklabField(trimmedValue);
+  }
+
+  if (
+    Math.abs(firstToken.raw) <= 1 &&
+    secondToken.raw >= 0 &&
+    Math.abs(secondToken.raw) <= 1 &&
+    Math.abs(thirdToken.raw) > 1
+  ) {
+    return parseOklchField(trimmedValue);
+  }
+
+  return parseRgbField(trimmedValue);
 }
 
 function resolveConvertColorElements(root: HTMLElement): ConvertColorElements | null {
+  const sidebarCard = root.querySelector(".convert-color-sidebar-card") as HTMLElement | null;
   const swatchButton = root.querySelector(".convert-color-swatch") as HTMLButtonElement | null;
   const swatchFill = root.querySelector(".convert-color-swatch-fill") as HTMLElement | null;
+  const swatchLabel = root.querySelector(".convert-color-swatch-label") as HTMLElement | null;
   const colorPicker = root.querySelector(".convert-color-picker") as HTMLInputElement | null;
+  const insertButton = root.querySelector(".convert-color-insert-btn") as HTMLButtonElement | null;
   const feedback = root.querySelector(".convert-color-feedback") as HTMLElement | null;
   const inputs = Array.from(
     root.querySelectorAll(".convert-color-field-input")
   ) as HTMLInputElement[];
+  const copyButtons = Array.from(
+    root.querySelectorAll(".convert-color-copy-btn")
+  ) as HTMLButtonElement[];
 
-  if (!swatchButton || !swatchFill || !colorPicker || !feedback || inputs.length === 0) {
+  if (
+    !sidebarCard ||
+    !swatchButton ||
+    !swatchFill ||
+    !swatchLabel ||
+    !colorPicker ||
+    !insertButton ||
+    !feedback ||
+    inputs.length === 0 ||
+    copyButtons.length === 0
+  ) {
     return null;
   }
 
@@ -463,11 +783,15 @@ function resolveConvertColorElements(root: HTMLElement): ConvertColorElements | 
   }
 
   return {
+    sidebarCard,
     swatchButton,
     swatchFill,
+    swatchLabel,
     colorPicker,
+    insertButton,
     feedback,
     inputs,
+    copyButtons,
     inputByFormat,
   };
 }
@@ -492,11 +816,11 @@ function initializeConvertColorApp() {
     AppSharedColors.getDefaultActiveColor?.() ||
     APP_CONSTANTS.DEFAULT_COLOR_BASE ||
     "#9EBB89";
+  const colorNameReferences = getColorNameReferences();
 
-  let cssFunctionPreference: CssColorFunctionPreference = "rgb";
-  let currentSnapshot =
-    buildSnapshot(defaultColor, cssFunctionPreference) ||
-    buildSnapshot("#9EBB89", cssFunctionPreference);
+  let currentSnapshot = buildSnapshot(defaultColor) || buildSnapshot("#9EBB89");
+  let copyFeedbackTimeoutIds = new WeakMap<HTMLButtonElement, number>();
+  let lastKnownClipboardText = "";
 
   if (!currentSnapshot) {
     return;
@@ -510,6 +834,71 @@ function initializeConvertColorApp() {
       input.classList.remove("is-invalid");
       input.setAttribute("aria-invalid", "false");
     });
+  }
+
+  function showCopyFeedback(button: HTMLButtonElement) {
+    showActionFeedback(button, {
+      defaultText: "Copiar",
+      successText: "¡Copiado!",
+      timeoutStore: copyFeedbackTimeoutIds,
+    });
+  }
+
+  function showActionFeedback(
+    button: HTMLButtonElement,
+    {
+      defaultText,
+      successText,
+      timeoutStore,
+    }: {
+      defaultText: string;
+      successText: string;
+      timeoutStore: WeakMap<HTMLButtonElement, number>;
+    }
+  ) {
+    const tooltip = button.querySelector(".tooltip") as HTMLElement | null;
+    if (!tooltip) {
+      return;
+    }
+
+    const previousTimeoutId = timeoutStore.get(button);
+    if (previousTimeoutId) {
+      window.clearTimeout(previousTimeoutId);
+    }
+
+    const feedbackBg = currentSnapshot.hex;
+    const feedbackTextColor =
+      AppColorUtils.getReadableTextColor(feedbackBg) === "#000000"
+        ? "var(--primary)"
+        : "var(--on-accent)";
+
+    tooltip.style.setProperty("--tooltip-feedback-bg", feedbackBg);
+    tooltip.style.setProperty("--tooltip-feedback-fg", feedbackTextColor);
+    tooltip.textContent = successText;
+    tooltip.classList.add("is-copied-feedback");
+    button.classList.add("show-feedback");
+
+    const timeoutId = window.setTimeout(() => {
+      tooltip.textContent = defaultText;
+      tooltip.classList.remove("is-copied-feedback");
+      button.classList.remove("show-feedback");
+      tooltip.style.removeProperty("--tooltip-feedback-bg");
+      tooltip.style.removeProperty("--tooltip-feedback-fg");
+      timeoutStore.delete(button);
+    }, 1400);
+
+    timeoutStore.set(button, timeoutId);
+  }
+
+  function setInsertButtonAvailability(hasClipboardText: boolean) {
+    elements.insertButton.disabled = !hasClipboardText;
+  }
+
+  async function refreshClipboardAvailability() {
+    const clipboardText = String((await AppClipboard.readText()) || "");
+    lastKnownClipboardText = clipboardText;
+    setInsertButtonAvailability(clipboardText.trim().length > 0);
+    return clipboardText;
   }
 
   function showInvalidMessage(
@@ -526,6 +915,12 @@ function initializeConvertColorApp() {
       `Todavía no he podido leer ese valor. Prueba con ${FORMAT_EXAMPLES[format]}.`;
   }
 
+  function showClipboardInvalidMessage() {
+    clearValidationState();
+    elements.feedback.textContent =
+      "Todavía no he podido leer ese color del portapapeles. Prueba con #A1B2C3, rgb(...), hsl(...) u oklch(...).";
+  }
+
   function applySnapshot(
     snapshot: ConvertColorSnapshot,
     options: {
@@ -537,6 +932,7 @@ function initializeConvertColorApp() {
   ) {
     currentSnapshot = snapshot;
     elements.swatchFill.style.backgroundColor = snapshot.hex;
+    elements.swatchLabel.textContent = getNearestColorName(snapshot.hex, colorNameReferences);
     elements.colorPicker.value = snapshot.hex;
 
     CONVERT_COLOR_FORMATS.forEach((format) => {
@@ -568,12 +964,7 @@ function initializeConvertColorApp() {
       activeInput?: HTMLInputElement | null;
     } = {}
   ) {
-    const nextCssFunctionPreference =
-      format === "css-color"
-        ? resolveCssFunctionPreference(value, cssFunctionPreference)
-        : cssFunctionPreference;
-
-    const snapshot = parseColorFromFormat(format, value, nextCssFunctionPreference);
+    const snapshot = parseColorFromFormat(format, value);
     if (!snapshot) {
       if (options.activeInput) {
         showInvalidMessage(format, options.activeInput);
@@ -581,7 +972,6 @@ function initializeConvertColorApp() {
       return false;
     }
 
-    cssFunctionPreference = nextCssFunctionPreference;
     applySnapshot(snapshot, options);
     return true;
   }
@@ -652,6 +1042,62 @@ function initializeConvertColorApp() {
     });
   });
 
+  elements.copyButtons.forEach((button) => {
+    const format = String(button.dataset.format || "") as ConvertColorFormat;
+    if (!CONVERT_COLOR_FORMATS.includes(format)) {
+      return;
+    }
+
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const input = elements.inputByFormat[format];
+      const valueToCopy = String(input?.value || "").trim();
+      if (!valueToCopy) {
+        return;
+      }
+
+      try {
+        await AppClipboard.writeText(valueToCopy);
+        showCopyFeedback(button);
+      } catch (error) {
+        // Ignore clipboard errors to avoid interrupting the flow.
+      }
+    });
+  });
+
+  elements.sidebarCard.addEventListener("mouseenter", () => {
+    void refreshClipboardAvailability();
+  });
+
+  elements.sidebarCard.addEventListener("focusin", () => {
+    void refreshClipboardAvailability();
+  });
+
+  elements.insertButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+
+    const clipboardText = String((await AppClipboard.readText()) || lastKnownClipboardText || "").trim();
+    lastKnownClipboardText = clipboardText;
+    setInsertButtonAvailability(clipboardText.length > 0);
+
+    if (!clipboardText) {
+      return;
+    }
+
+    const snapshot = parseColorFromAnySupportedFormat(clipboardText);
+    if (!snapshot) {
+      showClipboardInvalidMessage();
+      return;
+    }
+
+    applySnapshot(snapshot, {
+      publish: true,
+      source: "convert-color",
+    });
+  });
+
   elements.swatchButton.addEventListener("click", () => {
     if (typeof elements.colorPicker.showPicker === "function") {
       elements.colorPicker.showPicker();
@@ -668,26 +1114,20 @@ function initializeConvertColorApp() {
     });
   });
 
+  window.addEventListener("focus", () => {
+    void refreshClipboardAvailability();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      void refreshClipboardAvailability();
+    }
+  });
+
   applySnapshot(currentSnapshot, {
     publish: false,
   });
-
-  AppSharedColors.subscribe?.((detail: any = {}) => {
-    const { type, state, metadata } = detail;
-
-    if (type !== "activeColor" || !state?.activeColor) {
-      return;
-    }
-
-    if (metadata?.source === "convert-color") {
-      return;
-    }
-
-    setColorValue(String(state.activeColor), {
-      publish: false,
-      source: "shared-colors",
-    });
-  });
+  void refreshClipboardAvailability();
 }
 
 export function registerConvertColorApp() {

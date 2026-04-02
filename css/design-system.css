@@ -209,6 +209,37 @@ button[hidden] {
   padding-left: var(--PX-10);
 }
 
+.app-icon-btn {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.app-icon-btn .secondary-btn-icon-asset,
+.app-icon-btn .app-icon-btn-asset {
+  display: block;
+  width: var(--PX-18);
+  height: var(--PX-18);
+  object-fit: contain;
+}
+
+.app-icon-btn--compact {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding-left: var(--PX-4);
+}
+
+.app-icon-btn--compact.copy-btn-icon {
+  padding-left: var(--PX-4);
+}
+
+.app-icon-btn--compact .secondary-btn-icon-asset,
+.app-icon-btn--compact .app-icon-btn-asset,
+.app-icon-btn--compact svg {
+  width: 14px;
+  height: 14px;
+}
+
 .palette-regenerate-icon-btn {
   padding-right: 3px;
   padding-bottom: 1px;
@@ -438,6 +469,31 @@ button[hidden] {
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-top-color: var(--tooltip-bg);
+}
+
+.app-icon-btn:is(:hover, :focus-visible, :focus-within, .show-feedback) .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: var(--tooltip-visible-transform);
+}
+
+.app-icon-btn .tooltip {
+  bottom: calc(100% + var(--PX-8));
+  font-size: var(--PX-12);
+  transition:
+    var(--transition-tooltip),
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+.app-icon-btn .tooltip.is-copied-feedback {
+  background-color: var(--tooltip-feedback-bg, var(--accent));
+  color: var(--tooltip-feedback-fg, var(--on-accent));
+}
+
+.app-icon-btn .tooltip.is-copied-feedback::after {
+  border-top-color: var(--tooltip-feedback-bg, var(--accent));
+  transition: border-top-color 220ms ease;
 }
 
 .secondary-btn#surpriseBtn,
