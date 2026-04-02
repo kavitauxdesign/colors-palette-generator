@@ -24,6 +24,20 @@ function normalizeHexColor(color: unknown) {
   return String(color ?? "").trim().toUpperCase();
 }
 
+function normalizeHexInputValue(value: unknown) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  const hexCandidate = rawValue.replace(/^#+/, "");
+  if (/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(hexCandidate)) {
+    return `#${hexCandidate.toUpperCase()}`;
+  }
+
+  return rawValue;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -98,7 +112,7 @@ function createColor(color: unknown): InstanceType<typeof Color> | null {
     }
   }
 
-  const normalizedColor = String(color ?? "").trim();
+  const normalizedColor = normalizeHexInputValue(color);
   if (!normalizedColor) {
     return null;
   }
@@ -138,7 +152,7 @@ function isValidHexColor(hex: unknown) {
 }
 
 function parseCssColor(color: unknown): ParsedCssColor | null {
-  const inputValue = String(color ?? "").trim();
+  const inputValue = normalizeHexInputValue(color);
   if (!inputValue) {
     return null;
   }
@@ -439,6 +453,7 @@ export const AppColorUtils = {
   parseCssColor,
   colorToHex,
   normalizeHexColor,
+  normalizeHexInputValue,
   isValidHexColor,
   hexToRgb,
   rgbToHex,

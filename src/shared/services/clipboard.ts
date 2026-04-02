@@ -28,7 +28,20 @@ export async function writeText(text: string) {
   }
 }
 
+export async function readText() {
+  if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+    try {
+      return await navigator.clipboard.readText();
+    } catch (error) {
+      return "";
+    }
+  }
+
+  return "";
+}
+
 export const AppClipboard = {
+  readText,
   writeText,
 };
 

@@ -796,6 +796,10 @@ export function initializePaletteGeneratorColorMode() {
           return;
         }
 
+        if (dom.paletteColorTextInput.value !== parsedColor.inputValue) {
+          dom.paletteColorTextInput.value = parsedColor.inputValue;
+        }
+
         setSelectedPaletteBaseColor(parsedColor.inputValue, {
           syncTextInput: false,
         });

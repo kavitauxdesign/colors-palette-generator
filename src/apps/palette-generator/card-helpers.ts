@@ -1,6 +1,9 @@
 import AppColorUtils from "../../shared/color/color-utils";
 import AppClipboard from "../../shared/services/clipboard";
 import AppSharedColors from "../../shared/services/shared-colors";
+import createAppIconButton, {
+  type AppIconButtonIconName,
+} from "../../shared/ui/icon-button";
 
 let hasInitializedPaletteGeneratorCardHelpers = false;
 
@@ -373,42 +376,25 @@ export function initializePaletteGeneratorCardHelpers() {
     actionName: string,
     tooltipText: string
   ) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `color-action-btn action-${actionName}`;
-
     const actionAriaLabelMap: Record<string, string> = {
       regenerate: "Regenerar color",
       edit: "Editar color",
       copy: "Copiar color",
       delete: "Eliminar color",
     };
-    const actionIconAltMap: Record<string, string> = {
-      regenerate: "icono de regenerar color",
-      edit: "icono de editar color",
-      copy: "icono de copiar color",
-      delete: "icono de eliminar color",
+    const actionIconNameMap: Record<string, AppIconButtonIconName> = {
+      regenerate: "regenerate",
+      edit: "edit",
+      copy: "copy",
+      delete: "delete",
     };
-    button.setAttribute("aria-label", actionAriaLabelMap[actionName] || actionName);
-
-    const icon = document.createElement("img");
-    icon.className = "action-icon";
-    icon.src =
-      {
-        regenerate: runtimeWindow.AppAssetUrls?.icons?.regenerate || "assets/regenerate.svg",
-        edit: runtimeWindow.AppAssetUrls?.icons?.edit || "assets/edit.svg",
-        copy: runtimeWindow.AppAssetUrls?.icons?.copy || "assets/copy.svg",
-        delete: runtimeWindow.AppAssetUrls?.icons?.delete || "assets/delete.svg",
-      }[actionName] ||
-      runtimeWindow.AppAssetUrls?.icons?.edit ||
-      "assets/edit.svg";
-    icon.alt = actionIconAltMap[actionName] || `icono de ${actionName}`;
-    button.appendChild(icon);
-
-    const tooltip = document.createElement("div");
-    tooltip.className = "tooltip";
-    tooltip.textContent = tooltipText;
-    button.appendChild(tooltip);
+    const button = createAppIconButton({
+      ariaLabel: actionAriaLabelMap[actionName] || actionName,
+      tooltipText,
+      iconName: actionIconNameMap[actionName] || "edit",
+      extraClasses: ["app-icon-btn--compact", "color-action-btn", `action-${actionName}`],
+      iconClassNames: ["action-icon"],
+    });
 
     return button;
   };

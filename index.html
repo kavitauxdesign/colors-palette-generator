@@ -7,13 +7,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Classic HEX reúne mini-herramientas de color como el generador de paletas y la conversión de HEX a CSS filter." />
+    content="Classic HEX reúne mini-herramientas de color como el generador de paletas, Convert Color y la conversión de HEX a CSS filter." />
   <title>Classic HEX - Herramientas de trabajo con color</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon-palette-painted.svg" />
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/apps/shared.css" />
   <link rel="stylesheet" href="css/apps/palette-generator.css" />
+  <link rel="stylesheet" href="css/apps/convert-color.css" />
   <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
@@ -50,8 +51,18 @@
         <span class="sw-subtitle">— Herramientas de trabajo con color</span>
       </a>
       <nav class="site-nav" aria-label="Seleccionar mini-app">
-        <button class="site-nav-button" type="button" data-view="palette_generator">Generar Paletas</button>
-        <button class="site-nav-button" type="button" data-view="hex_to_filter">HEX to CSS filter</button>
+        <button class="site-nav-button" type="button" data-view="palette_generator">
+          <img class="site-nav-button-icon" src="assets/app-header-palette-generator.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Generar Paletas</span>
+        </button>
+        <button class="site-nav-button" type="button" data-view="convert_color">
+          <img class="site-nav-button-icon" src="assets/app-header-convert-color.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Convert Color</span>
+        </button>
+        <button class="site-nav-button" type="button" data-view="hex_to_filter">
+          <img class="site-nav-button-icon" src="assets/app-header-hex-to-filter.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">HEX to CSS filter</span>
+        </button>
       </nav>
     </div>
   </header>
@@ -306,7 +317,7 @@
           </div>
 
           <div class="palette-primary-actions u-flex u-row u-center u-wrap u-gap-sm">
-            <button id="copyHexBtn" class="secondary-btn secondary-btn-icon copy-btn-icon" type="button"
+            <button id="copyHexBtn" class="app-icon-btn secondary-btn secondary-btn-icon copy-btn-icon" type="button"
               aria-label="Copiar paleta">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -320,19 +331,19 @@
               </div>
             </button>
 
-            <button id="copyPaletteUrlBtn" class="secondary-btn secondary-btn-icon" type="button"
+            <button id="copyPaletteUrlBtn" class="app-icon-btn secondary-btn secondary-btn-icon" type="button"
               aria-label="Copiar URL de la paleta">
               <img class="secondary-btn-icon-asset" src="assets/url-checker-icon.svg" alt="" aria-hidden="true" />
               <div class="tooltip">Copiar URL de la paleta</div>
             </button>
 
-            <button id="paletteRegenerateBtn" class="secondary-btn secondary-btn-icon palette-regenerate-icon-btn"
+            <button id="paletteRegenerateBtn" class="app-icon-btn secondary-btn secondary-btn-icon palette-regenerate-icon-btn"
               type="button" aria-label="Regenerar paleta" hidden>
               <img class="secondary-btn-icon-asset" src="assets/regenerate.svg" alt="" aria-hidden="true" />
               <div class="tooltip">Regenerar paleta</div>
             </button>
 
-            <button id="surpriseBtn" class="secondary-btn secondary-btn-icon" type="button" aria-label="Sorpréndeme"
+            <button id="surpriseBtn" class="app-icon-btn secondary-btn secondary-btn-icon" type="button" aria-label="Sorpréndeme"
               hidden>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -351,7 +362,7 @@
               <div class="tooltip">Generar una variante más libre sin cambiar la cantidad de colores</div>
             </button>
 
-            <button id="paletteInspirationBtn" class="secondary-btn secondary-btn-icon" type="button"
+            <button id="paletteInspirationBtn" class="app-icon-btn secondary-btn secondary-btn-icon" type="button"
               aria-label="Modo inspiración" hidden>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -408,13 +419,224 @@
 </section>
 
 <!-- ==============================  -->
+<!--         CONVERT COLOR           -->
+<!-- =============================== -->
+<section id="convert_color" class="view-tab view-tab-offset app-view" data-app="convert-color">
+  <div class="app-view-shell">
+    <header class="app-view-hero">
+      <div class="app-view-meta">
+        <span class="app-view-kicker">Mini-app 02</span>
+        <h1>Convert Color</h1>
+        <p class="description app-view-description">
+          Convierte un color entre distintos formatos y trabaja con él de forma flexible.
+Puedes editar cualquier valor, pegar un código directamente o usar el selector de color para ajustarlo visualmente.
+        </p>
+      </div>
+    </header>
+
+    <div id="convert_color_tool" class="convert-color-tool">
+      <div class="convert-color-panel app-panel">
+        <div class="convert-color-workspace">
+          <aside class="convert-color-sidebar">
+            <div class="convert-color-sidebar-card">
+              <button class="convert-color-swatch" type="button" aria-label="Seleccionar color para convertir">
+                <span class="convert-color-swatch-fill"></span>
+                <span class="convert-color-swatch-label"></span>
+              </button>
+              <input class="convert-color-picker" type="color" value="#9ebb89" aria-hidden="true" tabindex="-1" />
+              <button class="secondary-btn convert-color-insert-btn" type="button"
+                aria-label="Insertar color desde el portapapeles" disabled>
+                <img class="secondary-btn-icon-asset convert-color-insert-icon" src="assets/paste.svg" alt="" aria-hidden="true" />
+                <span class="convert-color-insert-btn-label">Insertar color</span>
+                <div class="tooltip">Aplicar el código de color desde portapapeles</div>
+              </button>
+            </div>
+          </aside>
+
+          <div class="convert-color-content">
+            <section class="convert-color-row" aria-label="Formatos clásicos">
+              <h2 class="convert-color-row-title">Clásicos:</h2>
+              <div class="convert-color-row-grid convert-color-row-grid--classic">
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="hex" type="button" aria-label="Copiar HEX">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorHexInput">HEX</label>
+                  <input id="convertColorHexInput" class="convert-color-field-input" data-format="hex" type="text" placeholder="#A1B2C3 o red" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="hsl" type="button" aria-label="Copiar HSL">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorHslInput">HSL</label>
+                  <input id="convertColorHslInput" class="convert-color-field-input" data-format="hsl" type="text"
+                    placeholder="hsl(220 100% 63%)" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="rgb" type="button" aria-label="Copiar RGB">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorRgbInput">RGB</label>
+                  <input id="convertColorRgbInput" class="convert-color-field-input" data-format="rgb" type="text" placeholder="rgb(64 128 255)" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="hwb" type="button" aria-label="Copiar HWB">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorHwbInput">HWB</label>
+                  <input id="convertColorHwbInput" class="convert-color-field-input" data-format="hwb" type="text"
+                    placeholder="hwb(220deg 10% 15%)" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="hsv" type="button" aria-label="Copiar HSV o HSB">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorHsvInput">HSV/HSB</label>
+                  <input id="convertColorHsvInput" class="convert-color-field-input" data-format="hsv" type="text"
+                    placeholder="hsv(220deg 75% 100%)" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="ncol" type="button" aria-label="Copiar Ncol">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorNcolInput">Ncol</label>
+                  <input id="convertColorNcolInput" class="convert-color-field-input" data-format="ncol" type="text"
+                    placeholder="G13.4, 53.7%, 26.7%" />
+                </div>
+              </div>
+            </section>
+
+            <section class="convert-color-row" aria-label="Formatos perceptuales">
+              <h2 class="convert-color-row-title">Perceptuales:</h2>
+              <div class="convert-color-row-grid convert-color-row-grid--double">
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="oklch" type="button" aria-label="Copiar OKLCH">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorOklchInput">OKLCH</label>
+                  <input id="convertColorOklchInput" class="convert-color-field-input" data-format="oklch" type="text"
+                    placeholder="oklch(72% 0.14 244.5)" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="oklab" type="button" aria-label="Copiar OKLAB">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorOklabInput">OKLAB</label>
+                  <input id="convertColorOklabInput" class="convert-color-field-input" data-format="oklab" type="text"
+                    placeholder="0.72, -0.03, -0.12" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="lab" type="button" aria-label="Copiar LAB">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorLabInput">LAB</label>
+                  <input id="convertColorLabInput" class="convert-color-field-input" data-format="lab" type="text"
+                    placeholder="lab(72.7% -17.1 22)" />
+                </div>
+
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="lch" type="button" aria-label="Copiar LCH">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorLchInput">LCH</label>
+                  <input id="convertColorLchInput" class="convert-color-field-input" data-format="lch" type="text"
+                    placeholder="lch(72.7% 27.9 127.8)" />
+                </div>
+              </div>
+            </section>
+
+            <section class="convert-color-row" aria-label="Formato de impresión">
+              <h2 class="convert-color-row-title">Print:</h2>
+              <div class="convert-color-row-grid convert-color-row-grid--single">
+                <div class="convert-color-field-card">
+                  <button class="app-icon-btn app-icon-btn--compact secondary-btn secondary-btn-icon copy-btn-icon color-action-btn convert-color-copy-btn" data-format="cmyk" type="button" aria-label="Copiar CMYK">
+                    <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+                    </svg>
+                    <div class="tooltip">Copiar</div>
+                  </button>
+                  <label class="convert-color-field-label" for="convertColorCmykInput">CMYK</label>
+                  <input id="convertColorCmykInput" class="convert-color-field-input" data-format="cmyk" type="text"
+                    placeholder="75%, 50%, 0%, 0%" />
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <p class="convert-color-feedback" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==============================  -->
 <!--       HEX TO CSS FILTER         -->
 <!-- =============================== -->
 <section id="hex_to_filter" class="view-tab view-tab-offset app-view" data-app="hex-to-filter">
   <div class="app-view-shell">
     <header class="app-view-hero">
       <div class="app-view-meta">
-        <span class="app-view-kicker">Mini-app 02</span>
+        <span class="app-view-kicker">Mini-app 03</span>
         <h1>HEX to CSS Filter</h1>
         <p class="description app-view-description">
           Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
@@ -524,7 +746,7 @@
       © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
         id="footerYear"></span> · Reportar un bug o comentario en <a class="footer-report-link" href="https://github.com/kavitauxdesign/colors-palette-generator/issues" target="_blank" rel="noopener noreferrer">GitHub</a> o <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">DM</a>
     </div>
-    <span class="bottom-toolbar-version">Version 2.5.0.</span>
+    <span class="bottom-toolbar-version">Version 2.6.0.</span>
   </footer>
 
   <script type="module" src="/src/main.ts"></script>

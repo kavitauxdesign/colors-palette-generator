@@ -5,13 +5,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Classic HEX reúne mini-herramientas de color como el generador de paletas y la conversión de HEX a CSS filter." />
+    content="Classic HEX reúne mini-herramientas de color como el generador de paletas, Convert Color y la conversión de HEX a CSS filter." />
   <title>Classic HEX - Herramientas de trabajo con color</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon-palette-painted.svg" />
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/apps/shared.css" />
   <link rel="stylesheet" href="css/apps/palette-generator.css" />
+  <link rel="stylesheet" href="css/apps/convert-color.css" />
   <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
@@ -48,14 +49,26 @@
         <span class="sw-subtitle">— Herramientas de trabajo con color</span>
       </a>
       <nav class="site-nav" aria-label="Seleccionar mini-app">
-        <button class="site-nav-button" type="button" data-view="palette_generator">Generar Paletas</button>
-        <button class="site-nav-button" type="button" data-view="hex_to_filter">HEX to CSS filter</button>
+        <button class="site-nav-button" type="button" data-view="palette_generator">
+          <img class="site-nav-button-icon" src="assets/app-header-palette-generator.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Generar Paletas</span>
+        </button>
+        <button class="site-nav-button" type="button" data-view="convert_color">
+          <img class="site-nav-button-icon" src="assets/app-header-convert-color.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Convert Color</span>
+        </button>
+        <button class="site-nav-button" type="button" data-view="hex_to_filter">
+          <img class="site-nav-button-icon" src="assets/app-header-hex-to-filter.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">HEX to CSS filter</span>
+        </button>
       </nav>
     </div>
   </header>
 
   <main class="site-main">
 {{PALETTE_GENERATOR_APP}}
+
+{{CONVERT_COLOR_APP}}
 
 {{HEX_TO_FILTER_APP}}
   </main>

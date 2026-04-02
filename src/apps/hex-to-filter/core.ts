@@ -1,3 +1,5 @@
+import AppColorUtils from "../../shared/color/color-utils";
+
 export class Color {
   r: number;
   g: number;
@@ -514,14 +516,7 @@ export class Solver {
 }
 
 export function normalizeHexInputValue(value: unknown) {
-  const rawValue = String(value ?? "").trim();
-  if (/^#?[0-9a-f]{3}([0-9a-f]{3})?$/i.test(rawValue)) {
-    return rawValue.startsWith("#")
-      ? rawValue.toUpperCase()
-      : `#${rawValue.toUpperCase()}`;
-  }
-
-  return rawValue;
+  return AppColorUtils.normalizeHexInputValue(value);
 }
 
 export function getLossMessage(loss: number) {

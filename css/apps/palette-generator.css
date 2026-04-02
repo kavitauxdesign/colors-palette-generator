@@ -878,55 +878,18 @@
 
 .color-action-btn {
   position: relative;
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
-  padding: 0;
-  border: var(--PX-1) solid var(--shadow);
-  border-radius: var(--radius-pill);
-  background: var(--on-accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.25s ease;
-}
-
-.color-action-btn:hover {
-  transform: scale(1.15);
 }
 
 .color-action-btn.is-disabled {
-  opacity: 0.42;
+  opacity: var(--control-disabled-opacity);
   cursor: not-allowed;
-}
-
-.color-action-btn.is-disabled:hover {
-  transform: none;
+  box-shadow: none;
+  filter: none;
 }
 
 .action-icon {
-  width: 14px;
-  height: 14px;
+  display: block;
   object-fit: contain;
-}
-
-.color-action-btn .tooltip {
-  bottom: calc(100% + var(--PX-8));
-  font-size: var(--PX-12);
-  transition:
-    var(--transition-tooltip),
-    background-color 220ms ease,
-    color 220ms ease;
-}
-
-.color-action-btn .tooltip.is-copied-feedback {
-  background-color: var(--tooltip-feedback-bg, var(--accent));
-  color: var(--tooltip-feedback-fg, var(--on-accent));
-}
-
-.color-action-btn .tooltip.is-copied-feedback::after {
-  border-top-color: var(--tooltip-feedback-bg, var(--accent));
-  transition: border-top-color 220ms ease;
 }
 
 .color-action-btn.is-hidden {
@@ -1248,7 +1211,7 @@
   min-width: 32px;
 }
 
-.history-actions .action-edit .action-icon {
+.history-actions .action-edit .app-icon-btn-asset {
   display: block;
   width: var(--PX-16);
   height: var(--PX-16);

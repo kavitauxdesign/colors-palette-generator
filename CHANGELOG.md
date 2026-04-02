@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.6.0 - 2026-04-02
+
+### Highlights
+- Added the new `Convert Color` mini-app for synchronized color conversion across classic, perceptual, and print-oriented formats.
+- Refined the shared shell with icon-led mini-app navigation and more consistent icon-button behavior across the interface.
+- Reduced friction in color entry by auto-normalizing forgiving HEX input patterns across the tools.
+
+### Convert Color
+- Added conversion support for `HEX`, `RGB`, `HSL`, `HWB`, `HSV/HSB`, `Ncol`, `OKLCH`, `OKLAB`, `LAB`, `LCH`, and `CMYK`.
+- Added per-format copy actions, a global `Insert color` action powered by the clipboard, and a swatch linked to the native color picker.
+- Reworked the layout so the swatch acts as the visual anchor while grouped input cards stay organized by `Classics`, `Perceptual`, and `Print`.
+- Added approximate color-name labeling, successful-apply glow feedback, and cascade reveal transitions when the mini-app opens.
+
+### UI and shell polish
+- Updated the top mini-app menu to use large icons with compact labels and refreshed SVG assets for the app navigation.
+- Aligned `Convert Color` controls and actions more closely with the visual language of `Palette Generator`, including shared icon-button styling and tooltip behavior.
+- Improved copy and insert affordances so clipboard-driven actions feel clearer and less intrusive during editing.
+
+### Input resilience
+- Made HEX entry more forgiving across the mini-apps by accepting values like `AABBCC`, `abc`, or even duplicated leading hashes such as `##AABBCC`.
+- Normalized corrected HEX values back into the inputs automatically once they resolve to a valid color.
+
 ## 2.5.0 - 2026-04-01
 
 ### Highlights

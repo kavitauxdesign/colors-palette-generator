@@ -10,7 +10,7 @@ export function initializeAppShell() {
     return window.AppShell;
   }
   const views = Array.from(document.querySelectorAll(".view-tab"));
-  const navButtons = Array.from(document.querySelectorAll("nav button"));
+  const navButtons = Array.from(document.querySelectorAll(".site-nav-button"));
   const siteHeader = document.querySelector(".site-header");
   const initialHashViewName = location.hash.replace("#", "");
   const shouldResetInitialHashScroll = views.some((view) => view.id === initialHashViewName);
