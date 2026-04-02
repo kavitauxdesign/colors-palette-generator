@@ -15,7 +15,7 @@
 .generator-container {
   display: flex;
   align-items: flex-start;
-  gap: 170px;
+  gap: 10%;
   margin: var(--PX-20) 0 50px;
 }
 
