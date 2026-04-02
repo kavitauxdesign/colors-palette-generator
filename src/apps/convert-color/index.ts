@@ -122,16 +122,7 @@ function parseTokenValue(token: string) {
 }
 
 function normalizeHexCandidate(value: string) {
-  const trimmedValue = String(value ?? "").trim();
-  if (!trimmedValue) {
-    return "";
-  }
-
-  if (/^#?[0-9a-f]{3}$/i.test(trimmedValue) || /^#?[0-9a-f]{6}$/i.test(trimmedValue)) {
-    return trimmedValue.startsWith("#") ? trimmedValue : `#${trimmedValue}`;
-  }
-
-  return trimmedValue;
+  return AppColorUtils.normalizeHexInputValue(value);
 }
 
 function toSrgbSafeColor(color: any) {
@@ -1052,6 +1043,13 @@ function initializeConvertColorApp() {
         activeInput: input,
         animate: "soft",
       });
+
+      if (format === "hex") {
+        const normalizedHexInput = normalizeHexCandidate(input.value);
+        if (normalizedHexInput && input.value !== normalizedHexInput) {
+          input.value = normalizedHexInput;
+        }
+      }
     });
 
     input.addEventListener("blur", () => {

@@ -106,7 +106,7 @@ function initializeHexToFilterApp() {
       hex: parsedColor.hex,
       css: parsedColor.css,
       rgb: parsedColor.rgb,
-      inputValue: normalizedInputValue,
+      inputValue: parsedColor.inputValue,
     };
   }
 
