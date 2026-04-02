@@ -1,6 +1,6 @@
-# Classic·HEX — Version 2.4.0 (beta)
+# Classic·HEX — Version 2.6.0
 
-A small suite of color tools built on `Vite + TypeScript`. The current beta release includes a palette generator and a `HEX to CSS filter` converter, both mounted as mini-apps inside a shared front-end shell.
+A small suite of color tools built on `Vite + TypeScript`. The current release includes a palette generator, a flexible color converter, and a `HEX to CSS filter` converter, all mounted as mini-apps inside a shared front-end shell.
 
 ---
 
@@ -20,7 +20,7 @@ A small suite of color tools built on `Vite + TypeScript`. The current beta rele
 
 # Live Version
 
-Current public beta:
+Current public version:
 
 ```text
 https://kavita.es/classic-hex
@@ -30,9 +30,10 @@ https://kavita.es/classic-hex
 
 # Mini-apps
 
-The project currently contains two tools:
+The project currently contains three tools:
 
 - `Palette Generator`, focused on building and iterating on palettes with temperature, image, inspiration, and history workflows
+- `Convert Color`, focused on converting and copying colors across digital color formats with clipboard and color-picker support
 - `HEX to CSS filter`, focused on converting a target color into the closest CSS `filter` chain for recoloring SVG assets
 
 Both views live inside the same page and share a small shell for navigation, module bootstrapping, clipboard handling, and color state.
@@ -62,6 +63,8 @@ The application allows users to:
 - copy individual HEX values or the full palette
 - use `Undo / Redo`
 - store palette history during the session
+- convert colors across `HEX`, `RGB`, `HSL`, `HWB`, `HSV/HSB`, `Ncol`, `OKLCH`, `OKLAB`, `LAB`, `LCH`, and `CMYK`
+- copy individual converted values or insert a color code from the clipboard
 - convert `HEX`, `rgb()`, `hsl()`, or CSS named colors into the closest CSS filter
 - preview the original target color and the filtered SVG result side by side
 - copy the final CSS filter code
