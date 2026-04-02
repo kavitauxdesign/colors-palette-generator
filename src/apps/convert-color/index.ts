@@ -36,6 +36,8 @@ type ConvertColorElements = {
   inputByFormat: Record<ConvertColorFormat, HTMLInputElement>;
 };
 
+type ConvertColorApplyAnimationTone = "soft" | "insert";
+
 const CONVERT_COLOR_FORMATS: ConvertColorFormat[] = [
   "hex",
   "hsl",
@@ -821,6 +823,8 @@ function initializeConvertColorApp() {
   let currentSnapshot = buildSnapshot(defaultColor) || buildSnapshot("#9EBB89");
   let copyFeedbackTimeoutIds = new WeakMap<HTMLButtonElement, number>();
   let lastKnownClipboardText = "";
+  let refreshFeedbackTimeoutId = 0;
+  let lastRefreshFeedbackAt = 0;
 
   if (!currentSnapshot) {
     return;
@@ -921,6 +925,42 @@ function initializeConvertColorApp() {
       "Todavía no he podido leer ese color del portapapeles. Prueba con #A1B2C3, rgb(...), hsl(...) u oklch(...).";
   }
 
+  function triggerApplyFeedback(
+    snapshot: ConvertColorSnapshot,
+    tone: ConvertColorApplyAnimationTone = "soft"
+  ) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const now = Date.now();
+    if (tone !== "insert" && now - lastRefreshFeedbackAt < 150) {
+      return;
+    }
+
+    lastRefreshFeedbackAt = now;
+
+    const { r, g, b } = AppColorUtils.hexToRgb(snapshot.hex);
+    root.style.setProperty("--convert-color-refresh-rgb", `${r}, ${g}, ${b}`);
+
+    if (refreshFeedbackTimeoutId) {
+      window.clearTimeout(refreshFeedbackTimeoutId);
+    }
+
+    root.classList.remove("is-color-refreshing", "is-color-refreshing-strong");
+    void root.offsetWidth;
+    root.classList.add("is-color-refreshing");
+
+    if (tone === "insert") {
+      root.classList.add("is-color-refreshing-strong");
+    }
+
+    refreshFeedbackTimeoutId = window.setTimeout(() => {
+      root.classList.remove("is-color-refreshing", "is-color-refreshing-strong");
+      refreshFeedbackTimeoutId = 0;
+    }, tone === "insert" ? 380 : 300);
+  }
+
   function applySnapshot(
     snapshot: ConvertColorSnapshot,
     options: {
@@ -928,8 +968,12 @@ function initializeConvertColorApp() {
       source?: string;
       preserveActiveFieldValue?: boolean;
       activeInput?: HTMLInputElement | null;
+      animate?: ConvertColorApplyAnimationTone | false;
     } = {}
   ) {
+    const previousHex = currentSnapshot?.hex || "";
+    const didColorChange = previousHex !== snapshot.hex;
+
     currentSnapshot = snapshot;
     elements.swatchFill.style.backgroundColor = snapshot.hex;
     elements.swatchLabel.textContent = getNearestColorName(snapshot.hex, colorNameReferences);
@@ -947,6 +991,10 @@ function initializeConvertColorApp() {
 
     clearValidationState();
 
+    if (didColorChange && options.animate) {
+      triggerApplyFeedback(snapshot, options.animate);
+    }
+
     if (options.publish !== false) {
       AppSharedColors.setActiveColor(snapshot.hex, {
         source: options.source || "convert-color",
@@ -962,6 +1010,7 @@ function initializeConvertColorApp() {
       source?: string;
       preserveActiveFieldValue?: boolean;
       activeInput?: HTMLInputElement | null;
+      animate?: ConvertColorApplyAnimationTone | false;
     } = {}
   ) {
     const snapshot = parseColorFromFormat(format, value);
@@ -1001,6 +1050,7 @@ function initializeConvertColorApp() {
         publish: false,
         preserveActiveFieldValue: true,
         activeInput: input,
+        animate: "soft",
       });
     });
 
@@ -1015,6 +1065,7 @@ function initializeConvertColorApp() {
       const didApply = applyFieldValue(format, input.value, {
         publish: true,
         source: "convert-color",
+        animate: "soft",
       });
 
       if (!didApply) {
@@ -1031,6 +1082,7 @@ function initializeConvertColorApp() {
       const didApply = applyFieldValue(format, input.value, {
         publish: true,
         source: "convert-color",
+        animate: "soft",
       });
 
       if (!didApply) {
@@ -1095,6 +1147,7 @@ function initializeConvertColorApp() {
     applySnapshot(snapshot, {
       publish: true,
       source: "convert-color",
+      animate: "insert",
     });
   });
 

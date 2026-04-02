@@ -230,7 +230,7 @@ button[hidden] {
 }
 
 .app-icon-btn--compact.copy-btn-icon {
-  padding-left: var(--PX-4);
+  padding-left: 0;
 }
 
 .app-icon-btn--compact .secondary-btn-icon-asset,

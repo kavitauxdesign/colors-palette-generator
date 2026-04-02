@@ -51,9 +51,18 @@
         <span class="sw-subtitle">— Herramientas de trabajo con color</span>
       </a>
       <nav class="site-nav" aria-label="Seleccionar mini-app">
-        <button class="site-nav-button" type="button" data-view="palette_generator">Generar Paletas</button>
-        <button class="site-nav-button" type="button" data-view="convert_color">Convert Color</button>
-        <button class="site-nav-button" type="button" data-view="hex_to_filter">HEX to CSS filter</button>
+        <button class="site-nav-button" type="button" data-view="palette_generator">
+          <img class="site-nav-button-icon" src="assets/app-header-palette-generator.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Generar Paletas</span>
+        </button>
+        <button class="site-nav-button" type="button" data-view="convert_color">
+          <img class="site-nav-button-icon" src="assets/app-header-convert-color.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Convert Color</span>
+        </button>
+        <button class="site-nav-button" type="button" data-view="hex_to_filter">
+          <img class="site-nav-button-icon" src="assets/app-header-hex-to-filter.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">HEX to CSS filter</span>
+        </button>
       </nav>
     </div>
   </header>
@@ -419,13 +428,13 @@
         <span class="app-view-kicker">Mini-app 02</span>
         <h1>Convert Color</h1>
         <p class="description app-view-description">
-          Convierte un color digital entre formatos clásicos, perceptuales, CSS y CMYK. Si cambias cualquier campo,
-          el resto se actualiza al momento y el swatch superior queda conectado al selector de color nativo.
+          Convierte un color entre distintos formatos y trabaja con él de forma flexible.
+Puedes editar cualquier valor, pegar un código directamente o usar el selector de color para ajustarlo visualmente.
         </p>
       </div>
     </header>
 
-    <div id="convert_color_tool" class="convert-color-tool app-stack">
+    <div id="convert_color_tool" class="convert-color-tool">
       <div class="convert-color-panel app-panel">
         <div class="convert-color-workspace">
           <aside class="convert-color-sidebar">
