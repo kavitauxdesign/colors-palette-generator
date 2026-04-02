@@ -1,0 +1,144 @@
+/* Convert Color mini-app styles. */
+
+.convert-color-tool {
+  margin-top: var(--PX-24);
+}
+
+.convert-color-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--PX-24);
+  padding: clamp(20px, 2.5vw, 28px);
+  background:
+    radial-gradient(circle at top, rgba(224, 192, 166, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(243, 244, 246, 0.98) 100%);
+}
+
+.convert-color-swatch-shell {
+  display: flex;
+  justify-content: center;
+}
+
+.convert-color-swatch {
+  width: clamp(120px, 16vw, 152px);
+  height: clamp(120px, 16vw, 152px);
+  padding: 0;
+  border-radius: 32px;
+  border: 1px solid rgba(89, 77, 77, 0.1);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.36)),
+    rgba(229, 231, 235, 0.65);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 16px 36px rgba(89, 77, 77, 0.12);
+  transition:
+    transform var(--duration-ui) ease,
+    box-shadow var(--duration-ui) ease;
+}
+
+.convert-color-swatch:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 20px 42px rgba(89, 77, 77, 0.16);
+}
+
+.convert-color-swatch-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #9ebb89;
+}
+
+.convert-color-picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.convert-color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--PX-14);
+}
+
+.convert-color-field-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--PX-8);
+  min-width: 0;
+  padding: var(--PX-16);
+  border-radius: var(--PX-18);
+  border: 1px solid rgba(89, 77, 77, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 248, 248, 0.88) 100%);
+  box-shadow: 0 8px 22px rgba(89, 77, 77, 0.05);
+}
+
+.convert-color-field-group {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.convert-color-field-label {
+  color: var(--primary);
+  font-size: var(--PX-14);
+  font-weight: 600;
+}
+
+.convert-color-field-input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--PX-14);
+  border: 1px solid rgba(89, 77, 77, 0.14);
+  border-radius: var(--PX-12);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--primary);
+  box-sizing: border-box;
+}
+
+.convert-color-field-input::placeholder {
+  color: rgba(89, 77, 77, 0.5);
+}
+
+.convert-color-field-input.is-invalid {
+  border-color: rgba(206, 28, 28, 0.35);
+  box-shadow: 0 0 0 3px rgba(206, 28, 28, 0.08);
+}
+
+.convert-color-feedback {
+  min-height: 20px;
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--PX-14);
+}
+
+@media (max-width: 1180px) {
+  .convert-color-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .convert-color-panel {
+    gap: var(--PX-20);
+    padding: var(--PX-18);
+  }
+
+  .convert-color-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .convert-color-swatch {
+    width: 112px;
+    height: 112px;
+    border-radius: 26px;
+  }
+}

@@ -33,6 +33,7 @@ import "./apps/palette-generator/image-ui-runtime";
 import setupAppDom from "./shared/dom/app-dom";
 import initializeAppShell from "./app/shell";
 import initializeRegisteredApps from "./app/bootstrap";
+import registerConvertColorApp from "./apps/convert-color";
 import registerHexToFilterApp from "./apps/hex-to-filter";
 import registerPaletteGeneratorApp, {
   initializePaletteGeneratorModules,
@@ -56,8 +57,9 @@ function updateFooterYear() {
 async function bootstrap() {
   setupAppDom();
   initializeAppShell();
-  registerHexToFilterApp();
   registerPaletteGeneratorApp();
+  registerConvertColorApp();
+  registerHexToFilterApp();
   initializePaletteGeneratorModules();
   initializeRegisteredApps();
 }

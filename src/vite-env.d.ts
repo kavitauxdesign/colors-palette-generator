@@ -11,6 +11,7 @@ declare global {
     AppColorUtils?: any;
     AppColorNames?: any;
     AppShell?: any;
+    ConvertColorApp?: any;
     HexToFilterCore?: any;
     HexToFilterApp?: any;
     PaletteGeneratorApp?: any;

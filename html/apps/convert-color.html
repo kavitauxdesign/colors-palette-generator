@@ -1,0 +1,86 @@
+<!-- ==============================  -->
+<!--         CONVERT COLOR           -->
+<!-- =============================== -->
+<section id="convert_color" class="view-tab view-tab-offset app-view" data-app="convert-color">
+  <div class="app-view-shell">
+    <header class="app-view-hero">
+      <div class="app-view-meta">
+        <span class="app-view-kicker">Mini-app 02</span>
+        <h1>Convert Color</h1>
+        <p class="description app-view-description">
+          Convierte un color digital entre formatos clásicos, perceptuales, CSS y CMYK. Si cambias cualquier campo,
+          el resto se actualiza al momento y el swatch superior queda conectado al selector de color nativo.
+        </p>
+      </div>
+    </header>
+
+    <div id="convert_color_tool" class="convert-color-tool app-stack">
+      <div class="convert-color-panel app-panel">
+        <div class="convert-color-swatch-shell">
+          <button class="convert-color-swatch" type="button" aria-label="Seleccionar color para convertir">
+            <span class="convert-color-swatch-fill"></span>
+          </button>
+          <input class="convert-color-picker" type="color" value="#9ebb89" aria-hidden="true" tabindex="-1" />
+        </div>
+
+        <div class="convert-color-grid" aria-label="Campos de conversión de color">
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Clásicos</span>
+            <span class="convert-color-field-label">HEX</span>
+            <input class="convert-color-field-input" data-format="hex" type="text" placeholder="#A1B2C3 o red" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Clásicos</span>
+            <span class="convert-color-field-label">HSL</span>
+            <input class="convert-color-field-input" data-format="hsl" type="text"
+              placeholder="210, 68%, 52%" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Clásicos</span>
+            <span class="convert-color-field-label">RGB</span>
+            <input class="convert-color-field-input" data-format="rgb" type="text" placeholder="64, 128, 255" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Perceptuales</span>
+            <span class="convert-color-field-label">OKLCH</span>
+            <input class="convert-color-field-input" data-format="oklch" type="text"
+              placeholder="0.72, 0.14, 244.5" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Perceptuales</span>
+            <span class="convert-color-field-label">OKLAB</span>
+            <input class="convert-color-field-input" data-format="oklab" type="text"
+              placeholder="0.72, -0.03, -0.12" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Dev</span>
+            <span class="convert-color-field-label">CSS Color (oklch())</span>
+            <input class="convert-color-field-input" data-format="css-oklch" type="text"
+              placeholder="oklch(72% 0.14 244.5)" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Dev</span>
+            <span class="convert-color-field-label">CSS Color (rgb() / hsl())</span>
+            <input class="convert-color-field-input" data-format="css-color" type="text"
+              placeholder="rgb(64 128 255) o hsl(220 100% 63%)" />
+          </label>
+
+          <label class="convert-color-field-card">
+            <span class="convert-color-field-group">Print</span>
+            <span class="convert-color-field-label">CMYK</span>
+            <input class="convert-color-field-input" data-format="cmyk" type="text"
+              placeholder="75%, 50%, 0%, 0%" />
+          </label>
+        </div>
+
+        <p class="convert-color-feedback" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+</section>

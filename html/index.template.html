@@ -5,13 +5,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description"
-    content="Classic HEX reúne mini-herramientas de color como el generador de paletas y la conversión de HEX a CSS filter." />
+    content="Classic HEX reúne mini-herramientas de color como el generador de paletas, Convert Color y la conversión de HEX a CSS filter." />
   <title>Classic HEX - Herramientas de trabajo con color</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon-palette-painted.svg" />
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/apps/shared.css" />
   <link rel="stylesheet" href="css/apps/palette-generator.css" />
+  <link rel="stylesheet" href="css/apps/convert-color.css" />
   <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
@@ -49,6 +50,7 @@
       </a>
       <nav class="site-nav" aria-label="Seleccionar mini-app">
         <button class="site-nav-button" type="button" data-view="palette_generator">Generar Paletas</button>
+        <button class="site-nav-button" type="button" data-view="convert_color">Convert Color</button>
         <button class="site-nav-button" type="button" data-view="hex_to_filter">HEX to CSS filter</button>
       </nav>
     </div>
@@ -56,6 +58,8 @@
 
   <main class="site-main">
 {{PALETTE_GENERATOR_APP}}
+
+{{CONVERT_COLOR_APP}}
 
 {{HEX_TO_FILTER_APP}}
   </main>
