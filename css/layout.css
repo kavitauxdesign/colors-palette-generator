@@ -40,6 +40,79 @@
     transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
+.site-intro {
+  margin-bottom: clamp(28px, 4vw, 40px);
+}
+
+.site-intro-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--PX-14);
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(184, 160, 136, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(255, 249, 242, 0.98), rgba(247, 244, 239, 0.94));
+  box-shadow: var(--shadow-panel-soft);
+}
+
+.site-intro-kicker {
+  margin: 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-intro-title {
+  max-width: 22ch;
+  margin: 0;
+  font-size: clamp(34px, 5vw, 46px);
+  line-height: 0.95;
+  text-wrap: balance;
+}
+
+.site-intro-description {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--secondary);
+  font-size: 17px;
+}
+
+.site-intro-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--PX-10);
+  margin-top: var(--PX-4);
+}
+
+.site-intro-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid rgba(145, 111, 83, 0.18);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-ui) ease,
+    border-color var(--duration-ui) ease,
+    transform var(--duration-ui) ease;
+}
+
+.site-intro-link:hover,
+.site-intro-link:focus-visible {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(145, 111, 83, 0.34);
+  transform: translateY(-1px);
+}
+
 .u-flex {
   display: flex;
 }
@@ -165,6 +238,11 @@
   gap: var(--PX-10);
 }
 
+.app-view-title {
+  margin: 0;
+  font-size: var(--PX-28);
+}
+
 .app-view-heading {
   align-items: flex-start;
 }
@@ -190,6 +268,20 @@
 @media (max-width: 680px) {
   .app-view-shell {
     gap: var(--PX-24);
+  }
+
+  .site-intro-shell {
+    padding: var(--PX-24);
+    border-radius: 24px;
+  }
+
+  .site-intro-title {
+    max-width: none;
+    font-size: 32px;
+  }
+
+  .site-intro-description {
+    font-size: var(--PX-16);
   }
 
   .app-view-kicker {

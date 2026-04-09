@@ -6,10 +6,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="canonical" href="https://kavita.es/classic-hex/" />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="description"
-    content="Classic HEX reúne mini-herramientas de color como el generador de paletas, Convert Color y la conversión de HEX a CSS filter." />
-  <title>Classic HEX - Herramientas de trabajo con color</title>
+    content="Classic HEX es una herramienta online gratuita para generar paletas de colores, convertir colores entre formatos como HEX, RGB, HSL y OKLCH, y obtener el CSS filter más cercano para recolorear SVG." />
+  <meta name="author" content="Karina Khodzhakulieva" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="kavita.es" />
+  <meta property="og:url" content="https://kavita.es/classic-hex/" />
+  <meta property="og:title"
+    content="Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter" />
+  <meta property="og:description"
+    content="Herramienta online gratuita para generar paletas de colores, convertir formatos de color y calcular filtros CSS para SVG." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title"
+    content="Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter" />
+  <meta name="twitter:description"
+    content="Genera paletas, convierte colores y obtén el CSS filter más cercano para recolorear iconos SVG." />
+  <title>Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon-palette-painted.svg" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "Classic HEX",
+      "headline": "Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter",
+      "description": "Suite online gratuita para generar paletas de colores, convertir formatos como HEX, RGB, HSL, OKLCH, LAB y CMYK, y calcular filtros CSS para SVG.",
+      "url": "https://kavita.es/classic-hex/",
+      "inLanguage": "es",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "kavita.es",
+        "url": "https://kavita.es/"
+      },
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Paletas de colores"
+        },
+        {
+          "@type": "Thing",
+          "name": "Conversión de color"
+        },
+        {
+          "@type": "Thing",
+          "name": "CSS filter"
+        }
+      ],
+      "hasPart": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "Generador de Paletas de Colores",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "Web",
+          "url": "https://kavita.es/classic-hex/#palette_generator"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Convert Color",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web",
+          "url": "https://kavita.es/classic-hex/#convert_color"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "HEX to CSS Filter",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web",
+          "url": "https://kavita.es/classic-hex/#hex_to_filter"
+        }
+      ]
+    }
+  </script>
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/apps/shared.css" />
@@ -68,6 +137,30 @@
   </header>
 
   <main class="site-main">
+    <section class="site-intro" aria-labelledby="classicHexTitle">
+      <div class="site-intro-shell">
+        <p class="site-intro-kicker">Herramientas online de color</p>
+        <h1 id="classicHexTitle" class="site-intro-title">
+          Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter
+        </h1>
+        <p class="site-intro-description">
+          Classic HEX es una herramienta online gratuita para trabajar con color desde el navegador. Sirve para generar
+          paletas de colores, convertir formatos como HEX, RGB, HSL, OKLCH, LAB o CMYK, y calcular el filtro CSS más
+          cercano para recolorear iconos SVG.
+        </p>
+        <p class="site-intro-description">
+          La suite está pensada para diseño visual, branding y front-end: puedes partir de un color, una temperatura o
+          una imagen, explorar variaciones, guardar el historial mientras trabajas y copiar los resultados para usarlos
+          en CSS o en tu sistema de diseño.
+        </p>
+        <nav class="site-intro-links" aria-label="Abrir una herramienta de Classic HEX">
+          <a class="site-intro-link" href="#palette_generator">Generador de paletas</a>
+          <a class="site-intro-link" href="#convert_color">Convert Color</a>
+          <a class="site-intro-link" href="#hex_to_filter">HEX to CSS Filter</a>
+        </nav>
+      </div>
+    </section>
+
 <!-- ==============================  -->
 <!--       PALETTE GENERATOR         -->
 <!-- =============================== -->
@@ -77,7 +170,7 @@
       <div class="app-view-meta">
         <span class="app-view-kicker">Mini-app 01</span>
         <div class="section-heading-row app-view-heading">
-          <h1>Generador de Paletas de Colores</h1>
+          <h2 class="app-view-title">Generador de Paletas de Colores</h2>
           <button id="resetPaletteBtn" class="secondary-btn reset-btn-offset" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -426,7 +519,7 @@
     <header class="app-view-hero">
       <div class="app-view-meta">
         <span class="app-view-kicker">Mini-app 02</span>
-        <h1>Convert Color</h1>
+        <h2 class="app-view-title">Convert Color</h2>
         <p class="description app-view-description">
           Convierte un color entre distintos formatos y trabaja con él de forma flexible.
 Puedes editar cualquier valor, pegar un código directamente o usar el selector de color para ajustarlo visualmente.
@@ -637,7 +730,7 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
     <header class="app-view-hero">
       <div class="app-view-meta">
         <span class="app-view-kicker">Mini-app 03</span>
-        <h1>HEX to CSS Filter</h1>
+        <h2 class="app-view-title">HEX to CSS Filter</h2>
         <p class="description app-view-description">
           Conversión de colores HEX al filtro CSS más cercano que reproduce ese tono.
           Útil para colorear iconos SVG mediante <code>filter</code>.
