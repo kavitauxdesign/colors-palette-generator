@@ -83,6 +83,7 @@
   <link rel="stylesheet" href="css/apps/palette-generator.css" />
   <link rel="stylesheet" href="css/apps/convert-color.css" />
   <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
+  <link rel="stylesheet" href="css/apps/color-blind-simulator.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
       function loadMetrica() {
@@ -130,16 +131,23 @@
           <img class="site-nav-button-icon" src="assets/app-header-hex-to-filter.svg" alt="" aria-hidden="true" />
           <span class="site-nav-button-label">HEX to CSS filter</span>
         </button>
+        <button class="site-nav-button" type="button" data-view="color_blind_simulator">
+          <img class="site-nav-button-icon" src="assets/app-header-color-blind-simulator.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Simular Daltonismo</span>
+        </button>
       </nav>
     </div>
   </header>
 
   <main class="site-main">
+<h1 class="visually-hidden">Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter</h1>
 {{PALETTE_GENERATOR_APP}}
 
 {{CONVERT_COLOR_APP}}
 
 {{HEX_TO_FILTER_APP}}
+
+{{COLOR_BLIND_SIMULATOR_APP}}
   </main>
 
   <footer class="bottom-toolbar site-footer">

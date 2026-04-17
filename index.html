@@ -85,6 +85,7 @@
   <link rel="stylesheet" href="css/apps/palette-generator.css" />
   <link rel="stylesheet" href="css/apps/convert-color.css" />
   <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
+  <link rel="stylesheet" href="css/apps/color-blind-simulator.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
       function loadMetrica() {
@@ -132,11 +133,16 @@
           <img class="site-nav-button-icon" src="assets/app-header-hex-to-filter.svg" alt="" aria-hidden="true" />
           <span class="site-nav-button-label">HEX to CSS filter</span>
         </button>
+        <button class="site-nav-button" type="button" data-view="color_blind_simulator">
+          <img class="site-nav-button-icon" src="assets/app-header-color-blind-simulator.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Simular Daltonismo</span>
+        </button>
       </nav>
     </div>
   </header>
 
   <main class="site-main">
+<h1 class="visually-hidden">Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter</h1>
 <!-- ==============================  -->
 <!--       PALETTE GENERATOR         -->
 <!-- =============================== -->
@@ -814,6 +820,258 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
                 </ul>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================  -->
+<!--     COLOR BLINDNESS SIMULATOR          -->
+<!-- ====================================== -->
+<section id="color_blind_simulator" class="view-tab view-tab-offset app-view" data-app="color-blind-simulator">
+  <div class="app-view-shell">
+    <header class="app-view-hero">
+      <div class="app-view-meta">
+        <span class="app-view-kicker">Mini-app 04</span>
+        <h2 class="app-view-title">Simulador de Daltonismo</h2>
+        <p class="description app-view-description">
+          Carga una imagen, prepara el lienzo y deja listo el flujo de comparación.
+          En esta primera versión montamos toda la interfaz, con los controles visuales y el viewport donde más adelante irá el canvas.
+        </p>
+      </div>
+    </header>
+
+    <div id="colorBlindSimulatorApp" class="color-blind-sim app-stack">
+      <div class="app-workspace color-blind-sim-workspace">
+        <aside class="app-panel app-panel--sidebar color-blind-sim-sidebar">
+          <div class="app-stack">
+            <section class="color-blind-sim-section">
+              <div class="color-blind-sim-section-header">
+                <span class="color-blind-sim-step" aria-hidden="true">1</span>
+                <div class="color-blind-sim-section-copy-wrap">
+                  <h3 class="color-blind-sim-section-title">Imagen base</h3>
+                </div>
+              </div>
+
+              <input id="colorBlindSimulatorImageInput" class="color-blind-sim-file-input" type="file"
+                accept=".jpg,.jpeg,.png,.svg,.webp,image/jpeg,image/png,image/svg+xml,image/webp" />
+
+              <div id="colorBlindSimulatorImageDropzonePanel" class="image-upload-dropzone-panel">
+                <label id="colorBlindSimulatorImageDropzone" class="image-upload-dropzone" for="colorBlindSimulatorImageInput">
+                  <span class="image-upload-title">Arrastra una imagen aquí</span>
+                  <span class="image-upload-copy">o pulsa para subir un JPG, PNG, SVG o WEBP</span>
+                </label>
+              </div>
+
+              <div id="colorBlindSimulatorImagePreview" class="image-upload-preview" hidden>
+                <div class="image-upload-preview-header">
+                  <span class="image-upload-preview-title">Miniatura de la imagen subida</span>
+
+                  <div class="color-blind-sim-image-actions">
+                    <button type="button" id="colorBlindSimulatorReplaceBtn" class="image-upload-action"
+                      aria-label="Subir otra imagen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 16V6"></path>
+                        <path d="m8 10 4-4 4 4"></path>
+                        <path d="M20 17v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1"></path>
+                      </svg>
+                      <div class="tooltip">Subir otra imagen</div>
+                    </button>
+
+                    <button type="button" id="colorBlindSimulatorResetBtn" class="image-upload-action"
+                      aria-label="Restablecer imagen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                        <path d="M19 6l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                      </svg>
+                      <div class="tooltip">Restablecer</div>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="image-upload-preview-body">
+                  <img id="colorBlindSimulatorPreviewImg" class="image-upload-thumb"
+                    alt="Vista previa de la imagen base cargada" />
+                  <div class="image-upload-meta">
+                    <span id="colorBlindSimulatorImageName" class="image-upload-name"></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="color-blind-sim-section">
+              <div class="color-blind-sim-section-header">
+                <span class="color-blind-sim-step" aria-hidden="true">2</span>
+                <div class="color-blind-sim-section-copy-wrap">
+                  <h3 class="color-blind-sim-section-title">Tipo de visión</h3>
+                  <p class="color-blind-sim-section-copy">
+                    La selección ya queda preparada para enchufar el algoritmo después.
+                  </p>
+                </div>
+              </div>
+
+              <div class="color-blind-sim-type-grid" role="group" aria-label="Seleccionar tipo de visión">
+                <button type="button" class="color-blind-sim-type-btn is-active" data-vision-type="normal" aria-pressed="true">
+                  <span class="color-blind-sim-type-name">Normal</span>
+                  <span class="color-blind-sim-type-note">Referencia</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="achromatopsia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Acromatopsia</span>
+                  <span class="color-blind-sim-type-note">Sin color</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanomaly" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Protanomalía</span>
+                  <span class="color-blind-sim-type-note">Rojo debilitado</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanopia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Protanopia</span>
+                  <span class="color-blind-sim-type-note">Rojo ausente</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="deuteranomaly" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Deuteranomalía</span>
+                  <span class="color-blind-sim-type-note">Verde debilitado</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="deuteranopia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Deuteranopia</span>
+                  <span class="color-blind-sim-type-note">Verde ausente</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="tritanomaly" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Tritanomalía</span>
+                  <span class="color-blind-sim-type-note">Azul debilitado</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="tritanopia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Tritanopia</span>
+                  <span class="color-blind-sim-type-note">Azul ausente</span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="blue-cone-monochromacy" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Monocromatismo azul</span>
+                  <span class="color-blind-sim-type-note">Conos azules</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="color-blind-sim-section">
+              <div class="color-blind-sim-section-header">
+                <span class="color-blind-sim-step" aria-hidden="true">3</span>
+                <div class="color-blind-sim-section-copy-wrap">
+                  <div class="color-blind-sim-inline-heading">
+                    <h3 class="color-blind-sim-section-title">Severidad</h3>
+                    <span id="colorBlindSimulatorSeverityValue" class="color-blind-sim-inline-value">100%</span>
+                  </div>
+                  <p class="color-blind-sim-section-copy">
+                    La barra ya actualiza la UI; el cálculo real llegará al conectar el canvas.
+                  </p>
+                </div>
+              </div>
+
+              <input id="colorBlindSimulatorSeverity" class="color-blind-sim-range" type="range" min="0" max="100" step="1" value="100" />
+            </section>
+
+            <section class="color-blind-sim-section">
+              <div class="color-blind-sim-section-header">
+                <span class="color-blind-sim-step" aria-hidden="true">4</span>
+                <div class="color-blind-sim-section-copy-wrap">
+                  <h3 class="color-blind-sim-section-title">Modo de comparación</h3>
+                  <p id="colorBlindSimulatorModeCopy" class="color-blind-sim-section-copy">
+                    El visor arranca en modo dividido para marcar el espacio de la simulación.
+                  </p>
+                </div>
+              </div>
+
+              <div class="color-blind-sim-mode-switcher" role="group" aria-label="Seleccionar modo del visor">
+                <button type="button" class="color-blind-sim-mode-btn" data-preview-mode="original" aria-pressed="false">Original</button>
+                <button type="button" class="color-blind-sim-mode-btn" data-preview-mode="simulated" aria-pressed="false">Simulada</button>
+                <button type="button" class="color-blind-sim-mode-btn is-active" data-preview-mode="split" aria-pressed="true">Dividida</button>
+              </div>
+            </section>
+
+            <div class="color-blind-sim-footer-actions">
+              <button type="button" id="colorBlindSimulatorRunBtn" class="secondary-btn color-blind-sim-primary-placeholder" disabled>
+                Aplicar simulación
+              </button>
+              <button type="button" id="colorBlindSimulatorDownloadBtn" class="secondary-btn color-blind-sim-secondary-action" disabled>
+                Descargar imagen
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <div class="color-blind-sim-stage app-stack">
+          <section class="app-panel color-blind-sim-stage-panel">
+            <div class="color-blind-sim-stage-toolbar">
+              <div>
+                <p class="color-blind-sim-stage-kicker">Visor principal</p>
+                <h3 id="colorBlindSimulatorActiveModeLabel" class="color-blind-sim-stage-title">Vista dividida</h3>
+              </div>
+
+              <div class="color-blind-sim-chip-row">
+                <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-chip">Visión normal</span>
+                <span id="colorBlindSimulatorSeverityPill" class="color-blind-sim-chip color-blind-sim-chip--muted">Severidad 100%</span>
+              </div>
+            </div>
+
+            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" data-preview-mode="split">
+              <img class="color-blind-sim-stage-image" data-preview-image src="assets/lightsaber.png"
+                alt="Imagen cargada para preparar la simulación" />
+
+              <div class="color-blind-sim-split-indicator" aria-hidden="true">
+                <span class="color-blind-sim-split-label color-blind-sim-split-label--left">Original</span>
+                <span class="color-blind-sim-split-handle"></span>
+                <span class="color-blind-sim-split-label color-blind-sim-split-label--right">Canvas</span>
+              </div>
+
+              <div class="color-blind-sim-stage-overlay">
+                <p class="color-blind-sim-stage-overlay-title">Canvas pendiente</p>
+                <p id="colorBlindSimulatorActiveTypeDescription" class="color-blind-sim-stage-overlay-copy">
+                  La referencia ya está lista. Aquí aparecerá el resultado procesado cuando conectemos la simulación por píxel.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <div class="app-grid-2 color-blind-sim-card-grid">
+            <section class="app-panel color-blind-sim-card">
+              <div class="color-blind-sim-card-header">
+                <div>
+                  <p class="color-blind-sim-card-kicker">Referencia</p>
+                  <h3 class="color-blind-sim-card-title">Original</h3>
+                </div>
+              </div>
+
+              <div class="color-blind-sim-card-image-wrap">
+                <img class="color-blind-sim-card-image" data-preview-image src="assets/lightsaber.png"
+                  alt="Vista original de la imagen cargada" />
+              </div>
+
+              <p class="color-blind-sim-card-copy">
+                La imagen base queda lista para comparar antes y después.
+              </p>
+            </section>
+
+            <section class="app-panel color-blind-sim-card color-blind-sim-card--result">
+              <div class="color-blind-sim-card-header">
+                <div>
+                  <p class="color-blind-sim-card-kicker">Resultado</p>
+                  <h3 class="color-blind-sim-card-title">Canvas de salida</h3>
+                </div>
+              </div>
+
+              <div class="color-blind-sim-card-image-wrap color-blind-sim-card-image-wrap--result">
+                <img class="color-blind-sim-card-image color-blind-sim-card-image--pending" data-simulated-preview-image
+                  src="assets/lightsaber.png" alt="Espacio reservado para la simulación resultante" />
+                <div class="color-blind-sim-card-placeholder">
+                  <span class="color-blind-sim-card-placeholder-badge">Próximamente</span>
+                  <p id="colorBlindSimulatorResultCopy" class="color-blind-sim-card-placeholder-copy">
+                    El canvas procesado aparecerá aquí en cuanto conectemos la simulación seleccionada.
+                  </p>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
