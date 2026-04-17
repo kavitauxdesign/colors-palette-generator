@@ -115,26 +115,38 @@
 }
 
 .target-color-swatch {
+  position: relative;
   width: 120px;
   height: 120px;
   padding: 0;
+  border: 0;
+  border-radius: var(--PX-18);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  cursor: pointer;
+  overflow: visible;
+  box-shadow: 0 var(--PX-10) 25px var(--shadow);
+  transition:
+    transform var(--duration-fast) ease,
+    background-color 150ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 180ms ease;
+  will-change: transform, background-color;
   flex-shrink: 0;
-  border-radius: 18px;
-  border: 1px solid rgba(89, 77, 77, 0.1);
-  background: rgba(229, 231, 235, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
 }
 
 .target-color-swatch:hover {
-  transform: translateY(-1px);
+  transform: scale(1.05);
+  z-index: 10;
 }
 
 .target-color-swatch-fill {
-  width: 120px;
-  height: 120px;
-  border-radius: inherit;
+  position: absolute;
+  inset: 0;
+  border-radius: var(--PX-18);
   display: block;
-  background: #00a4d6;
+  background: #9ebb89;
 }
 
 .filter-tool-form {
