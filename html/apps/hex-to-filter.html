@@ -16,26 +16,33 @@
 
     <div id="hex_to_code" class="filter-tool app-stack">
       <div class="filter-tool-panel app-panel">
-        <div class="filter-target-card">
-          <button class="target-color-swatch" type="button" aria-label="Seleccionar color objetivo">
-            <span class="target-color-swatch-fill"></span>
-          </button>
-
+        <div class="filter-tool-top-row">
+          <div class="filter-target-card">
             <div class="filter-tool-form">
-              <label for="filterTarget" class="filter-tool-label">Color objetivo</label>
+              <div class="filter-title-row">
+                <span class="filter-title-badge" aria-hidden="true">1</span>
+                <label for="filterTarget" class="filter-tool-label filter-preview-title">Color objetivo</label>
+              </div>
+              <p class="filter-preview-copy">Inserta aqui el color que quieres aplicar a tu SVG</p>
               <div class="filter-tool-input-row">
+                <button class="target-color-swatch" type="button" aria-label="Seleccionar color objetivo">
+                  <span class="target-color-swatch-fill"></span>
+                </button>
                 <input id="filterTarget" class="target filter-tool-input" type="text" placeholder="HEX, rgb, hsl..."
                 value="#9ebb89" />
+                <span class="filter-source-arrow" aria-hidden="true">➔</span>
               </div>
               <p class="filter-tool-feedback" aria-live="polite"></p>
             </div>
 
-          <input class="filter-target-picker" type="color" value="#9ebb89" aria-hidden="true" tabindex="-1" />
-        </div>
+            <input class="filter-target-picker" type="color" value="#9ebb89" aria-hidden="true" tabindex="-1" />
+          </div>
 
-        <div class="filter-tool-previews app-grid-2">
           <div class="filter-preview-card">
-            <p class="filter-preview-title">Píxel real</p>
+            <div class="filter-title-row">
+              <span class="filter-title-badge" aria-hidden="true">2</span>
+              <p class="filter-preview-title">Final pixel</p>
+            </div>
             <p class="filter-preview-copy">
               Base sobre la que se aplicará el filtro CSS.
             </p>
@@ -61,10 +68,15 @@
               El filtro ha de aplicarse sobre imágenes SVG de color negro puro, <code>#000</code>.
             </p>
           </div>
+        </div>
 
+        <div class="filter-tool-previews app-grid-2">
           <div class="filter-result-card">
             <div class="filter-result-header">
-              <p class="filter-preview-title">Código final</p>
+              <div class="filter-title-row">
+                <span class="filter-title-badge" aria-hidden="true">3</span>
+                <p class="filter-preview-title">Código final</p>
+              </div>
               <button class="secondary-btn filter-copy-btn" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
