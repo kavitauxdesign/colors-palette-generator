@@ -1,19 +1,10 @@
 import path from "node:path";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 const IMAGE_FIXTURE_PATH = path.resolve(
   __dirname,
   "fixtures/three-band-palette.svg"
 );
-
-async function setRangeValue(page: Page, selector: string, value: number) {
-  await page.locator(selector).evaluate((element, nextValue) => {
-    const input = element as HTMLInputElement;
-    input.value = String(nextValue);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  }, value);
-}
 
 test("color blind simulator UI boots and updates its local controls", async ({ page }) => {
   await page.goto("/");
@@ -23,22 +14,24 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
   await expect(page.locator("#colorBlindSimulatorApp")).toBeVisible();
   await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Visión normal");
   await expect(page.locator("#colorBlindSimulatorActiveModeLabel")).toHaveText("Vista dividida");
+  await expect(page.locator("#colorBlindSimulatorSplitToggle")).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#colorBlindSimulatorImageDropzonePanel")).toBeVisible();
   await expect(page.locator("#colorBlindSimulatorImagePreview")).toBeHidden();
 
   await page.click('.color-blind-sim-type-btn[data-vision-type="deuteranopia"]');
   await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Deuteranopia");
+  await expect(page.locator('[data-preview-mode="original"]')).toHaveCount(0);
+  await expect(page.locator(".color-blind-sim-mode-btn")).toHaveCount(0);
 
-  await setRangeValue(page, "#colorBlindSimulatorSeverity", 64);
-  await expect(page.locator("#colorBlindSimulatorSeverityValue")).toHaveText("64%");
-  await expect(page.locator("#colorBlindSimulatorSeverityPill")).toHaveText("Severidad 64%");
-
-  await page.click('.color-blind-sim-mode-btn[data-preview-mode="simulated"]');
+  await page.click("#colorBlindSimulatorSplitToggle");
   await expect(page.locator("#colorBlindSimulatorViewport")).toHaveAttribute(
     "data-preview-mode",
     "simulated"
   );
   await expect(page.locator("#colorBlindSimulatorActiveModeLabel")).toHaveText("Vista simulada");
+  await expect(page.locator("#colorBlindSimulatorSplitToggle")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#colorBlindSimulatorRunBtn")).toHaveCount(0);
+  await expect(page.locator("#colorBlindSimulatorDownloadBtn")).toHaveCount(0);
 
   const viewportImage = page.locator("#colorBlindSimulatorViewport [data-preview-image]").first();
   await page.setInputFiles("#colorBlindSimulatorImageInput", IMAGE_FIXTURE_PATH);
@@ -66,5 +59,4 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
       return String(src || "").startsWith("blob:");
     })
     .toBe(false);
-  await expect(page.locator("#colorBlindSimulatorDownloadBtn")).toBeDisabled();
 });

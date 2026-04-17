@@ -71,20 +71,6 @@
   line-height: 1.5;
 }
 
-.color-blind-sim-inline-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--PX-12);
-  flex-wrap: wrap;
-}
-
-.color-blind-sim-inline-value {
-  color: var(--accent);
-  font-size: var(--PX-14);
-  font-weight: 700;
-}
-
 .color-blind-sim-file-input {
   position: absolute;
   width: 1px;
@@ -231,49 +217,6 @@
   font-size: 13px;
 }
 
-.color-blind-sim-range {
-  width: 100%;
-  accent-color: var(--accent);
-}
-
-.color-blind-sim-mode-switcher {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--PX-8);
-  flex-wrap: wrap;
-}
-
-.color-blind-sim-mode-btn {
-  height: 36px;
-  padding: 0 var(--PX-14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--secondary);
-  border: 1px solid rgba(89, 77, 77, 0.1);
-  font-size: var(--PX-14);
-  transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    color 180ms ease;
-}
-
-.color-blind-sim-mode-btn.is-active {
-  background: rgba(145, 111, 83, 0.12);
-  border-color: rgba(145, 111, 83, 0.28);
-  color: var(--primary);
-}
-
-.color-blind-sim-footer-actions {
-  display: flex;
-  gap: var(--PX-10);
-  flex-wrap: wrap;
-}
-
-.color-blind-sim-primary-placeholder {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
 .color-blind-sim-stage {
   flex: 0.6;
   min-width: 0;
@@ -295,8 +238,7 @@
   flex-wrap: wrap;
 }
 
-.color-blind-sim-stage-kicker,
-.color-blind-sim-card-kicker {
+.color-blind-sim-stage-kicker {
   margin: 0 0 var(--PX-4);
   color: var(--accent);
   font-size: 12px;
@@ -304,8 +246,7 @@
   text-transform: uppercase;
 }
 
-.color-blind-sim-stage-title,
-.color-blind-sim-card-title {
+.color-blind-sim-stage-title {
   margin: 0;
   color: var(--primary);
   font-size: var(--PX-22);
@@ -313,6 +254,7 @@
 
 .color-blind-sim-chip-row {
   display: flex;
+  align-items: center;
   gap: var(--PX-8);
   flex-wrap: wrap;
 }
@@ -329,8 +271,21 @@
   font-weight: 600;
 }
 
-.color-blind-sim-chip--muted {
-  background: rgba(89, 77, 77, 0.08);
+.color-blind-sim-toolbar-toggle {
+  color: var(--accent);
+}
+
+.color-blind-sim-toolbar-toggle.is-active {
+  background: rgba(145, 111, 83, 0.14);
+  box-shadow: 0 8px 18px rgba(89, 77, 77, 0.12);
+}
+
+.color-blind-sim-toolbar-toggle svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
 }
 
 .color-blind-sim-viewport {
@@ -428,13 +383,8 @@
   line-height: 1.5;
 }
 
-.color-blind-sim-viewport[data-preview-mode="original"] .color-blind-sim-split-indicator,
 .color-blind-sim-viewport[data-preview-mode="simulated"] .color-blind-sim-split-indicator {
   opacity: 0;
-}
-
-.color-blind-sim-viewport[data-preview-mode="original"] .color-blind-sim-stage-overlay {
-  background: rgba(14, 14, 14, 0.36);
 }
 
 .color-blind-sim-viewport[data-preview-mode="simulated"]::before {
@@ -443,83 +393,6 @@
   inset: 0;
   background: linear-gradient(180deg, rgba(245, 240, 234, 0.12) 0%, rgba(14, 14, 14, 0.32) 100%);
   pointer-events: none;
-}
-
-.color-blind-sim-card-grid {
-  align-items: stretch;
-}
-
-.color-blind-sim-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--PX-14);
-  min-width: 0;
-  padding: clamp(18px, 2.2vw, 24px);
-}
-
-.color-blind-sim-card-image-wrap {
-  position: relative;
-  overflow: hidden;
-  border-radius: 20px;
-  background: rgba(25, 23, 22, 0.94);
-  min-height: 220px;
-}
-
-.color-blind-sim-card-image {
-  width: 100%;
-  height: 220px;
-  display: block;
-  object-fit: cover;
-}
-
-.color-blind-sim-card-copy {
-  margin: 0;
-  color: var(--secondary);
-  font-size: var(--PX-14);
-  line-height: 1.5;
-}
-
-.color-blind-sim-card-image-wrap--result::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(14, 14, 14, 0.18), rgba(14, 14, 14, 0.34));
-}
-
-.color-blind-sim-card-image--pending {
-  opacity: 0.62;
-}
-
-.color-blind-sim-card-placeholder {
-  position: absolute;
-  left: var(--PX-16);
-  right: var(--PX-16);
-  bottom: var(--PX-16);
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--PX-8);
-}
-
-.color-blind-sim-card-placeholder-badge {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 28px;
-  padding: 0 var(--PX-10);
-  border-radius: 999px;
-  background: rgba(255, 247, 239, 0.92);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.color-blind-sim-card-placeholder-copy {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.94);
-  font-size: var(--PX-14);
-  line-height: 1.5;
 }
 
 @media (max-width: 1120px) {
