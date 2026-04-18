@@ -8,8 +8,7 @@ type VisionType =
   | "protanomaly"
   | "deuteranomaly"
   | "tritanomaly"
-  | "achromatopsia"
-  | "blue-cone-monochromacy";
+  | "achromatopsia";
 
 type PreviewMode = "original" | "simulated" | "split";
 
@@ -23,10 +22,13 @@ type ColorBlindSimulatorElements = {
   replaceButton: HTMLButtonElement;
   resetButton: HTMLButtonElement;
   viewport: HTMLElement;
+  simulatedCanvas: HTMLCanvasElement;
   modeLabel: HTMLElement;
+  defaultCaption: HTMLElement;
   splitToggleButton: HTMLButtonElement;
+  splitToggleDivider: SVGPathElement;
+  splitToggleTooltip: HTMLElement;
   activeTypePill: HTMLElement;
-  activeTypeDescription: HTMLElement;
   previewImages: HTMLImageElement[];
   simulatedPreviewImages: HTMLImageElement[];
   typeButtons: HTMLButtonElement[];
@@ -34,76 +36,99 @@ type ColorBlindSimulatorElements = {
 
 type VisionTypeDescriptor = {
   pill: string;
-  description: string;
 };
+
+type ColorVisionMatrix = readonly [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
 
 const VISION_TYPE_COPY: Record<VisionType, VisionTypeDescriptor> = {
   normal: {
     pill: "Visión normal",
-    description:
-      "La referencia ya está lista. Aquí aparecerá el resultado procesado cuando conectemos la simulación por píxel.",
   },
   protanopia: {
     pill: "Protanopia",
-    description:
-      "La escena queda preparada para comparar la referencia con una simulación de ausencia de sensibilidad al rojo.",
   },
   deuteranopia: {
     pill: "Deuteranopia",
-    description:
-      "La vista se ajusta para una futura comparación con la simulación de ausencia de sensibilidad al verde.",
   },
   tritanopia: {
     pill: "Tritanopia",
-    description:
-      "La interfaz ya deja listo el espacio para una simulación con ausencia de sensibilidad al azul.",
   },
   protanomaly: {
     pill: "Protanomalía",
-    description:
-      "La UI ya contempla una simulación de reducción parcial de sensibilidad al rojo.",
   },
   deuteranomaly: {
     pill: "Deuteranomalía",
-    description:
-      "La pantalla queda lista para conectar una simulación con menor sensibilidad al verde.",
   },
   tritanomaly: {
     pill: "Tritanomalía",
-    description:
-      "La estructura ya soporta una futura simulación con sensibilidad reducida al azul.",
   },
   achromatopsia: {
     pill: "Acromatopsia",
-    description:
-      "La interfaz ya reserva el espacio para una simulación sin percepción cromática.",
-  },
-  "blue-cone-monochromacy": {
-    pill: "Monocromatismo azul",
-    description:
-      "La comparativa queda preparada para una futura simulación de monocromatismo de conos azules.",
   },
 };
 
-const PREVIEW_MODE_COPY: Record<
-  PreviewMode,
-  {
-    label: string;
-    copy: string;
-  }
-> = {
-  original: {
-    label: "Vista original",
-    copy: "El visor muestra la referencia limpia para revisar encuadre, escala y composición antes del procesamiento.",
-  },
-  split: {
-    label: "Vista dividida",
-    copy: "",
-  },
-  simulated: {
-    label: "Vista simulada",
-    copy: "",
-  },
+const PREVIEW_PANEL_TITLE = "Vista previa";
+const DEFAULT_PREVIEW_SRC = "assets/rodion-kutsaiev-water-oil-macro-unsplash.jpg";
+const SPLIT_TOGGLE_COPY = {
+  active: "Visión dividida activa",
+  inactive: "Visión dividida inactiva",
+} as const;
+
+const COLOR_VISION_MATRICES: Partial<Record<VisionType, ColorVisionMatrix>> = {
+  deuteranomaly: [
+    0.8,
+    0.2,
+    0,
+    0.258,
+    0.742,
+    0,
+    0,
+    0.142,
+    0.858,
+  ],
+  deuteranopia: [
+    0.625,
+    0.375,
+    0,
+    0.7,
+    0.3,
+    0,
+    0,
+    0.3,
+    0.7,
+  ],
+  protanomaly: [
+    0.817,
+    0.183,
+    0,
+    0.333,
+    0.667,
+    0,
+    0,
+    0.125,
+    0.875,
+  ],
+  protanopia: [
+    0.567,
+    0.433,
+    0,
+    0.558,
+    0.442,
+    0,
+    0,
+    0.242,
+    0.758,
+  ],
 };
 
 const ACCEPTED_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".svg", ".webp"];
@@ -128,6 +153,10 @@ function isAcceptedImageFile(file: File | null) {
   );
 }
 
+function clampColorChannel(value: number) {
+  return Math.min(255, Math.max(0, Math.round(value)));
+}
+
 function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null {
   const fileInput = root.querySelector("#colorBlindSimulatorImageInput") as HTMLInputElement | null;
   const dropzonePanel = root.querySelector(
@@ -145,14 +174,19 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
   ) as HTMLButtonElement | null;
   const resetButton = root.querySelector("#colorBlindSimulatorResetBtn") as HTMLButtonElement | null;
   const viewport = root.querySelector("#colorBlindSimulatorViewport") as HTMLElement | null;
+  const simulatedCanvas = root.querySelector(
+    "#colorBlindSimulatorCanvas"
+  ) as HTMLCanvasElement | null;
   const modeLabel = root.querySelector("#colorBlindSimulatorActiveModeLabel") as HTMLElement | null;
+  const defaultCaption = root.querySelector("#colorBlindSimulatorDefaultCaption") as HTMLElement | null;
   const splitToggleButton = root.querySelector(
     "#colorBlindSimulatorSplitToggle"
   ) as HTMLButtonElement | null;
+  const splitToggleDivider = splitToggleButton?.querySelector(
+    "#colorBlindSimulatorSplitToggleDivider"
+  ) as SVGPathElement | null;
+  const splitToggleTooltip = splitToggleButton?.querySelector(".tooltip") as HTMLElement | null;
   const activeTypePill = root.querySelector("#colorBlindSimulatorActiveTypePill") as HTMLElement | null;
-  const activeTypeDescription = root.querySelector(
-    "#colorBlindSimulatorActiveTypeDescription"
-  ) as HTMLElement | null;
 
   if (
     !fileInput ||
@@ -163,10 +197,13 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
     !replaceButton ||
     !resetButton ||
     !viewport ||
+    !simulatedCanvas ||
     !modeLabel ||
+    !defaultCaption ||
     !splitToggleButton ||
-    !activeTypePill ||
-    !activeTypeDescription
+    !splitToggleDivider ||
+    !splitToggleTooltip ||
+    !activeTypePill
   ) {
     return null;
   }
@@ -181,10 +218,13 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
     replaceButton,
     resetButton,
     viewport,
+    simulatedCanvas,
     modeLabel,
+    defaultCaption,
     splitToggleButton,
+    splitToggleDivider,
+    splitToggleTooltip,
     activeTypePill,
-    activeTypeDescription,
     previewImages: Array.from(root.querySelectorAll("[data-preview-image]")) as HTMLImageElement[],
     simulatedPreviewImages: Array.from(
       root.querySelectorAll("[data-simulated-preview-image]")
@@ -214,10 +254,10 @@ function initializeColorBlindSimulatorApp() {
 
   const defaultPreviewSrc =
     elements.previewImages.find((image) => !!image.getAttribute("src"))?.getAttribute("src") ||
-    "assets/lightsaber.png";
+    DEFAULT_PREVIEW_SRC;
   let activePreviewUrl: string | null = null;
   let activeVisionType: VisionType = "normal";
-  let activePreviewMode: PreviewMode = "split";
+  let activePreviewMode: PreviewMode = "simulated";
 
   function revokeActivePreviewUrl() {
     if (!activePreviewUrl || !activePreviewUrl.startsWith("blob:")) {
@@ -228,7 +268,97 @@ function initializeColorBlindSimulatorApp() {
     activePreviewUrl = null;
   }
 
-  function updatePreviewImages(src: string) {
+  function applyAchromatopsia(imageData: ImageData) {
+    const { data } = imageData;
+
+    for (let index = 0; index < data.length; index += 4) {
+      const luminance = Math.round(
+        data[index] * 0.2126 + data[index + 1] * 0.7152 + data[index + 2] * 0.0722
+      );
+
+      data[index] = luminance;
+      data[index + 1] = luminance;
+      data[index + 2] = luminance;
+    }
+  }
+
+  function applyColorVisionMatrix(imageData: ImageData, matrix: ColorVisionMatrix) {
+    const { data } = imageData;
+
+    for (let index = 0; index < data.length; index += 4) {
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+
+      data[index] = clampColorChannel(red * matrix[0] + green * matrix[1] + blue * matrix[2]);
+      data[index + 1] = clampColorChannel(red * matrix[3] + green * matrix[4] + blue * matrix[5]);
+      data[index + 2] = clampColorChannel(red * matrix[6] + green * matrix[7] + blue * matrix[8]);
+    }
+  }
+
+  function updateDefaultCaptionVisibility(isDefaultImage: boolean) {
+    elements.defaultCaption.hidden = !isDefaultImage;
+  }
+
+  function syncPreviewAspectRatio() {
+    const image = elements.previewImages[0];
+    if (!image) {
+      return;
+    }
+
+    const applyNativeRatio = () => {
+      if (!image.naturalWidth || !image.naturalHeight) {
+        return;
+      }
+
+      elements.viewport.style.setProperty(
+        "--color-blind-sim-preview-ratio",
+        `${image.naturalWidth} / ${image.naturalHeight}`
+      );
+    };
+
+    if (image.complete) {
+      applyNativeRatio();
+      return;
+    }
+
+    image.addEventListener("load", applyNativeRatio, { once: true });
+  }
+
+  function renderSimulatedPreview() {
+    const image = elements.previewImages[0];
+    const canvas = elements.simulatedCanvas;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!image || !context) {
+      return;
+    }
+
+    if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
+      image.addEventListener("load", renderSimulatedPreview, { once: true });
+      return;
+    }
+
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const colorVisionMatrix = COLOR_VISION_MATRICES[activeVisionType];
+    if (activeVisionType !== "achromatopsia" && !colorVisionMatrix) {
+      return;
+    }
+
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    if (activeVisionType === "achromatopsia") {
+      applyAchromatopsia(imageData);
+    } else if (colorVisionMatrix) {
+      applyColorVisionMatrix(imageData, colorVisionMatrix);
+    }
+    context.putImageData(imageData, 0, 0);
+  }
+
+  function updatePreviewImages(src: string, options: { isDefaultImage: boolean }) {
     elements.previewImage.src = src;
 
     elements.previewImages.forEach((image) => {
@@ -238,6 +368,10 @@ function initializeColorBlindSimulatorApp() {
     elements.simulatedPreviewImages.forEach((image) => {
       image.src = src;
     });
+
+    updateDefaultCaptionVisibility(options.isDefaultImage);
+    syncPreviewAspectRatio();
+    renderSimulatedPreview();
   }
 
   function setImageStepState(state: { hasPreview: boolean; imageName?: string | null }) {
@@ -260,23 +394,28 @@ function initializeColorBlindSimulatorApp() {
     });
 
     elements.activeTypePill.textContent = descriptor.pill;
-    elements.activeTypeDescription.textContent = descriptor.description;
+    renderSimulatedPreview();
   }
 
   function applyPreviewMode(nextPreviewMode: PreviewMode) {
     activePreviewMode = nextPreviewMode;
-    const copy = PREVIEW_MODE_COPY[nextPreviewMode];
     const isSplitActive = nextPreviewMode === "split";
+    const splitToggleText = isSplitActive ? SPLIT_TOGGLE_COPY.active : SPLIT_TOGGLE_COPY.inactive;
 
     elements.viewport.dataset.previewMode = nextPreviewMode;
-    elements.modeLabel.textContent = copy.label;
+    elements.modeLabel.textContent = PREVIEW_PANEL_TITLE;
     elements.splitToggleButton.classList.toggle("is-active", isSplitActive);
+    elements.splitToggleButton.dataset.state = isSplitActive ? "active" : "inactive";
     elements.splitToggleButton.setAttribute("aria-pressed", isSplitActive ? "true" : "false");
+    elements.splitToggleButton.setAttribute("aria-label", splitToggleText);
+    elements.splitToggleButton.title = splitToggleText;
+    elements.splitToggleDivider.toggleAttribute("hidden", !isSplitActive);
+    elements.splitToggleTooltip.textContent = splitToggleText;
   }
 
   function restoreDefaultImage() {
     revokeActivePreviewUrl();
-    updatePreviewImages(defaultPreviewSrc);
+    updatePreviewImages(defaultPreviewSrc, { isDefaultImage: true });
     elements.fileInput.value = "";
     setImageStepState({
       hasPreview: true,
@@ -287,7 +426,7 @@ function initializeColorBlindSimulatorApp() {
   function loadSelectedFile(file: File) {
     revokeActivePreviewUrl();
     activePreviewUrl = URL.createObjectURL(file);
-    updatePreviewImages(activePreviewUrl);
+    updatePreviewImages(activePreviewUrl, { isDefaultImage: false });
     setImageStepState({
       hasPreview: true,
       imageName: file.name,
@@ -346,6 +485,9 @@ function initializeColorBlindSimulatorApp() {
 
   applyVisionType(activeVisionType);
   applyPreviewMode(activePreviewMode);
+  updateDefaultCaptionVisibility(true);
+  syncPreviewAspectRatio();
+  renderSimulatedPreview();
   setImageStepState({
     hasPreview: false,
   });

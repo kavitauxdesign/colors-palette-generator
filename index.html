@@ -837,8 +837,7 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
         <span class="app-view-kicker">Mini-app 04</span>
         <h2 class="app-view-title">Simulador de Daltonismo</h2>
         <p class="description app-view-description">
-          Carga una imagen, prepara el lienzo y deja listo el flujo de comparación.
-          En esta primera versión montamos toda la interfaz, con los controles visuales y el viewport donde más adelante irá el canvas.
+          Carga una imagen y revisa cómo cambia la percepción del color en cada tipo de visión.
         </p>
       </div>
     </header>
@@ -910,7 +909,7 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
                 <div class="color-blind-sim-section-copy-wrap">
                   <h3 class="color-blind-sim-section-title">Tipo de visión</h3>
                   <p class="color-blind-sim-section-copy">
-                    La selección ya queda preparada para enchufar el algoritmo después.
+                    Elige una simulación para revisar la imagen procesada.
                   </p>
                 </div>
               </div>
@@ -918,39 +917,80 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
               <div class="color-blind-sim-type-grid" role="group" aria-label="Seleccionar tipo de visión">
                 <button type="button" class="color-blind-sim-type-btn is-active" data-vision-type="normal" aria-pressed="true">
                   <span class="color-blind-sim-type-name">Normal</span>
-                  <span class="color-blind-sim-type-note">Referencia</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Referencia</span>
+                    <span class="color-blind-sim-type-prevalence">~92–96%</span>
+                  </span>
                 </button>
                 <button type="button" class="color-blind-sim-type-btn" data-vision-type="achromatopsia" aria-pressed="false">
                   <span class="color-blind-sim-type-name">Acromatopsia</span>
-                  <span class="color-blind-sim-type-note">Sin color</span>
-                </button>
-                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanomaly" aria-pressed="false">
-                  <span class="color-blind-sim-type-name">Protanomalía</span>
-                  <span class="color-blind-sim-type-note">Rojo debilitado</span>
-                </button>
-                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanopia" aria-pressed="false">
-                  <span class="color-blind-sim-type-name">Protanopia</span>
-                  <span class="color-blind-sim-type-note">Rojo ausente</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Sin color</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~0.003%
+                      <span class="tooltip">~1 de cada 30.000</span>
+                    </span>
+                  </span>
                 </button>
                 <button type="button" class="color-blind-sim-type-btn" data-vision-type="deuteranomaly" aria-pressed="false">
                   <span class="color-blind-sim-type-name">Deuteranomalía</span>
-                  <span class="color-blind-sim-type-note">Verde debilitado</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Verde debilitado</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~3–4%
+                      <span class="tooltip">~1 de cada 25–30</span>
+                    </span>
+                  </span>
                 </button>
                 <button type="button" class="color-blind-sim-type-btn" data-vision-type="deuteranopia" aria-pressed="false">
                   <span class="color-blind-sim-type-name">Deuteranopia</span>
-                  <span class="color-blind-sim-type-note">Verde ausente</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Verde ausente</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~1%
+                      <span class="tooltip">~1 de cada 100</span>
+                    </span>
+                  </span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanomaly" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Protanomalía</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Rojo debilitado</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~1%
+                      <span class="tooltip">~1 de cada 100</span>
+                    </span>
+                  </span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanopia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Protanopia</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Rojo ausente</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~1%
+                      <span class="tooltip">~1 de cada 100</span>
+                    </span>
+                  </span>
                 </button>
                 <button type="button" class="color-blind-sim-type-btn" data-vision-type="tritanomaly" aria-pressed="false">
                   <span class="color-blind-sim-type-name">Tritanomalía</span>
-                  <span class="color-blind-sim-type-note">Azul debilitado</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Azul debilitado</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      &lt;0.01%
+                      <span class="tooltip">&lt;1 de cada 10.000</span>
+                    </span>
+                  </span>
                 </button>
                 <button type="button" class="color-blind-sim-type-btn" data-vision-type="tritanopia" aria-pressed="false">
                   <span class="color-blind-sim-type-name">Tritanopia</span>
-                  <span class="color-blind-sim-type-note">Azul ausente</span>
-                </button>
-                <button type="button" class="color-blind-sim-type-btn" data-vision-type="blue-cone-monochromacy" aria-pressed="false">
-                  <span class="color-blind-sim-type-name">Monocromatismo azul</span>
-                  <span class="color-blind-sim-type-note">Conos azules</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Azul ausente</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      &lt;0.01%
+                      <span class="tooltip">&lt;1 de cada 10.000</span>
+                    </span>
+                  </span>
                 </button>
               </div>
             </section>
@@ -962,40 +1002,36 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
           <section class="app-panel color-blind-sim-stage-panel">
             <div class="color-blind-sim-stage-toolbar">
               <div>
-                <p class="color-blind-sim-stage-kicker">Visor principal</p>
-                <h3 id="colorBlindSimulatorActiveModeLabel" class="color-blind-sim-stage-title">Vista dividida</h3>
+                <h3 id="colorBlindSimulatorActiveModeLabel" class="color-blind-sim-stage-title">Vista previa</h3>
               </div>
 
               <div class="color-blind-sim-chip-row">
-                <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-chip">Visión normal</span>
-                <button type="button" id="colorBlindSimulatorSplitToggle" class="image-upload-action color-blind-sim-toolbar-toggle is-active"
-                  aria-label="Alternar visión dividida" aria-pressed="true">
+                <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-active-type">Visión normal</span>
+                <button type="button" id="colorBlindSimulatorSplitToggle" class="image-upload-action color-blind-sim-toolbar-toggle"
+                  aria-label="Visión dividida inactiva" aria-pressed="false" title="Visión dividida inactiva" data-state="inactive">
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <rect x="4" y="5" width="16" height="14" rx="2"></rect>
-                    <path d="M12 5v14"></path>
+                    <path id="colorBlindSimulatorSplitToggleDivider" class="color-blind-sim-toggle-divider" d="M12 5v14" hidden></path>
                   </svg>
-                  <div class="tooltip">Visión dividida</div>
+                  <div class="tooltip">Visión dividida inactiva</div>
                 </button>
               </div>
             </div>
 
-            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" data-preview-mode="split">
-              <img class="color-blind-sim-stage-image" data-preview-image src="assets/lightsaber.png"
+            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" data-preview-mode="simulated"
+              style="--color-blind-sim-preview-ratio: 1096 / 731">
+              <img class="color-blind-sim-stage-image" data-preview-image src="assets/rodion-kutsaiev-water-oil-macro-unsplash.jpg"
                 alt="Imagen cargada para preparar la simulación" />
+              <canvas id="colorBlindSimulatorCanvas" class="color-blind-sim-simulated-canvas"
+                aria-hidden="true"></canvas>
 
               <div class="color-blind-sim-split-indicator" aria-hidden="true">
                 <span class="color-blind-sim-split-label color-blind-sim-split-label--left">Original</span>
                 <span class="color-blind-sim-split-handle"></span>
                 <span class="color-blind-sim-split-label color-blind-sim-split-label--right">Simulada</span>
               </div>
-
-              <div class="color-blind-sim-stage-overlay">
-                <p class="color-blind-sim-stage-overlay-title">Canvas pendiente</p>
-                <p id="colorBlindSimulatorActiveTypeDescription" class="color-blind-sim-stage-overlay-copy">
-                  La referencia ya está lista. Aquí aparecerá el resultado procesado cuando conectemos la simulación por píxel.
-                </p>
-              </div>
             </div>
+            <p id="colorBlindSimulatorDefaultCaption" class="color-blind-sim-default-caption">Rodion Kutsaiev, unsplash.com</p>
           </section>
         </div>
       </div>
