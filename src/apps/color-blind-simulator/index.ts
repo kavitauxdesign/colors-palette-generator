@@ -2,13 +2,9 @@ import AppRegistry from "../../shared/services/registry";
 
 type VisionType =
   | "normal"
+  | "achromatopsia"
   | "protanopia"
-  | "deuteranopia"
-  | "tritanopia"
-  | "protanomaly"
-  | "deuteranomaly"
-  | "tritanomaly"
-  | "achromatopsia";
+  | "deuteranomaly";
 
 type PreviewMode = "original" | "simulated" | "split";
 
@@ -54,81 +50,83 @@ const VISION_TYPE_COPY: Record<VisionType, VisionTypeDescriptor> = {
   normal: {
     pill: "Visión normal",
   },
+  achromatopsia: {
+    pill: "Acromatopsia",
+  },
   protanopia: {
     pill: "Protanopia",
-  },
-  deuteranopia: {
-    pill: "Deuteranopia",
-  },
-  tritanopia: {
-    pill: "Tritanopia",
-  },
-  protanomaly: {
-    pill: "Protanomalía",
   },
   deuteranomaly: {
     pill: "Deuteranomalía",
   },
-  tritanomaly: {
-    pill: "Tritanomalía",
-  },
-  achromatopsia: {
-    pill: "Acromatopsia",
-  },
 };
 
 const PREVIEW_PANEL_TITLE = "Vista previa";
-const DEFAULT_PREVIEW_SRC = "assets/rodion-kutsaiev-water-oil-macro-unsplash.jpg";
+const DEFAULT_PREVIEW_SRC = "assets/peter-olexa-unsplash.jpg";
 const SPLIT_TOGGLE_COPY = {
   active: "Visión dividida activa",
   inactive: "Visión dividida inactiva",
 } as const;
 
+const IDENTITY_COLOR_VISION_MATRIX: ColorVisionMatrix = [
+  1,
+  0,
+  0,
+  0,
+  1,
+  0,
+  0,
+  0,
+  1,
+];
+
+const DEUTERANOPIA_COLOR_VISION_MATRIX: ColorVisionMatrix = [
+  0.367322,
+  0.860646,
+  -0.227968,
+  0.280085,
+  0.672501,
+  0.047413,
+  -0.01182,
+  0.04294,
+  0.968881,
+];
+
+const PROTANOPIA_COLOR_VISION_MATRIX: ColorVisionMatrix = [
+  0.152286,
+  1.052583,
+  -0.204868,
+  0.114503,
+  0.786281,
+  0.099216,
+  -0.003882,
+  -0.048116,
+  1.051998,
+];
+
+const REDUCED_VISION_STRENGTH = 0.65;
+
+function createReducedColorVisionMatrix(matrix: ColorVisionMatrix): ColorVisionMatrix {
+  const mixCoefficient = (index: number) =>
+    IDENTITY_COLOR_VISION_MATRIX[index] +
+    (matrix[index] - IDENTITY_COLOR_VISION_MATRIX[index]) * REDUCED_VISION_STRENGTH;
+
+  return [
+    mixCoefficient(0),
+    mixCoefficient(1),
+    mixCoefficient(2),
+    mixCoefficient(3),
+    mixCoefficient(4),
+    mixCoefficient(5),
+    mixCoefficient(6),
+    mixCoefficient(7),
+    mixCoefficient(8),
+  ];
+}
+
 const COLOR_VISION_MATRICES: Partial<Record<VisionType, ColorVisionMatrix>> = {
-  deuteranomaly: [
-    0.8,
-    0.2,
-    0,
-    0.258,
-    0.742,
-    0,
-    0,
-    0.142,
-    0.858,
-  ],
-  deuteranopia: [
-    0.625,
-    0.375,
-    0,
-    0.7,
-    0.3,
-    0,
-    0,
-    0.3,
-    0.7,
-  ],
-  protanomaly: [
-    0.817,
-    0.183,
-    0,
-    0.333,
-    0.667,
-    0,
-    0,
-    0.125,
-    0.875,
-  ],
-  protanopia: [
-    0.567,
-    0.433,
-    0,
-    0.558,
-    0.442,
-    0,
-    0,
-    0.242,
-    0.758,
-  ],
+  deuteranomaly: createReducedColorVisionMatrix(DEUTERANOPIA_COLOR_VISION_MATRIX),
+  protanopia: PROTANOPIA_COLOR_VISION_MATRIX,
 };
 
 const ACCEPTED_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".svg", ".webp"];
@@ -151,6 +149,20 @@ function isAcceptedImageFile(file: File | null) {
     ACCEPTED_FILE_TYPES.has(file.type) ||
     ACCEPTED_FILE_EXTENSIONS.some((extension) => normalizedName.endsWith(extension))
   );
+}
+
+function applyAchromatopsia(imageData: ImageData) {
+  const { data } = imageData;
+
+  for (let index = 0; index < data.length; index += 4) {
+    const luminance = Math.round(
+      data[index] * 0.2126 + data[index + 1] * 0.7152 + data[index + 2] * 0.0722
+    );
+
+    data[index] = luminance;
+    data[index + 1] = luminance;
+    data[index + 2] = luminance;
+  }
 }
 
 function clampColorChannel(value: number) {
@@ -266,20 +278,6 @@ function initializeColorBlindSimulatorApp() {
 
     URL.revokeObjectURL(activePreviewUrl);
     activePreviewUrl = null;
-  }
-
-  function applyAchromatopsia(imageData: ImageData) {
-    const { data } = imageData;
-
-    for (let index = 0; index < data.length; index += 4) {
-      const luminance = Math.round(
-        data[index] * 0.2126 + data[index + 1] * 0.7152 + data[index + 2] * 0.0722
-      );
-
-      data[index] = luminance;
-      data[index + 1] = luminance;
-      data[index + 2] = luminance;
-    }
   }
 
   function applyColorVisionMatrix(imageData: ImageData, matrix: ColorVisionMatrix) {

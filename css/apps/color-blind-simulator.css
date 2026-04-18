@@ -149,37 +149,15 @@
   --cb-indicator-strike-color: rgba(54, 54, 54, 0.92);
 }
 
-.color-blind-sim-type-btn[data-vision-type="protanomaly"],
 .color-blind-sim-type-btn[data-vision-type="protanopia"] {
   --cb-indicator-color: #c65a5a;
-}
-
-.color-blind-sim-type-btn[data-vision-type="protanopia"] {
   --cb-indicator-opacity: 0.58;
   --cb-indicator-strike-opacity: 1;
   --cb-indicator-strike-color: rgba(86, 24, 24, 0.92);
 }
 
-.color-blind-sim-type-btn[data-vision-type="deuteranomaly"],
-.color-blind-sim-type-btn[data-vision-type="deuteranopia"] {
+.color-blind-sim-type-btn[data-vision-type="deuteranomaly"] {
   --cb-indicator-color: #5f9a6c;
-}
-
-.color-blind-sim-type-btn[data-vision-type="deuteranopia"] {
-  --cb-indicator-opacity: 0.58;
-  --cb-indicator-strike-opacity: 1;
-  --cb-indicator-strike-color: rgba(28, 78, 41, 0.92);
-}
-
-.color-blind-sim-type-btn[data-vision-type="tritanomaly"],
-.color-blind-sim-type-btn[data-vision-type="tritanopia"] {
-  --cb-indicator-color: #587fc9;
-}
-
-.color-blind-sim-type-btn[data-vision-type="tritanopia"] {
-  --cb-indicator-opacity: 0.58;
-  --cb-indicator-strike-opacity: 1;
-  --cb-indicator-strike-color: rgba(27, 56, 112, 0.94);
 }
 
 .color-blind-sim-type-name {

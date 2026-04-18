@@ -9,6 +9,7 @@ const IMAGE_FIXTURE_PATH = path.resolve(
 test("color blind simulator UI boots and updates its local controls", async ({ page }) => {
   await page.goto("/");
   await page.click('.site-nav-button[data-view="color_blind_simulator"]');
+  await expect(page).toHaveURL(/#color_blind_simulator$/);
 
   const viewport = page.locator("#colorBlindSimulatorViewport");
   const viewportImage = page.locator("#colorBlindSimulatorViewport [data-preview-image]").first();
@@ -35,17 +36,17 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
   await expect(page.locator("#colorBlindSimulatorActiveModeLabel")).toHaveText("Vista previa");
   await expect(viewportImage).toHaveAttribute(
     "src",
-    /rodion-kutsaiev-water-oil-macro-unsplash\.jpg/
+    /peter-olexa-unsplash\.jpg/
   );
   await expect(defaultCaption).toBeVisible();
-  await expect(defaultCaption).toHaveText("Rodion Kutsaiev, unsplash.com");
+  await expect(defaultCaption).toHaveText("Peter Olexa, unsplash.com");
   await expect
     .poll(async () =>
       viewport.evaluate((element) =>
         (element as HTMLElement).style.getPropertyValue("--color-blind-sim-preview-ratio").trim()
       )
     )
-    .toBe("1096 / 731");
+    .toBe("4886 / 3257");
   await expect(viewport).toHaveAttribute(
     "data-preview-mode",
     "simulated"
@@ -60,23 +61,23 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="normal"] .color-blind-sim-type-prevalence')).toHaveText("~92–96%");
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="deuteranomaly"] .color-blind-sim-type-prevalence')).toContainText("~3–4%");
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="deuteranomaly"] .tooltip')).toHaveText("~1 de cada 25–30");
-  await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="tritanopia"] .color-blind-sim-type-prevalence')).toContainText("<0.01%");
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="achromatopsia"] .tooltip')).toHaveText("~1 de cada 30.000");
   await expect(page.locator(".color-blind-sim-type-name")).toHaveText([
     "Normal",
     "Acromatopsia",
     "Deuteranomalía",
-    "Deuteranopia",
-    "Protanomalía",
     "Protanopia",
-    "Tritanomalía",
-    "Tritanopia",
   ]);
+  await expect(page.locator(".color-blind-sim-type-note")).toHaveText([
+    "Referencia",
+    "Sin color",
+    "Verdes reducidos",
+    "Rojos alterados",
+  ]);
+  await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="deuteranopia"], .color-blind-sim-type-btn[data-vision-type="protanomaly"], .color-blind-sim-type-btn[data-vision-type^="tritan"]')).toHaveCount(0);
   await expect(page.locator("#colorBlindSimulatorImageDropzonePanel")).toBeVisible();
   await expect(page.locator("#colorBlindSimulatorImagePreview")).toBeHidden();
 
-  await page.click('.color-blind-sim-type-btn[data-vision-type="achromatopsia"]');
-  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Acromatopsia");
   await expect(page.locator("#colorBlindSimulatorActiveTypeDescription")).toHaveCount(0);
   await expect(page.locator('[data-preview-mode="original"]')).toHaveCount(0);
   await expect(page.locator(".color-blind-sim-mode-btn")).toHaveCount(0);
@@ -118,24 +119,18 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
     )
     .toBe("300 / 120");
 
+  await page.click('.color-blind-sim-type-btn[data-vision-type="achromatopsia"]');
+  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Acromatopsia");
+  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([123, 123, 123, 255]);
+
   await page.click('.color-blind-sim-type-btn[data-vision-type="deuteranomaly"]');
   await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Deuteranomalía");
-  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([221, 127, 120, 255]);
-
-  await page.click('.color-blind-sim-type-btn[data-vision-type="deuteranopia"]');
-  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Deuteranopia");
-  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([191, 203, 113, 255]);
-
-  await page.click('.color-blind-sim-type-btn[data-vision-type="protanomaly"]');
-  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Protanomalía");
-  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([224, 140, 121, 255]);
+  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([178, 116, 124, 255]);
 
   await page.click('.color-blind-sim-type-btn[data-vision-type="protanopia"]');
   await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Protanopia");
-  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([181, 179, 116, 255]);
+  await expect.poll(async () => sampleSimulatedPixel(50, 60)).toEqual([100, 107, 128, 255]);
 
-  await page.click('.color-blind-sim-type-btn[data-vision-type="achromatopsia"]');
-  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Acromatopsia");
   await expect
     .poll(async () =>
       simulatedCanvas.evaluate((canvasElement) => {
@@ -149,38 +144,25 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
       })
     )
     .toBe(true);
-  await expect
-    .poll(async () => {
-      const [red, green, blue, alpha] = await sampleSimulatedPixel(50, 60);
-
-      return (
-        alpha === 255 &&
-        Math.abs(red - green) <= 1 &&
-        Math.abs(green - blue) <= 1 &&
-        red > 100 &&
-        red < 140
-      );
-    })
-    .toBe(true);
 
   await page.click("#colorBlindSimulatorResetBtn");
   await expect(page.locator("#colorBlindSimulatorImageDropzonePanel")).toBeHidden();
   await expect(page.locator("#colorBlindSimulatorImagePreview")).toBeVisible();
   await expect(defaultCaption).toBeVisible();
   await expect(page.locator("#colorBlindSimulatorImageName")).toHaveText("Imagen por defecto");
-  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Acromatopsia");
+  await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Protanopia");
   await expect(viewport).toHaveAttribute("data-preview-mode", "split");
   await expect
     .poll(async () => {
       const src = await viewportImage.getAttribute("src");
       return String(src || "");
     })
-    .toContain("rodion-kutsaiev-water-oil-macro-unsplash.jpg");
+    .toContain("peter-olexa-unsplash.jpg");
   await expect
     .poll(async () =>
       viewport.evaluate((element) =>
         (element as HTMLElement).style.getPropertyValue("--color-blind-sim-preview-ratio").trim()
       )
     )
-    .toBe("1096 / 731");
+    .toBe("4886 / 3257");
 });
