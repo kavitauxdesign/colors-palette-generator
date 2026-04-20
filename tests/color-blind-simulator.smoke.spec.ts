@@ -74,6 +74,11 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
     "Verdes reducidos",
     "Rojos alterados",
   ]);
+  await expect(page.locator(".color-blind-sim-help .footer-loss-help-trigger")).toHaveText("Tipos de visión en el simulador");
+  await expect(page.locator(".color-blind-sim-help-popover")).toContainText("Existen más variantes de daltonismo");
+  await expect(page.locator(".color-blind-sim-help-popover")).toContainText("no depender únicamente del color");
+  await page.locator(".color-blind-sim-help .footer-loss-help-trigger").focus();
+  await expect(page.locator(".color-blind-sim-help-popover")).toBeVisible();
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="deuteranopia"], .color-blind-sim-type-btn[data-vision-type="protanomaly"], .color-blind-sim-type-btn[data-vision-type^="tritan"]')).toHaveCount(0);
   await expect(page.locator("#colorBlindSimulatorImageDropzonePanel")).toBeVisible();
   await expect(page.locator("#colorBlindSimulatorImagePreview")).toBeHidden();

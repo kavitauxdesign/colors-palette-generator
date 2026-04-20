@@ -226,6 +226,18 @@
   transform: var(--tooltip-visible-transform);
 }
 
+.color-blind-sim-help {
+  margin-top: var(--PX-2);
+}
+
+.color-blind-sim-help-popover {
+  width: min(460px, calc(100vw - 32px));
+}
+
+.color-blind-sim-help-copy {
+  margin-bottom: 0;
+}
+
 .color-blind-sim-stage {
   flex: 0.6;
   min-width: 0;
