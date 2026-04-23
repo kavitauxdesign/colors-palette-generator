@@ -1,10 +1,17 @@
 # Changelog
 
+## 2.7.1 - 2026-04-23
+
+### Highlights
+- Added PNG download for simulated images in the `Color Blindness Simulator`.
+- Added an optional cursor-following loupe mode with a circular 300% zoom preview.
+- Refined the loupe cursor, toggle state, preview sizing, and automated coverage for the simulator workflow.
+
 ## 2.7.0 - 2026-04-23
 
 ### Highlights
 - Added the `Color Blindness Simulator` mini-app to review images through common color-vision simulations.
-- Added image upload, reset, replacement, simulated preview, toggleable hover zoom inspection, and PNG download for simulated images.
+- Added image upload, reset, replacement, and simulated preview controls for accessibility checks.
 - Updated the simulator navigation icon with the new eye-hide SVG asset.
 
 ## 2.6.0 - 2026-04-02

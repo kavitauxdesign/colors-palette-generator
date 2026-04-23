@@ -1,4 +1,4 @@
-# Classic·HEX — Version 2.7.0
+# Classic·HEX — Version 2.7.1
 
 A small suite of color tools built on `Vite + TypeScript`. The current release includes a palette generator, a flexible color converter, a `HEX to CSS filter` converter, and a color blindness simulator, all mounted as mini-apps inside a shared front-end shell.
 

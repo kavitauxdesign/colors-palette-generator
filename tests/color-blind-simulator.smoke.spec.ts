@@ -57,6 +57,8 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
   await expect(zoomCanvas).toHaveAttribute("aria-hidden", "true");
   await expect(zoomCanvas).toHaveCSS("opacity", "0");
   await expect(zoomCanvas).toHaveCSS("border-radius", "50%");
+  await expect(zoomCanvas).toHaveCSS("width", "270px");
+  await expect(zoomCanvas).toHaveCSS("height", "270px");
   await expect(zoomToggleButton).toBeVisible();
   await expect(zoomToggleButton).toHaveAttribute("aria-pressed", "true");
   await expect(zoomToggleButton).toHaveAttribute("aria-label", "Desactivar lupa");
