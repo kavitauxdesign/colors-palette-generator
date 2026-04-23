@@ -998,6 +998,16 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
 
               <div class="color-blind-sim-chip-row">
                 <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-active-type">Visión normal</span>
+                <button type="button" id="colorBlindSimulatorZoomToggle" class="image-upload-action color-blind-sim-toolbar-toggle is-active"
+                  aria-label="Desactivar lupa" aria-pressed="true" title="Desactivar lupa" data-state="active">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6"></circle>
+                    <path d="m16 16 4 4"></path>
+                    <path d="M11 8v6"></path>
+                    <path d="M8 11h6"></path>
+                  </svg>
+                  <div class="tooltip">Desactivar lupa</div>
+                </button>
                 <button type="button" id="colorBlindSimulatorDownloadBtn" class="image-upload-action color-blind-sim-toolbar-toggle"
                   aria-label="Descargar imagen simulada" title="Descargar imagen simulada" disabled>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1014,6 +1024,8 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
               <img class="color-blind-sim-stage-image" data-preview-image src="assets/peter-olexa-unsplash.jpg"
                 alt="Imagen cargada para preparar la simulación" />
               <canvas id="colorBlindSimulatorCanvas" class="color-blind-sim-simulated-canvas"
+                aria-hidden="true"></canvas>
+              <canvas id="colorBlindSimulatorZoomCanvas" class="color-blind-sim-zoom-preview"
                 aria-hidden="true"></canvas>
             </div>
             <p id="colorBlindSimulatorDefaultCaption" class="color-blind-sim-default-caption">Peter Olexa, unsplash.com</p>

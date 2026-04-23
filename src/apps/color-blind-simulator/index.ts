@@ -17,6 +17,9 @@ type ColorBlindSimulatorElements = {
   resetButton: HTMLButtonElement;
   viewport: HTMLElement;
   simulatedCanvas: HTMLCanvasElement;
+  zoomCanvas: HTMLCanvasElement;
+  zoomToggleButton: HTMLButtonElement;
+  zoomToggleTooltip: HTMLElement;
   defaultCaption: HTMLElement;
   downloadButton: HTMLButtonElement;
   downloadTooltip: HTMLElement;
@@ -65,6 +68,13 @@ const DOWNLOAD_IMAGE_COPY = {
   unavailable: "No se pudo preparar la descarga",
 } as const;
 const DOWNLOAD_IMAGE_MIME_TYPE = "image/png";
+const ZOOM_PREVIEW_SCALE = 3;
+const ZOOM_PREVIEW_OFFSET = 18;
+const ZOOM_PREVIEW_MAX_DPR = 2;
+const ZOOM_TOGGLE_COPY = {
+  active: "Desactivar lupa",
+  inactive: "Activar lupa",
+} as const;
 const VISION_TYPE_FILE_SLUGS: Record<VisionType, string> = {
   normal: "vision-normal",
   achromatopsia: "achromatopsia",
@@ -173,6 +183,10 @@ function clampColorChannel(value: number) {
   return Math.min(255, Math.max(0, Math.round(value)));
 }
 
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null {
   const fileInput = root.querySelector("#colorBlindSimulatorImageInput") as HTMLInputElement | null;
   const dropzonePanel = root.querySelector(
@@ -193,6 +207,13 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
   const simulatedCanvas = root.querySelector(
     "#colorBlindSimulatorCanvas"
   ) as HTMLCanvasElement | null;
+  const zoomCanvas = root.querySelector(
+    "#colorBlindSimulatorZoomCanvas"
+  ) as HTMLCanvasElement | null;
+  const zoomToggleButton = root.querySelector(
+    "#colorBlindSimulatorZoomToggle"
+  ) as HTMLButtonElement | null;
+  const zoomToggleTooltip = zoomToggleButton?.querySelector(".tooltip") as HTMLElement | null;
   const defaultCaption = root.querySelector("#colorBlindSimulatorDefaultCaption") as HTMLElement | null;
   const downloadButton = root.querySelector(
     "#colorBlindSimulatorDownloadBtn"
@@ -210,6 +231,9 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
     !resetButton ||
     !viewport ||
     !simulatedCanvas ||
+    !zoomCanvas ||
+    !zoomToggleButton ||
+    !zoomToggleTooltip ||
     !defaultCaption ||
     !downloadButton ||
     !downloadTooltip ||
@@ -229,6 +253,9 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
     resetButton,
     viewport,
     simulatedCanvas,
+    zoomCanvas,
+    zoomToggleButton,
+    zoomToggleTooltip,
     defaultCaption,
     downloadButton,
     downloadTooltip,
@@ -266,6 +293,7 @@ function initializeColorBlindSimulatorApp() {
   let activePreviewUrl: string | null = null;
   let activeVisionType: VisionType = "normal";
   let activeImageName = "Imagen por defecto";
+  let isZoomEnabled = true;
 
   function revokeActivePreviewUrl() {
     if (!activePreviewUrl || !activePreviewUrl.startsWith("blob:")) {
@@ -292,6 +320,141 @@ function initializeColorBlindSimulatorApp() {
 
   function updateDefaultCaptionVisibility(isDefaultImage: boolean) {
     elements.defaultCaption.hidden = !isDefaultImage;
+  }
+
+  function hideZoomPreview() {
+    elements.viewport.classList.remove("is-zooming");
+  }
+
+  function setZoomModeEnabled(isEnabled: boolean) {
+    isZoomEnabled = isEnabled;
+    const zoomToggleText = isEnabled ? ZOOM_TOGGLE_COPY.active : ZOOM_TOGGLE_COPY.inactive;
+
+    elements.viewport.classList.toggle("is-zoom-enabled", isEnabled);
+    elements.zoomToggleButton.classList.toggle("is-active", isEnabled);
+    elements.zoomToggleButton.dataset.state = isEnabled ? "active" : "inactive";
+    elements.zoomToggleButton.setAttribute("aria-pressed", isEnabled ? "true" : "false");
+    elements.zoomToggleButton.setAttribute("aria-label", zoomToggleText);
+    elements.zoomToggleButton.title = zoomToggleText;
+    elements.zoomToggleTooltip.textContent = zoomToggleText;
+
+    if (!isEnabled) {
+      hideZoomPreview();
+    }
+  }
+
+  function syncZoomCanvasBackingStore() {
+    const rect = elements.zoomCanvas.getBoundingClientRect();
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, ZOOM_PREVIEW_MAX_DPR);
+    const nextWidth = Math.max(1, Math.round(rect.width * pixelRatio));
+    const nextHeight = Math.max(1, Math.round(rect.height * pixelRatio));
+
+    if (elements.zoomCanvas.width !== nextWidth) {
+      elements.zoomCanvas.width = nextWidth;
+    }
+
+    if (elements.zoomCanvas.height !== nextHeight) {
+      elements.zoomCanvas.height = nextHeight;
+    }
+
+    return {
+      cssWidth: rect.width,
+      cssHeight: rect.height,
+    };
+  }
+
+  function positionZoomPreview(pointerX: number, pointerY: number, previewWidth: number, previewHeight: number) {
+    const viewportRect = elements.viewport.getBoundingClientRect();
+    const viewportWidth = viewportRect.width;
+    const viewportHeight = viewportRect.height;
+    let left = pointerX + ZOOM_PREVIEW_OFFSET;
+    let top = pointerY + ZOOM_PREVIEW_OFFSET;
+
+    if (left + previewWidth > viewportWidth) {
+      left = pointerX - previewWidth - ZOOM_PREVIEW_OFFSET;
+    }
+
+    if (top + previewHeight > viewportHeight) {
+      top = pointerY - previewHeight - ZOOM_PREVIEW_OFFSET;
+    }
+
+    elements.zoomCanvas.style.setProperty(
+      "--color-blind-sim-zoom-x",
+      `${clampNumber(left, 8, Math.max(8, viewportWidth - previewWidth - 8))}px`
+    );
+    elements.zoomCanvas.style.setProperty(
+      "--color-blind-sim-zoom-y",
+      `${clampNumber(top, 8, Math.max(8, viewportHeight - previewHeight - 8))}px`
+    );
+  }
+
+  function updateZoomPreview(event: PointerEvent) {
+    if (!isZoomEnabled) {
+      hideZoomPreview();
+      return;
+    }
+
+    if (event.pointerType !== "mouse" && event.pointerType !== "pen") {
+      return;
+    }
+
+    const canvas = elements.simulatedCanvas;
+    if (!canvas.width || !canvas.height) {
+      hideZoomPreview();
+      return;
+    }
+
+    const viewportRect = elements.viewport.getBoundingClientRect();
+    const pointerX = event.clientX - viewportRect.left;
+    const pointerY = event.clientY - viewportRect.top;
+
+    if (
+      pointerX < 0 ||
+      pointerY < 0 ||
+      pointerX > viewportRect.width ||
+      pointerY > viewportRect.height
+    ) {
+      hideZoomPreview();
+      return;
+    }
+
+    const { cssWidth, cssHeight } = syncZoomCanvasBackingStore();
+    const context = elements.zoomCanvas.getContext("2d");
+    if (!context) {
+      hideZoomPreview();
+      return;
+    }
+
+    const canvasX = (pointerX / viewportRect.width) * canvas.width;
+    const canvasY = (pointerY / viewportRect.height) * canvas.height;
+    const sourceWidth = Math.min(
+      canvas.width,
+      Math.max(1, (cssWidth / ZOOM_PREVIEW_SCALE) * (canvas.width / viewportRect.width))
+    );
+    const sourceHeight = Math.min(
+      canvas.height,
+      Math.max(1, (cssHeight / ZOOM_PREVIEW_SCALE) * (canvas.height / viewportRect.height))
+    );
+    const sourceX = clampNumber(canvasX - sourceWidth / 2, 0, Math.max(0, canvas.width - sourceWidth));
+    const sourceY = clampNumber(canvasY - sourceHeight / 2, 0, Math.max(0, canvas.height - sourceHeight));
+
+    context.clearRect(0, 0, elements.zoomCanvas.width, elements.zoomCanvas.height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(
+      canvas,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      elements.zoomCanvas.width,
+      elements.zoomCanvas.height
+    );
+
+    positionZoomPreview(pointerX, pointerY, cssWidth, cssHeight);
+    elements.viewport.classList.add("is-zooming");
   }
 
   function createSafeFileNameSegment(value: string) {
@@ -352,6 +515,7 @@ function initializeColorBlindSimulatorApp() {
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
     setDownloadControlState(false);
+    hideZoomPreview();
 
     if (!image || !context) {
       setDownloadControlState(false, DOWNLOAD_IMAGE_COPY.unavailable);
@@ -498,6 +662,15 @@ function initializeColorBlindSimulatorApp() {
     downloadSimulatedImage();
   });
 
+  elements.zoomToggleButton.addEventListener("click", () => {
+    setZoomModeEnabled(!isZoomEnabled);
+  });
+
+  elements.viewport.addEventListener("pointerenter", updateZoomPreview);
+  elements.viewport.addEventListener("pointermove", updateZoomPreview);
+  elements.viewport.addEventListener("pointerleave", hideZoomPreview);
+  elements.viewport.addEventListener("pointercancel", hideZoomPreview);
+
   elements.replaceButton.addEventListener("click", () => {
     if (typeof elements.fileInput.showPicker === "function") {
       elements.fileInput.showPicker();
@@ -534,6 +707,7 @@ function initializeColorBlindSimulatorApp() {
   );
 
   applyVisionType(activeVisionType);
+  setZoomModeEnabled(isZoomEnabled);
   updateDefaultCaptionVisibility(true);
   syncPreviewAspectRatio();
   renderSimulatedPreview();

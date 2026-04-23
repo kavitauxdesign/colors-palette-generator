@@ -71,6 +71,7 @@ The application allows users to:
 - copy the final CSS filter code
 - reuse the latest active palette color inside the filter tool through shared color state
 - simulate common color-vision types on an image and download the processed PNG
+- inspect the simulated image with an optional cursor-following zoom preview
 
 ---
 

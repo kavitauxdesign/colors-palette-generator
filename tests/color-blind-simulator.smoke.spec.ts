@@ -14,6 +14,8 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
   const viewport = page.locator("#colorBlindSimulatorViewport");
   const viewportImage = page.locator("#colorBlindSimulatorViewport [data-preview-image]").first();
   const simulatedCanvas = page.locator("#colorBlindSimulatorCanvas");
+  const zoomCanvas = page.locator("#colorBlindSimulatorZoomCanvas");
+  const zoomToggleButton = page.locator("#colorBlindSimulatorZoomToggle");
   const downloadButton = page.locator("#colorBlindSimulatorDownloadBtn");
   const defaultCaption = page.locator("#colorBlindSimulatorDefaultCaption");
   const sampleSimulatedPixel = (x: number, y: number) =>
@@ -52,6 +54,14 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
   await expect(downloadButton).toBeEnabled();
   await expect(downloadButton).toHaveAttribute("aria-label", "Descargar imagen simulada");
   await expect(downloadButton.locator(".tooltip")).toHaveText("Descargar imagen simulada");
+  await expect(zoomCanvas).toHaveAttribute("aria-hidden", "true");
+  await expect(zoomCanvas).toHaveCSS("opacity", "0");
+  await expect(zoomCanvas).toHaveCSS("border-radius", "50%");
+  await expect(zoomToggleButton).toBeVisible();
+  await expect(zoomToggleButton).toHaveAttribute("aria-pressed", "true");
+  await expect(zoomToggleButton).toHaveAttribute("aria-label", "Desactivar lupa");
+  await expect(zoomToggleButton.locator(".tooltip")).toHaveText("Desactivar lupa");
+  await expect(viewport).toHaveClass(/is-zoom-enabled/);
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="normal"] .color-blind-sim-type-prevalence')).toHaveText("~92–96%");
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="deuteranomaly"] .color-blind-sim-type-prevalence')).toContainText("~3–4%");
   await expect(page.locator('.color-blind-sim-type-btn[data-vision-type="deuteranomaly"] .tooltip')).toHaveText("~1 de cada 25–30");
@@ -112,6 +122,66 @@ test("color blind simulator UI boots and updates its local controls", async ({ p
       )
     )
     .toBe("300 / 120");
+
+  const viewportBox = await viewport.boundingBox();
+  expect(viewportBox).not.toBeNull();
+  if (!viewportBox) {
+    throw new Error("Missing color blindness simulator viewport bounds.");
+  }
+
+  await page.mouse.move(
+    viewportBox.x + viewportBox.width * 0.25,
+    viewportBox.y + viewportBox.height * 0.5
+  );
+  await expect(viewport).toHaveClass(/is-zooming/);
+  await expect(zoomCanvas).toHaveCSS("opacity", "1");
+  await expect
+    .poll(async () =>
+      zoomCanvas.evaluate((canvasElement) => {
+        const canvas = canvasElement as HTMLCanvasElement;
+        const context = canvas.getContext("2d");
+
+        if (!context || !canvas.width || !canvas.height) {
+          return false;
+        }
+
+        const pixel = context.getImageData(
+          Math.floor(canvas.width / 2),
+          Math.floor(canvas.height / 2),
+          1,
+          1
+        ).data;
+
+        return pixel[3] > 0;
+      })
+    )
+    .toBe(true);
+  await page.mouse.move(8, 8);
+  await expect(viewport).not.toHaveClass(/is-zooming/);
+
+  await zoomToggleButton.click();
+  await expect(zoomToggleButton).toHaveAttribute("aria-pressed", "false");
+  await expect(zoomToggleButton).toHaveAttribute("aria-label", "Activar lupa");
+  await expect(zoomToggleButton.locator(".tooltip")).toHaveText("Activar lupa");
+  await expect(viewport).not.toHaveClass(/is-zoom-enabled/);
+  await page.mouse.move(
+    viewportBox.x + viewportBox.width * 0.4,
+    viewportBox.y + viewportBox.height * 0.5
+  );
+  await expect(viewport).not.toHaveClass(/is-zooming/);
+  await expect(zoomCanvas).toHaveCSS("opacity", "0");
+
+  await zoomToggleButton.click();
+  await expect(zoomToggleButton).toHaveAttribute("aria-pressed", "true");
+  await expect(zoomToggleButton).toHaveAttribute("aria-label", "Desactivar lupa");
+  await expect(viewport).toHaveClass(/is-zoom-enabled/);
+  await page.mouse.move(
+    viewportBox.x + viewportBox.width * 0.35,
+    viewportBox.y + viewportBox.height * 0.5
+  );
+  await expect(viewport).toHaveClass(/is-zooming/);
+  await page.mouse.move(8, 8);
+  await expect(viewport).not.toHaveClass(/is-zooming/);
 
   await page.click('.color-blind-sim-type-btn[data-vision-type="achromatopsia"]');
   await expect(page.locator("#colorBlindSimulatorActiveTypePill")).toHaveText("Acromatopsia");
