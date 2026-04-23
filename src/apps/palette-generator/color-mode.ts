@@ -3,6 +3,7 @@ import PaletteGeneratorColorModeHelpers from "./color-mode-helpers";
 import PaletteGeneratorColorModeRuntime from "./color-mode-runtime";
 
 let hasInitializedPaletteGeneratorColorMode = false;
+const COLOR_PICKER_PALETTE_GENERATION_DELAY_MS = 180;
 
 function getPaletteGeneratorColorModeWindow() {
   return window as any;
@@ -110,6 +111,7 @@ export function initializePaletteGeneratorColorMode() {
   let colorPaletteVariantIndex = Number.isFinite(getStoreState()?.colorPaletteVariantIndex)
     ? Number(getStoreState()?.colorPaletteVariantIndex)
     : 0;
+  let paletteColorPickerGenerationTimeout: number | null = null;
 
   const colorVariantDescriptor = {
     get() {
@@ -227,6 +229,50 @@ export function initializePaletteGeneratorColorMode() {
 
   function hasValidSelectedPaletteBaseColor() {
     return !!getPaletteBaseColorSnapshot();
+  }
+
+  function canGenerateColorModePalette() {
+    return (
+      globals.paletteBaseMode === "color" &&
+      Array.isArray(globals.currentPalette) &&
+      globals.currentPalette.length > 0 &&
+      hasValidSelectedPaletteBaseColor()
+    );
+  }
+
+  function cancelScheduledColorPickerPaletteGeneration() {
+    if (paletteColorPickerGenerationTimeout === null) {
+      return;
+    }
+
+    window.clearTimeout(paletteColorPickerGenerationTimeout);
+    paletteColorPickerGenerationTimeout = null;
+  }
+
+  function generateColorModePaletteIfReady() {
+    if (!canGenerateColorModePalette()) {
+      return;
+    }
+
+    void runtimeWindow.generatePalette?.();
+  }
+
+  function scheduleColorPickerPaletteGeneration() {
+    cancelScheduledColorPickerPaletteGeneration();
+
+    if (!canGenerateColorModePalette()) {
+      return;
+    }
+
+    paletteColorPickerGenerationTimeout = window.setTimeout(() => {
+      paletteColorPickerGenerationTimeout = null;
+      generateColorModePaletteIfReady();
+    }, COLOR_PICKER_PALETTE_GENERATION_DELAY_MS);
+  }
+
+  function flushColorPickerPaletteGeneration() {
+    cancelScheduledColorPickerPaletteGeneration();
+    generateColorModePaletteIfReady();
   }
 
   function getAllowedPaletteSizesForType(type: unknown) {
@@ -435,12 +481,8 @@ export function initializePaletteGeneratorColorMode() {
     runtimeWindow.updatePaletteSizeButtonsAvailability?.();
     updatePaletteRegenerationUi();
 
-    if (
-      options.generate !== false &&
-      globals.paletteBaseMode === "color" &&
-      Array.isArray(globals.currentPalette) &&
-      globals.currentPalette.length > 0
-    ) {
+    if (options.generate !== false && canGenerateColorModePalette()) {
+      cancelScheduledColorPickerPaletteGeneration();
       void runtimeWindow.generatePalette?.();
     }
   }
@@ -466,12 +508,8 @@ export function initializePaletteGeneratorColorMode() {
       });
     }
 
-    if (
-      options.generate !== false &&
-      globals.paletteBaseMode === "color" &&
-      Array.isArray(globals.currentPalette) &&
-      globals.currentPalette.length > 0
-    ) {
+    if (options.generate !== false && canGenerateColorModePalette()) {
+      cancelScheduledColorPickerPaletteGeneration();
       void runtimeWindow.generatePalette?.();
     }
 
@@ -495,11 +533,10 @@ export function initializePaletteGeneratorColorMode() {
 
     if (
       options.generate !== false &&
-      globals.paletteBaseMode === "color" &&
       globals.selectedColorPaletteType === "monochromatic" &&
-      Array.isArray(globals.currentPalette) &&
-      globals.currentPalette.length > 0
+      canGenerateColorModePalette()
     ) {
+      cancelScheduledColorPickerPaletteGeneration();
       void runtimeWindow.generatePalette?.();
     }
   }
@@ -519,11 +556,10 @@ export function initializePaletteGeneratorColorMode() {
 
     if (
       options.generate !== false &&
-      globals.paletteBaseMode === "color" &&
       globals.selectedColorPaletteType === "analogous" &&
-      Array.isArray(globals.currentPalette) &&
-      globals.currentPalette.length > 0
+      canGenerateColorModePalette()
     ) {
+      cancelScheduledColorPickerPaletteGeneration();
       void runtimeWindow.generatePalette?.();
     }
   }
@@ -778,14 +814,29 @@ export function initializePaletteGeneratorColorMode() {
 
     if (dom.paletteColorPicker) {
       dom.paletteColorPicker.addEventListener("input", () => {
-        setSelectedPaletteBaseColor(dom.paletteColorPicker.value, {
+        const wasApplied = setSelectedPaletteBaseColor(dom.paletteColorPicker.value, {
+          generate: false,
           syncTextInput: true,
         });
+        if (wasApplied) {
+          scheduleColorPickerPaletteGeneration();
+        }
+      });
+
+      dom.paletteColorPicker.addEventListener("change", () => {
+        const wasApplied = setSelectedPaletteBaseColor(dom.paletteColorPicker.value, {
+          generate: false,
+          syncTextInput: true,
+        });
+        if (wasApplied) {
+          flushColorPickerPaletteGeneration();
+        }
       });
     }
 
     if (dom.paletteColorTextInput) {
       dom.paletteColorTextInput.addEventListener("input", () => {
+        cancelScheduledColorPickerPaletteGeneration();
         const parsedColor = normalizePaletteBaseCssColor(dom.paletteColorTextInput.value);
         if (!parsedColor) {
           setPaletteBaseColorFeedback(

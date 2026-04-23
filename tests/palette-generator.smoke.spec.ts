@@ -251,6 +251,42 @@ test("color base input updates palette and keeps base role placement", async ({ 
   expect(dialogMessages).toEqual([]);
 });
 
+test("color picker waits for dragging to settle before regenerating", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await page.evaluate(() => {
+    const runtimeWindow = window as any;
+    const originalGeneratePalette = runtimeWindow.generatePalette;
+    runtimeWindow.__paletteGeneratorTestGenerateCalls = 0;
+    runtimeWindow.generatePalette = (...args: unknown[]) => {
+      runtimeWindow.__paletteGeneratorTestGenerateCalls += 1;
+      return originalGeneratePalette?.(...args);
+    };
+  });
+
+  const immediateCallCount = await page.locator("#paletteColorPicker").evaluate((element) => {
+    const input = element as HTMLInputElement;
+    ["#ff0000", "#00ff00", "#0000ff", "#ff537e"].forEach((value) => {
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    return (window as any).__paletteGeneratorTestGenerateCalls;
+  });
+
+  expect(immediateCallCount).toBe(0);
+  await expect
+    .poll(() => page.evaluate(() => (window as any).__paletteGeneratorTestGenerateCalls))
+    .toBe(1);
+  await expect
+    .poll(async () => normalizeHex(await page.locator("#paletteColorTextInput").inputValue()))
+    .toBe("#FF537E");
+  await expect.poll(async () => (await getPaletteHexes(page))[0]).toBe("#FF537E");
+
+  expect(dialogMessages).toEqual([]);
+});
+
 test("temperature sliders update labels and palette colors", async ({ page }) => {
   const dialogMessages = await collectUnexpectedDialogs(page);
   await gotoPaletteGenerator(page);
