@@ -6,8 +6,6 @@ type VisionType =
   | "protanopia"
   | "deuteranomaly";
 
-type PreviewMode = "original" | "simulated" | "split";
-
 type ColorBlindSimulatorElements = {
   root: HTMLElement;
   fileInput: HTMLInputElement;
@@ -19,11 +17,9 @@ type ColorBlindSimulatorElements = {
   resetButton: HTMLButtonElement;
   viewport: HTMLElement;
   simulatedCanvas: HTMLCanvasElement;
-  modeLabel: HTMLElement;
   defaultCaption: HTMLElement;
-  splitToggleButton: HTMLButtonElement;
-  splitToggleDivider: SVGPathElement;
-  splitToggleTooltip: HTMLElement;
+  downloadButton: HTMLButtonElement;
+  downloadTooltip: HTMLElement;
   activeTypePill: HTMLElement;
   previewImages: HTMLImageElement[];
   simulatedPreviewImages: HTMLImageElement[];
@@ -61,12 +57,20 @@ const VISION_TYPE_COPY: Record<VisionType, VisionTypeDescriptor> = {
   },
 };
 
-const PREVIEW_PANEL_TITLE = "Vista previa";
 const DEFAULT_PREVIEW_SRC = "assets/peter-olexa-unsplash.jpg";
-const SPLIT_TOGGLE_COPY = {
-  active: "Visión dividida activa",
-  inactive: "Visión dividida inactiva",
+const DOWNLOAD_IMAGE_COPY = {
+  ready: "Descargar imagen simulada",
+  pending: "Preparando imagen",
+  downloading: "Preparando descarga",
+  unavailable: "No se pudo preparar la descarga",
 } as const;
+const DOWNLOAD_IMAGE_MIME_TYPE = "image/png";
+const VISION_TYPE_FILE_SLUGS: Record<VisionType, string> = {
+  normal: "vision-normal",
+  achromatopsia: "achromatopsia",
+  protanopia: "protanopia",
+  deuteranomaly: "deuteranomalia",
+};
 
 const IDENTITY_COLOR_VISION_MATRIX: ColorVisionMatrix = [
   1,
@@ -189,15 +193,11 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
   const simulatedCanvas = root.querySelector(
     "#colorBlindSimulatorCanvas"
   ) as HTMLCanvasElement | null;
-  const modeLabel = root.querySelector("#colorBlindSimulatorActiveModeLabel") as HTMLElement | null;
   const defaultCaption = root.querySelector("#colorBlindSimulatorDefaultCaption") as HTMLElement | null;
-  const splitToggleButton = root.querySelector(
-    "#colorBlindSimulatorSplitToggle"
+  const downloadButton = root.querySelector(
+    "#colorBlindSimulatorDownloadBtn"
   ) as HTMLButtonElement | null;
-  const splitToggleDivider = splitToggleButton?.querySelector(
-    "#colorBlindSimulatorSplitToggleDivider"
-  ) as SVGPathElement | null;
-  const splitToggleTooltip = splitToggleButton?.querySelector(".tooltip") as HTMLElement | null;
+  const downloadTooltip = downloadButton?.querySelector(".tooltip") as HTMLElement | null;
   const activeTypePill = root.querySelector("#colorBlindSimulatorActiveTypePill") as HTMLElement | null;
 
   if (
@@ -210,11 +210,9 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
     !resetButton ||
     !viewport ||
     !simulatedCanvas ||
-    !modeLabel ||
     !defaultCaption ||
-    !splitToggleButton ||
-    !splitToggleDivider ||
-    !splitToggleTooltip ||
+    !downloadButton ||
+    !downloadTooltip ||
     !activeTypePill
   ) {
     return null;
@@ -231,11 +229,9 @@ function resolveElements(root: HTMLElement): ColorBlindSimulatorElements | null 
     resetButton,
     viewport,
     simulatedCanvas,
-    modeLabel,
     defaultCaption,
-    splitToggleButton,
-    splitToggleDivider,
-    splitToggleTooltip,
+    downloadButton,
+    downloadTooltip,
     activeTypePill,
     previewImages: Array.from(root.querySelectorAll("[data-preview-image]")) as HTMLImageElement[],
     simulatedPreviewImages: Array.from(
@@ -269,7 +265,7 @@ function initializeColorBlindSimulatorApp() {
     DEFAULT_PREVIEW_SRC;
   let activePreviewUrl: string | null = null;
   let activeVisionType: VisionType = "normal";
-  let activePreviewMode: PreviewMode = "simulated";
+  let activeImageName = "Imagen por defecto";
 
   function revokeActivePreviewUrl() {
     if (!activePreviewUrl || !activePreviewUrl.startsWith("blob:")) {
@@ -296,6 +292,33 @@ function initializeColorBlindSimulatorApp() {
 
   function updateDefaultCaptionVisibility(isDefaultImage: boolean) {
     elements.defaultCaption.hidden = !isDefaultImage;
+  }
+
+  function createSafeFileNameSegment(value: string) {
+    const fileNameWithoutExtension = value.trim().replace(/\.[^/.\\]+$/, "");
+
+    return (
+      fileNameWithoutExtension
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "imagen"
+    );
+  }
+
+  function getSimulatedDownloadFileName() {
+    return `${createSafeFileNameSegment(activeImageName)}-${VISION_TYPE_FILE_SLUGS[activeVisionType]}-simulada.png`;
+  }
+
+  function setDownloadControlState(isReady: boolean, tooltipText?: string) {
+    const resolvedTooltipText =
+      tooltipText || (isReady ? DOWNLOAD_IMAGE_COPY.ready : DOWNLOAD_IMAGE_COPY.pending);
+
+    elements.downloadButton.disabled = !isReady;
+    elements.downloadButton.setAttribute("aria-label", resolvedTooltipText);
+    elements.downloadButton.title = resolvedTooltipText;
+    elements.downloadTooltip.textContent = resolvedTooltipText;
   }
 
   function syncPreviewAspectRatio() {
@@ -328,7 +351,10 @@ function initializeColorBlindSimulatorApp() {
     const canvas = elements.simulatedCanvas;
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
+    setDownloadControlState(false);
+
     if (!image || !context) {
+      setDownloadControlState(false, DOWNLOAD_IMAGE_COPY.unavailable);
       return;
     }
 
@@ -344,16 +370,22 @@ function initializeColorBlindSimulatorApp() {
 
     const colorVisionMatrix = COLOR_VISION_MATRICES[activeVisionType];
     if (activeVisionType !== "achromatopsia" && !colorVisionMatrix) {
+      setDownloadControlState(true);
       return;
     }
 
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    if (activeVisionType === "achromatopsia") {
-      applyAchromatopsia(imageData);
-    } else if (colorVisionMatrix) {
-      applyColorVisionMatrix(imageData, colorVisionMatrix);
+    try {
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      if (activeVisionType === "achromatopsia") {
+        applyAchromatopsia(imageData);
+      } else if (colorVisionMatrix) {
+        applyColorVisionMatrix(imageData, colorVisionMatrix);
+      }
+      context.putImageData(imageData, 0, 0);
+      setDownloadControlState(true);
+    } catch {
+      setDownloadControlState(false, DOWNLOAD_IMAGE_COPY.unavailable);
     }
-    context.putImageData(imageData, 0, 0);
   }
 
   function updatePreviewImages(src: string, options: { isDefaultImage: boolean }) {
@@ -377,6 +409,7 @@ function initializeColorBlindSimulatorApp() {
     elements.previewPanel.hidden = !state.hasPreview;
 
     if (typeof state.imageName === "string") {
+      activeImageName = state.imageName;
       elements.imageName.textContent = state.imageName;
     }
   }
@@ -393,22 +426,6 @@ function initializeColorBlindSimulatorApp() {
 
     elements.activeTypePill.textContent = descriptor.pill;
     renderSimulatedPreview();
-  }
-
-  function applyPreviewMode(nextPreviewMode: PreviewMode) {
-    activePreviewMode = nextPreviewMode;
-    const isSplitActive = nextPreviewMode === "split";
-    const splitToggleText = isSplitActive ? SPLIT_TOGGLE_COPY.active : SPLIT_TOGGLE_COPY.inactive;
-
-    elements.viewport.dataset.previewMode = nextPreviewMode;
-    elements.modeLabel.textContent = PREVIEW_PANEL_TITLE;
-    elements.splitToggleButton.classList.toggle("is-active", isSplitActive);
-    elements.splitToggleButton.dataset.state = isSplitActive ? "active" : "inactive";
-    elements.splitToggleButton.setAttribute("aria-pressed", isSplitActive ? "true" : "false");
-    elements.splitToggleButton.setAttribute("aria-label", splitToggleText);
-    elements.splitToggleButton.title = splitToggleText;
-    elements.splitToggleDivider.toggleAttribute("hidden", !isSplitActive);
-    elements.splitToggleTooltip.textContent = splitToggleText;
   }
 
   function restoreDefaultImage() {
@@ -431,6 +448,41 @@ function initializeColorBlindSimulatorApp() {
     });
   }
 
+  function downloadSimulatedImage() {
+    const canvas = elements.simulatedCanvas;
+
+    if (elements.downloadButton.disabled || !canvas.width || !canvas.height) {
+      return;
+    }
+
+    setDownloadControlState(false, DOWNLOAD_IMAGE_COPY.downloading);
+
+    try {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setDownloadControlState(false, DOWNLOAD_IMAGE_COPY.unavailable);
+          return;
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = getSimulatedDownloadFileName();
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+
+        window.setTimeout(() => {
+          URL.revokeObjectURL(downloadUrl);
+        }, 0);
+
+        setDownloadControlState(true);
+      }, DOWNLOAD_IMAGE_MIME_TYPE);
+    } catch {
+      setDownloadControlState(false, DOWNLOAD_IMAGE_COPY.unavailable);
+    }
+  }
+
   elements.typeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const nextVisionType = button.dataset.visionType as VisionType | undefined;
@@ -442,8 +494,8 @@ function initializeColorBlindSimulatorApp() {
     });
   });
 
-  elements.splitToggleButton.addEventListener("click", () => {
-    applyPreviewMode(activePreviewMode === "split" ? "simulated" : "split");
+  elements.downloadButton.addEventListener("click", () => {
+    downloadSimulatedImage();
   });
 
   elements.replaceButton.addEventListener("click", () => {
@@ -482,7 +534,6 @@ function initializeColorBlindSimulatorApp() {
   );
 
   applyVisionType(activeVisionType);
-  applyPreviewMode(activePreviewMode);
   updateDefaultCaptionVisibility(true);
   syncPreviewAspectRatio();
   renderSimulatedPreview();

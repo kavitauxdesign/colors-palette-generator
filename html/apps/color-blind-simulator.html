@@ -158,29 +158,23 @@
 
               <div class="color-blind-sim-chip-row">
                 <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-active-type">Visión normal</span>
-                <button type="button" id="colorBlindSimulatorSplitToggle" class="image-upload-action color-blind-sim-toolbar-toggle"
-                  aria-label="Visión dividida inactiva" aria-pressed="false" title="Visión dividida inactiva" data-state="inactive">
+                <button type="button" id="colorBlindSimulatorDownloadBtn" class="image-upload-action color-blind-sim-toolbar-toggle"
+                  aria-label="Descargar imagen simulada" title="Descargar imagen simulada" disabled>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="4" y="5" width="16" height="14" rx="2"></rect>
-                    <path id="colorBlindSimulatorSplitToggleDivider" class="color-blind-sim-toggle-divider" d="M12 5v14" hidden></path>
+                    <path d="M12 4v10"></path>
+                    <path d="m8 10 4 4 4-4"></path>
+                    <path d="M5 20h14"></path>
                   </svg>
-                  <div class="tooltip">Visión dividida inactiva</div>
+                  <div class="tooltip">Preparando imagen</div>
                 </button>
               </div>
             </div>
 
-            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" data-preview-mode="simulated"
-              style="--color-blind-sim-preview-ratio: 4886 / 3257">
+            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" style="--color-blind-sim-preview-ratio: 4886 / 3257">
               <img class="color-blind-sim-stage-image" data-preview-image src="assets/peter-olexa-unsplash.jpg"
                 alt="Imagen cargada para preparar la simulación" />
               <canvas id="colorBlindSimulatorCanvas" class="color-blind-sim-simulated-canvas"
                 aria-hidden="true"></canvas>
-
-              <div class="color-blind-sim-split-indicator" aria-hidden="true">
-                <span class="color-blind-sim-split-label color-blind-sim-split-label--left">Original</span>
-                <span class="color-blind-sim-split-handle"></span>
-                <span class="color-blind-sim-split-label color-blind-sim-split-label--right">Simulada</span>
-              </div>
             </div>
             <p id="colorBlindSimulatorDefaultCaption" class="color-blind-sim-default-caption">Peter Olexa, unsplash.com</p>
           </section>

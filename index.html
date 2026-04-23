@@ -9,30 +9,30 @@
   <link rel="canonical" href="https://kavita.es/classic-hex/" />
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="description"
-    content="Classic HEX es una herramienta online gratuita para generar paletas de colores, convertir colores entre formatos como HEX, RGB, HSL y OKLCH, y obtener el CSS filter más cercano para recolorear SVG." />
+    content="Classic HEX es una herramienta online gratuita para generar paletas de colores, convertir colores entre formatos como HEX, RGB, HSL y OKLCH, obtener el CSS filter más cercano para recolorear SVG y simular daltonismo en imágenes." />
   <meta name="author" content="Karina Khodzhakulieva" />
   <meta property="og:locale" content="es_ES" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="kavita.es" />
   <meta property="og:url" content="https://kavita.es/classic-hex/" />
   <meta property="og:title"
-    content="Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter" />
+    content="Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo" />
   <meta property="og:description"
-    content="Herramienta online gratuita para generar paletas de colores, convertir formatos de color y calcular filtros CSS para SVG." />
+    content="Herramienta online gratuita para generar paletas, convertir formatos de color, calcular filtros CSS para SVG y simular daltonismo en imágenes." />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title"
-    content="Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter" />
+    content="Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo" />
   <meta name="twitter:description"
-    content="Genera paletas, convierte colores y obtén el CSS filter más cercano para recolorear iconos SVG." />
-  <title>Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter</title>
+    content="Genera paletas, convierte colores, calcula CSS filters y simula daltonismo en imágenes." />
+  <title>Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon-palette-painted.svg" />
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       "name": "Classic HEX",
-      "headline": "Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter",
-      "description": "Suite online gratuita para generar paletas de colores, convertir formatos como HEX, RGB, HSL, OKLCH, LAB y CMYK, y calcular filtros CSS para SVG.",
+      "headline": "Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo",
+      "description": "Suite online gratuita para generar paletas de colores, convertir formatos como HEX, RGB, HSL, OKLCH, LAB y CMYK, calcular filtros CSS para SVG y simular daltonismo en imágenes.",
       "url": "https://kavita.es/classic-hex/",
       "inLanguage": "es",
       "isPartOf": {
@@ -52,6 +52,10 @@
         {
           "@type": "Thing",
           "name": "CSS filter"
+        },
+        {
+          "@type": "Thing",
+          "name": "Simulador de daltonismo"
         }
       ],
       "hasPart": [
@@ -75,6 +79,13 @@
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Web",
           "url": "https://kavita.es/classic-hex/#hex_to_filter"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Simulador de Daltonismo",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "Web",
+          "url": "https://kavita.es/classic-hex/#color_blind_simulator"
         }
       ]
     }
@@ -142,7 +153,7 @@
   </header>
 
   <main class="site-main">
-<h1 class="visually-hidden">Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter</h1>
+<h1 class="visually-hidden">Classic HEX: generador de paletas, convertidor de color, HEX a CSS filter y simulador de daltonismo</h1>
 <!-- ==============================  -->
 <!--       PALETTE GENERATOR         -->
 <!-- =============================== -->
@@ -987,29 +998,23 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
 
               <div class="color-blind-sim-chip-row">
                 <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-active-type">Visión normal</span>
-                <button type="button" id="colorBlindSimulatorSplitToggle" class="image-upload-action color-blind-sim-toolbar-toggle"
-                  aria-label="Visión dividida inactiva" aria-pressed="false" title="Visión dividida inactiva" data-state="inactive">
+                <button type="button" id="colorBlindSimulatorDownloadBtn" class="image-upload-action color-blind-sim-toolbar-toggle"
+                  aria-label="Descargar imagen simulada" title="Descargar imagen simulada" disabled>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="4" y="5" width="16" height="14" rx="2"></rect>
-                    <path id="colorBlindSimulatorSplitToggleDivider" class="color-blind-sim-toggle-divider" d="M12 5v14" hidden></path>
+                    <path d="M12 4v10"></path>
+                    <path d="m8 10 4 4 4-4"></path>
+                    <path d="M5 20h14"></path>
                   </svg>
-                  <div class="tooltip">Visión dividida inactiva</div>
+                  <div class="tooltip">Preparando imagen</div>
                 </button>
               </div>
             </div>
 
-            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" data-preview-mode="simulated"
-              style="--color-blind-sim-preview-ratio: 4886 / 3257">
+            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" style="--color-blind-sim-preview-ratio: 4886 / 3257">
               <img class="color-blind-sim-stage-image" data-preview-image src="assets/peter-olexa-unsplash.jpg"
                 alt="Imagen cargada para preparar la simulación" />
               <canvas id="colorBlindSimulatorCanvas" class="color-blind-sim-simulated-canvas"
                 aria-hidden="true"></canvas>
-
-              <div class="color-blind-sim-split-indicator" aria-hidden="true">
-                <span class="color-blind-sim-split-label color-blind-sim-split-label--left">Original</span>
-                <span class="color-blind-sim-split-handle"></span>
-                <span class="color-blind-sim-split-label color-blind-sim-split-label--right">Simulada</span>
-              </div>
             </div>
             <p id="colorBlindSimulatorDefaultCaption" class="color-blind-sim-default-caption">Peter Olexa, unsplash.com</p>
           </section>
@@ -1025,7 +1030,7 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
       © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
         id="footerYear"></span> · Reportar un bug o comentario en <a class="footer-report-link" href="https://github.com/kavitauxdesign/colors-palette-generator/issues" target="_blank" rel="noopener noreferrer">GitHub</a> o <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">DM</a>
     </div>
-    <span class="bottom-toolbar-version">Version 2.6.0.</span>
+    <span class="bottom-toolbar-version">Version 2.7.0.</span>
   </footer>
 
   <script type="module" src="/src/main.ts"></script>

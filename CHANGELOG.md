@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.0 - 2026-04-23
+
+### Highlights
+- Added the `Color Blindness Simulator` mini-app to review images through common color-vision simulations.
+- Added image upload, reset, replacement, simulated preview, and PNG download for simulated images.
+- Updated the simulator navigation icon with the new eye-hide SVG asset.
+
 ## 2.6.0 - 2026-04-02
 
 ### Highlights
