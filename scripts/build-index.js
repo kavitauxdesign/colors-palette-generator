@@ -10,6 +10,12 @@ const partials = {
   "{{PALETTE_GENERATOR_APP}}": path.join(projectRoot, "html", "apps", "palette-generator.html"),
   "{{CONVERT_COLOR_APP}}": path.join(projectRoot, "html", "apps", "convert-color.html"),
   "{{HEX_TO_FILTER_APP}}": path.join(projectRoot, "html", "apps", "hex-to-filter.html"),
+  "{{COLOR_BLIND_SIMULATOR_APP}}": path.join(
+    projectRoot,
+    "html",
+    "apps",
+    "color-blind-simulator.html"
+  ),
 };
 
 function getAppVersionLabel() {

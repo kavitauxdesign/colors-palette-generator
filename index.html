@@ -9,30 +9,30 @@
   <link rel="canonical" href="https://kavita.es/classic-hex/" />
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="description"
-    content="Classic HEX es una herramienta online gratuita para generar paletas de colores, convertir colores entre formatos como HEX, RGB, HSL y OKLCH, y obtener el CSS filter más cercano para recolorear SVG." />
+    content="Classic HEX es una herramienta online gratuita para generar paletas de colores, convertir colores entre formatos como HEX, RGB, HSL y OKLCH, obtener el CSS filter más cercano para recolorear SVG y simular daltonismo en imágenes." />
   <meta name="author" content="Karina Khodzhakulieva" />
   <meta property="og:locale" content="es_ES" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="kavita.es" />
   <meta property="og:url" content="https://kavita.es/classic-hex/" />
   <meta property="og:title"
-    content="Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter" />
+    content="Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo" />
   <meta property="og:description"
-    content="Herramienta online gratuita para generar paletas de colores, convertir formatos de color y calcular filtros CSS para SVG." />
+    content="Herramienta online gratuita para generar paletas, convertir formatos de color, calcular filtros CSS para SVG y simular daltonismo en imágenes." />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title"
-    content="Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter" />
+    content="Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo" />
   <meta name="twitter:description"
-    content="Genera paletas, convierte colores y obtén el CSS filter más cercano para recolorear iconos SVG." />
-  <title>Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter</title>
+    content="Genera paletas, convierte colores, calcula CSS filters y simula daltonismo en imágenes." />
+  <title>Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon-palette-painted.svg" />
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       "name": "Classic HEX",
-      "headline": "Classic HEX: generador de paletas, convertidor de color y HEX a CSS filter",
-      "description": "Suite online gratuita para generar paletas de colores, convertir formatos como HEX, RGB, HSL, OKLCH, LAB y CMYK, y calcular filtros CSS para SVG.",
+      "headline": "Classic HEX: paletas, conversión, filtros CSS y simulador de daltonismo",
+      "description": "Suite online gratuita para generar paletas de colores, convertir formatos como HEX, RGB, HSL, OKLCH, LAB y CMYK, calcular filtros CSS para SVG y simular daltonismo en imágenes.",
       "url": "https://kavita.es/classic-hex/",
       "inLanguage": "es",
       "isPartOf": {
@@ -52,6 +52,10 @@
         {
           "@type": "Thing",
           "name": "CSS filter"
+        },
+        {
+          "@type": "Thing",
+          "name": "Simulador de daltonismo"
         }
       ],
       "hasPart": [
@@ -75,6 +79,13 @@
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Web",
           "url": "https://kavita.es/classic-hex/#hex_to_filter"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Simulador de Daltonismo",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "Web",
+          "url": "https://kavita.es/classic-hex/#color_blind_simulator"
         }
       ]
     }
@@ -85,6 +96,7 @@
   <link rel="stylesheet" href="css/apps/palette-generator.css" />
   <link rel="stylesheet" href="css/apps/convert-color.css" />
   <link rel="stylesheet" href="css/apps/hex-to-filter.css" />
+  <link rel="stylesheet" href="css/apps/color-blind-simulator.css" />
   <!-- Metrika counter -->
   <script type="text/javascript">
       function loadMetrica() {
@@ -132,11 +144,16 @@
           <img class="site-nav-button-icon" src="assets/app-header-hex-to-filter.svg" alt="" aria-hidden="true" />
           <span class="site-nav-button-label">HEX to CSS filter</span>
         </button>
+        <button class="site-nav-button" type="button" data-view="color_blind_simulator">
+          <img class="site-nav-button-icon" src="assets/app-header-color-blind-simulator.svg" alt="" aria-hidden="true" />
+          <span class="site-nav-button-label">Simular Daltonismo</span>
+        </button>
       </nav>
     </div>
   </header>
 
   <main class="site-main">
+<h1 class="visually-hidden">Classic HEX: generador de paletas, convertidor de color, HEX a CSS filter y simulador de daltonismo</h1>
 <!-- ==============================  -->
 <!--       PALETTE GENERATOR         -->
 <!-- =============================== -->
@@ -820,6 +837,204 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
     </div>
   </div>
 </section>
+
+<!-- =====================================  -->
+<!--     COLOR BLINDNESS SIMULATOR          -->
+<!-- ====================================== -->
+<section id="color_blind_simulator" class="view-tab view-tab-offset app-view" data-app="color-blind-simulator">
+  <div class="app-view-shell">
+    <header class="app-view-hero">
+      <div class="app-view-meta">
+        <span class="app-view-kicker">Mini-app 04</span>
+        <h2 class="app-view-title">Simulador de Daltonismo</h2>
+        <p class="description app-view-description">
+          Carga una imagen y revisa cómo cambia la percepción del color en cada tipo de visión.
+        </p>
+      </div>
+    </header>
+
+    <div id="colorBlindSimulatorApp" class="color-blind-sim app-stack">
+      <div class="app-workspace color-blind-sim-workspace">
+        <aside class="app-panel app-panel--sidebar color-blind-sim-sidebar">
+          <div class="app-stack">
+            <section class="color-blind-sim-section">
+              <div class="color-blind-sim-section-header">
+                <span class="color-blind-sim-step" aria-hidden="true">1</span>
+                <div class="color-blind-sim-section-copy-wrap">
+                  <h3 class="color-blind-sim-section-title">Imagen base</h3>
+                </div>
+              </div>
+
+              <input id="colorBlindSimulatorImageInput" class="color-blind-sim-file-input" type="file"
+                accept=".jpg,.jpeg,.png,.svg,.webp,image/jpeg,image/png,image/svg+xml,image/webp" />
+
+              <div id="colorBlindSimulatorImageDropzonePanel" class="image-upload-dropzone-panel">
+                <label id="colorBlindSimulatorImageDropzone" class="image-upload-dropzone" for="colorBlindSimulatorImageInput">
+                  <span class="image-upload-title">Arrastra una imagen aquí</span>
+                  <span class="image-upload-copy">o pulsa para subir un JPG, PNG, SVG o WEBP</span>
+                </label>
+              </div>
+
+              <div id="colorBlindSimulatorImagePreview" class="image-upload-preview" hidden>
+                <div class="image-upload-preview-header">
+                  <span class="image-upload-preview-title">Miniatura de la imagen subida</span>
+
+                  <div class="color-blind-sim-image-actions">
+                    <button type="button" id="colorBlindSimulatorReplaceBtn" class="image-upload-action"
+                      aria-label="Subir otra imagen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 16V6"></path>
+                        <path d="m8 10 4-4 4 4"></path>
+                        <path d="M20 17v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1"></path>
+                      </svg>
+                      <div class="tooltip">Subir otra imagen</div>
+                    </button>
+
+                    <button type="button" id="colorBlindSimulatorResetBtn" class="image-upload-action"
+                      aria-label="Restablecer imagen">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 6h18"></path>
+                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                        <path d="M19 6l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                        <path d="M10 11v6"></path>
+                        <path d="M14 11v6"></path>
+                      </svg>
+                      <div class="tooltip">Restablecer</div>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="image-upload-preview-body">
+                  <img id="colorBlindSimulatorPreviewImg" class="image-upload-thumb"
+                    alt="Vista previa de la imagen base cargada" />
+                  <div class="image-upload-meta">
+                    <span id="colorBlindSimulatorImageName" class="image-upload-name"></span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="color-blind-sim-section">
+              <div class="color-blind-sim-section-header">
+                <span class="color-blind-sim-step" aria-hidden="true">2</span>
+                <div class="color-blind-sim-section-copy-wrap">
+                  <h3 class="color-blind-sim-section-title">Tipo de visión</h3>
+                  <p class="color-blind-sim-section-copy">
+                    Elige una simulación para revisar la imagen procesada.
+                  </p>
+                </div>
+              </div>
+
+              <div class="color-blind-sim-type-grid" role="group" aria-label="Seleccionar tipo de visión">
+                <button type="button" class="color-blind-sim-type-btn is-active" data-vision-type="normal" aria-pressed="true">
+                  <span class="color-blind-sim-type-name">Normal</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Referencia</span>
+                    <span class="color-blind-sim-type-prevalence">~92–96%</span>
+                  </span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="achromatopsia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Acromatopsia</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Sin color</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~0.003%
+                      <span class="tooltip">~1 de cada 30.000</span>
+                    </span>
+                  </span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="deuteranomaly" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Deuteranomalía</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Verdes reducidos</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~3–4%
+                      <span class="tooltip">~1 de cada 25–30</span>
+                    </span>
+                  </span>
+                </button>
+                <button type="button" class="color-blind-sim-type-btn" data-vision-type="protanopia" aria-pressed="false">
+                  <span class="color-blind-sim-type-name">Protanopia</span>
+                  <span class="color-blind-sim-type-meta">
+                    <span class="color-blind-sim-type-note">Rojos alterados</span>
+                    <span class="color-blind-sim-type-prevalence">
+                      ~1%
+                      <span class="tooltip">~1 de cada 100</span>
+                    </span>
+                  </span>
+                </button>
+              </div>
+
+              <div class="footer-loss-help color-blind-sim-help">
+                <div class="footer-loss-help-wrap">
+                  <button class="footer-loss-help-trigger" type="button">
+                    Tipos de visión en el simulador
+                  </button>
+                  <div class="footer-loss-help-popover color-blind-sim-help-popover">
+                    <p class="footer-loss-help-title">
+                      Existen más variantes de daltonismo, pero aquí se muestran solo las más frecuentes y con impacto
+                      visual más claro. Esto reduce la carga cognitiva y permite hacer tests rápidos de accesibilidad en
+                      UI.
+                    </p>
+                    <p class="footer-loss-help-title color-blind-sim-help-copy">
+                      En la práctica, suele ser suficiente para detectar los problemas principales. Ante la duda, es
+                      recomendable validar también el caso extremo (acromatismo) y no depender únicamente del color:
+                      usar iconos, textos u otros indicadores de estado.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </aside>
+
+        <div class="color-blind-sim-stage app-stack">
+          <section class="app-panel color-blind-sim-stage-panel">
+            <div class="color-blind-sim-stage-toolbar">
+              <div>
+                <h3 id="colorBlindSimulatorActiveModeLabel" class="color-blind-sim-stage-title">Vista previa</h3>
+              </div>
+
+              <div class="color-blind-sim-chip-row">
+                <span id="colorBlindSimulatorActiveTypePill" class="color-blind-sim-active-type">Visión normal</span>
+                <button type="button" id="colorBlindSimulatorZoomToggle" class="image-upload-action color-blind-sim-toolbar-toggle is-active"
+                  aria-label="Desactivar lupa" aria-pressed="true" title="Desactivar lupa" data-state="active">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6"></circle>
+                    <path d="m16 16 4 4"></path>
+                    <path d="M11 8v6"></path>
+                    <path d="M8 11h6"></path>
+                  </svg>
+                  <div class="tooltip">Desactivar lupa</div>
+                </button>
+                <button type="button" id="colorBlindSimulatorDownloadBtn" class="image-upload-action color-blind-sim-toolbar-toggle"
+                  aria-label="Descargar imagen simulada" title="Descargar imagen simulada" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 4v10"></path>
+                    <path d="m8 10 4 4 4-4"></path>
+                    <path d="M5 20h14"></path>
+                  </svg>
+                  <div class="tooltip">Preparando imagen</div>
+                </button>
+              </div>
+            </div>
+
+            <div id="colorBlindSimulatorViewport" class="color-blind-sim-viewport" style="--color-blind-sim-preview-ratio: 4886 / 3257">
+              <img class="color-blind-sim-stage-image" data-preview-image src="assets/peter-olexa-unsplash.jpg"
+                alt="Imagen cargada para preparar la simulación" />
+              <canvas id="colorBlindSimulatorCanvas" class="color-blind-sim-simulated-canvas"
+                aria-hidden="true"></canvas>
+              <canvas id="colorBlindSimulatorZoomCanvas" class="color-blind-sim-zoom-preview"
+                aria-hidden="true"></canvas>
+            </div>
+            <p id="colorBlindSimulatorDefaultCaption" class="color-blind-sim-default-caption">Peter Olexa, unsplash.com</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
   </main>
 
   <footer class="bottom-toolbar site-footer">
@@ -827,7 +1042,7 @@ Puedes editar cualquier valor, pegar un código directamente o usar el selector 
       © <a href="https://kavita.es" target="_blank" rel="noopener noreferrer">kavita.es</a> · <span
         id="footerYear"></span> · Reportar un bug o comentario en <a class="footer-report-link" href="https://github.com/kavitauxdesign/colors-palette-generator/issues" target="_blank" rel="noopener noreferrer">GitHub</a> o <a class="footer-report-link" href="https://www.linkedin.com/in/karina-khodzhakulieva/" target="_blank" rel="noopener noreferrer">DM</a>
     </div>
-    <span class="bottom-toolbar-version">Version 2.6.0.</span>
+    <span class="bottom-toolbar-version">Version 2.7.0.</span>
   </footer>
 
   <script type="module" src="/src/main.ts"></script>

@@ -35,6 +35,7 @@ import initializeAppShell from "./app/shell";
 import initializeRegisteredApps from "./app/bootstrap";
 import registerConvertColorApp from "./apps/convert-color";
 import registerHexToFilterApp from "./apps/hex-to-filter";
+import registerColorBlindSimulatorApp from "./apps/color-blind-simulator";
 import registerPaletteGeneratorApp, {
   initializePaletteGeneratorModules,
 } from "./apps/palette-generator";
@@ -60,6 +61,7 @@ async function bootstrap() {
   registerPaletteGeneratorApp();
   registerConvertColorApp();
   registerHexToFilterApp();
+  registerColorBlindSimulatorApp();
   initializePaletteGeneratorModules();
   initializeRegisteredApps();
 }

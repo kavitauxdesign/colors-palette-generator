@@ -1,6 +1,6 @@
-# Classic·HEX — Version 2.6.0
+# Classic·HEX — Version 2.7.0
 
-A small suite of color tools built on `Vite + TypeScript`. The current release includes a palette generator, a flexible color converter, and a `HEX to CSS filter` converter, all mounted as mini-apps inside a shared front-end shell.
+A small suite of color tools built on `Vite + TypeScript`. The current release includes a palette generator, a flexible color converter, a `HEX to CSS filter` converter, and a color blindness simulator, all mounted as mini-apps inside a shared front-end shell.
 
 ---
 
@@ -30,13 +30,14 @@ https://kavita.es/classic-hex
 
 # Mini-apps
 
-The project currently contains three tools:
+The project currently contains four tools:
 
 - `Palette Generator`, focused on building and iterating on palettes with temperature, image, inspiration, and history workflows
 - `Convert Color`, focused on converting and copying colors across digital color formats with clipboard and color-picker support
 - `HEX to CSS filter`, focused on converting a target color into the closest CSS `filter` chain for recoloring SVG assets
+- `Color Blindness Simulator`, focused on previewing uploaded images through common color-vision simulations
 
-Both views live inside the same page and share a small shell for navigation, module bootstrapping, clipboard handling, and color state.
+All mini-apps live inside the same page and share a small shell for navigation, module bootstrapping, clipboard handling, and color state.
 
 ---
 
@@ -69,6 +70,8 @@ The application allows users to:
 - preview the original target color and the filtered SVG result side by side
 - copy the final CSS filter code
 - reuse the latest active palette color inside the filter tool through shared color state
+- simulate common color-vision types on an image and download the processed PNG
+- inspect the simulated image with an optional cursor-following zoom preview
 
 ---
 
