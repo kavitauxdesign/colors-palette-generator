@@ -2,23 +2,44 @@ import AppColorUtils from "../../shared/color/color-utils";
 import AppClipboard from "../../shared/services/clipboard";
 
 let hasInitializedPaletteGeneratorCardNames = false;
+let cachedColorNameReferences:
+  | Array<{
+      name: string;
+      hex: string;
+      color: unknown;
+    }>
+  | null = null;
+const nearestColorNameCache = new Map<string, string>();
 
 function getPaletteGeneratorCardNamesWindow() {
   return window as any;
 }
 
 function getColorNameReferencesWithColor(runtimeWindow: any) {
+  if (Array.isArray(cachedColorNameReferences)) {
+    return cachedColorNameReferences;
+  }
+
   const entries = Array.isArray(runtimeWindow.AppColorNames) ? runtimeWindow.AppColorNames : [];
-  return entries.map((entry: any) => ({
+  cachedColorNameReferences = entries.map((entry: any) => ({
     ...entry,
     color: AppColorUtils.createColor(entry.hex),
   }));
+
+  return cachedColorNameReferences;
 }
 
 function getNearestColorNameFactory(runtimeWindow: any) {
   return function getNearestColorName(hex: string) {
-    if (AppColorUtils.normalizeHexColor(hex) === "#FFFFFF") {
+    const normalizedHex = AppColorUtils.normalizeHexColor(hex);
+
+    if (normalizedHex === "#FFFFFF") {
       return "Pure white";
+    }
+
+    const cachedName = nearestColorNameCache.get(normalizedHex);
+    if (cachedName) {
+      return cachedName;
     }
 
     let closestName = "Unknown";
@@ -29,7 +50,7 @@ function getNearestColorNameFactory(runtimeWindow: any) {
         return;
       }
 
-      const distance = AppColorUtils.getColorDistance(hex, entry.color, {
+      const distance = AppColorUtils.getColorDistance(normalizedHex, entry.color, {
         method: "deltae2000",
       });
 
@@ -39,6 +60,7 @@ function getNearestColorNameFactory(runtimeWindow: any) {
       }
     });
 
+    nearestColorNameCache.set(normalizedHex, closestName);
     return closestName;
   };
 }

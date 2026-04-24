@@ -228,6 +228,41 @@ test("individual card copy shows copied feedback", async ({ page, context }) => 
   expect(dialogMessages).toEqual([]);
 });
 
+test("palette history stays capped at 50 session entries", async ({ page }) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await expect(page.getByText("Se guardan hasta 50 versiones por sesión del navegador.")).toBeVisible();
+
+  const historySnapshot = await page.evaluate(() => {
+    const runtimeWindow = window as any;
+    const originalRenderHistory = runtimeWindow.renderHistory;
+
+    runtimeWindow.renderHistory = () => {};
+
+    for (let index = 0; index < 55; index += 1) {
+      const leadColor = `#${String(index + 1).padStart(6, "0")}`;
+      runtimeWindow.saveHistory?.([leadColor, "#123456", "#ABCDEF"]);
+    }
+
+    runtimeWindow.renderHistory = originalRenderHistory;
+    runtimeWindow.renderHistory?.();
+
+    return {
+      historyLength: Array.isArray(runtimeWindow.PaletteGeneratorLegacyGlobals?.paletteHistory)
+        ? runtimeWindow.PaletteGeneratorLegacyGlobals.paletteHistory.length
+        : -1,
+      historyIndex: Number(runtimeWindow.PaletteGeneratorLegacyGlobals?.paletteHistoryIndex),
+    };
+  });
+
+  expect(historySnapshot.historyLength).toBe(50);
+  expect(historySnapshot.historyIndex).toBe(49);
+  await expect(page.locator(".history-palette")).toHaveCount(50);
+
+  expect(dialogMessages).toEqual([]);
+});
+
 test("color base input updates palette and keeps base role placement", async ({ page }) => {
   const dialogMessages = await collectUnexpectedDialogs(page);
   await gotoPaletteGenerator(page);

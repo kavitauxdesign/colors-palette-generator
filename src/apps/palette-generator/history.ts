@@ -18,6 +18,11 @@ export function initializePaletteGeneratorHistory() {
     runtimeWindow.AppColorUtils?.normalizeHexColor || ((value: string) => value);
   const copyTextToClipboard =
     runtimeWindow.AppClipboard?.writeText || runtimeWindow.copyTextToClipboard;
+  const maxSessionPaletteHistoryEntries = Number.isFinite(
+    constants.MAX_SESSION_PALETTE_HISTORY_ENTRIES
+  )
+    ? Math.max(1, Number(constants.MAX_SESSION_PALETTE_HISTORY_ENTRIES))
+    : 50;
 
   if (
     typeof historyRuntime.captureCurrentGeneratorSettings !== "function" ||
@@ -157,7 +162,7 @@ export function initializePaletteGeneratorHistory() {
             : []
         );
 
-    globals.paletteHistory = [
+    let nextPaletteHistory = [
       ...globals.paletteHistory,
       historyRuntime.createHistoryEntry({
         colors,
@@ -168,6 +173,12 @@ export function initializePaletteGeneratorHistory() {
         settings: captureCurrentGeneratorSettings(),
       }),
     ];
+
+    if (nextPaletteHistory.length > maxSessionPaletteHistoryEntries) {
+      nextPaletteHistory = nextPaletteHistory.slice(-maxSessionPaletteHistoryEntries);
+    }
+
+    globals.paletteHistory = nextPaletteHistory;
     globals.paletteHistoryIndex = globals.paletteHistory.length - 1;
     runtimeWindow.syncPaletteGeneratorStoreHistoryState?.({
       scope: "history-save",
@@ -182,16 +193,11 @@ export function initializePaletteGeneratorHistory() {
   }
 
   function renderHistory() {
-    dom.historyContainer?.replaceChildren();
+    const historyEntries = Array.isArray(globals.paletteHistory) ? globals.paletteHistory : [];
+    const fragment = document.createDocumentFragment();
 
-    const historyEntries = (globals.paletteHistory || [])
-      .map((entry: any, index: number) => ({
-        entry,
-        historyIndex: index,
-      }))
-      .reverse();
-
-    historyEntries.forEach(({ entry, historyIndex }: { entry: any; historyIndex: number }) => {
+    for (let historyIndex = historyEntries.length - 1; historyIndex >= 0; historyIndex -= 1) {
+      const entry = historyEntries[historyIndex];
       const palette = Array.isArray(entry) ? entry : entry.colors;
       const createdAt = Array.isArray(entry) ? null : entry.createdAt;
       const isAlternative = Array.isArray(entry) ? false : !!entry.isAlternative;
@@ -313,8 +319,10 @@ export function initializePaletteGeneratorHistory() {
 
       historyItem.appendChild(header);
       historyItem.appendChild(row);
-      dom.historyContainer?.appendChild(historyItem);
-    });
+      fragment.appendChild(historyItem);
+    }
+
+    dom.historyContainer?.replaceChildren(fragment);
 
     updateHistoryNavigationButtons();
   }

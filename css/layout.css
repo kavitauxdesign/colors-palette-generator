@@ -137,6 +137,10 @@
   flex-wrap: wrap;
 }
 
+.u-gap-xs {
+  gap: 6px;
+}
+
 .u-gap-sm {
   gap: var(--PX-10);
 }

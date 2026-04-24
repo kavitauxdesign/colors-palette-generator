@@ -19,6 +19,7 @@ export const APP_CONSTANTS = {
   ],
   CARD_COPY_TOOLTIP_DEFAULT: "Copiar HEX",
   HISTORY_COPY_TOOLTIP_DEFAULT: "Copiar paleta",
+  MAX_SESSION_PALETTE_HISTORY_ENTRIES: 50,
   ADD_DISABLED_LABEL:
     "Esperemos, que con 24 colores la paleta esté completa\u261D\uFE0F",
   DEFAULT_PALETTE_SIZE: 9,
