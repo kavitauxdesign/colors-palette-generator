@@ -4,6 +4,7 @@ import AppColorUtils from "../../shared/color/color-utils";
 let hasInitializedPaletteGeneratorImageUi = false;
 
 const PALETTE_ADJUSTMENT_PREVIEW_DELAY_MS = 16;
+const IMAGE_PRIORITY_TOGGLE_PALETTE_SYNC_DELAY_MS = 180;
 const IMAGE_EXTRACTION_ERROR_MESSAGE =
   "No se ha podido extraer colores. Has de intentar subir otra imagen.";
 const IMAGE_PANEL_TRANSITION_MS = 320;
@@ -517,7 +518,27 @@ export function initializePaletteGeneratorImageUi() {
     });
   }
 
+  function getImagePriorityTogglePaletteSyncState() {
+    const existingState = runtimeWindow.__paletteGeneratorImagePriorityToggleSyncState;
+    if (existingState && typeof existingState === "object") {
+      return existingState;
+    }
+
+    const nextState = {
+      timeoutId: null as ReturnType<typeof setTimeout> | null,
+      requestId: 0,
+    };
+    runtimeWindow.__paletteGeneratorImagePriorityToggleSyncState = nextState;
+    return nextState;
+  }
+
   async function syncImagePaletteFromSource(options: Record<string, unknown> = {}) {
+    const syncState = getImagePriorityTogglePaletteSyncState();
+    if (syncState.timeoutId !== null) {
+      window.clearTimeout(syncState.timeoutId);
+      syncState.timeoutId = null;
+    }
+
     return uiRuntime.syncImagePaletteFromSource({
       paletteBaseMode: globals.paletteBaseMode,
       uploadedImageDataUrl: globals.uploadedBaseImage?.dataUrl,
@@ -557,6 +578,36 @@ export function initializePaletteGeneratorImageUi() {
           ? runtimeWindow.withPaletteLoadingOverlay
           : null,
     });
+  }
+
+  function scheduleImagePriorityTogglePaletteSync() {
+    const syncState = getImagePriorityTogglePaletteSyncState();
+    syncState.requestId += 1;
+    const requestId = syncState.requestId;
+
+    if (syncState.timeoutId !== null) {
+      window.clearTimeout(syncState.timeoutId);
+    }
+
+    syncState.timeoutId = window.setTimeout(() => {
+      if (syncState.requestId !== requestId) {
+        return;
+      }
+
+      syncState.timeoutId = null;
+
+      if (globals.paletteBaseMode !== "image" || !globals.uploadedBaseImage?.dataUrl) {
+        return;
+      }
+
+      void syncImagePaletteFromSource({
+        resetVariant: true,
+        skipRefreshImageDerivedControls: true,
+        generatePaletteOptions: {
+          referencePalette: [],
+        },
+      });
+    }, IMAGE_PRIORITY_TOGGLE_PALETTE_SYNC_DELAY_MS);
   }
 
   function getFirstPaletteHexForColorBaseAdoption() {
@@ -1371,7 +1422,7 @@ export function initializePaletteGeneratorImageUi() {
         return;
       }
 
-      void syncImagePaletteFromSource({ resetVariant: true });
+      scheduleImagePriorityTogglePaletteSync();
     });
   }
 

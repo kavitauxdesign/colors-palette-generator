@@ -50,7 +50,7 @@ type SyncImagePaletteFromSourceArgs = {
   }) => void;
   refreshImageDerivedControls: () => Promise<unknown>;
   isExtractionFeedbackVisible: () => boolean;
-  generatePalette: () => Promise<unknown> | unknown;
+  generatePalette: (options?: Record<string, unknown>) => Promise<unknown> | unknown;
   withPaletteLoadingOverlay?: OverlayTask | null;
 };
 
@@ -377,8 +377,12 @@ async function syncImagePaletteFromSource(args: SyncImagePaletteFromSourceArgs) 
       args.clearRecentInspiredPalettes();
     }
 
-    const refreshResult = await args.refreshImageDerivedControls();
-    if (args.isExtractionFeedbackVisible()) {
+    const shouldRefreshImageDerivedControls =
+      args.options?.skipRefreshImageDerivedControls !== true;
+    const refreshResult = shouldRefreshImageDerivedControls
+      ? await args.refreshImageDerivedControls()
+      : null;
+    if (shouldRefreshImageDerivedControls && args.isExtractionFeedbackVisible()) {
       return;
     }
 
@@ -398,7 +402,13 @@ async function syncImagePaletteFromSource(args: SyncImagePaletteFromSourceArgs) 
       args.setPaletteSize(resolvedPaletteSize);
     }
 
-    await args.generatePalette();
+    const generatePaletteOptions =
+      args.options?.generatePaletteOptions &&
+      typeof args.options.generatePaletteOptions === "object"
+        ? (args.options.generatePaletteOptions as Record<string, unknown>)
+        : undefined;
+
+    await args.generatePalette(generatePaletteOptions);
   };
 
   if (typeof args.withPaletteLoadingOverlay === "function") {

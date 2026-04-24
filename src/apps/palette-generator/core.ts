@@ -537,12 +537,30 @@ export function initializePaletteGeneratorCore() {
       let usedAlternativePalette = false;
       let effectiveColorPaletteType: string | null = null;
       const previousPalette = normalizePaletteHexCollection(
-        options.referencePalette ?? globals.currentPalette
+        options.previousPalette ?? globals.currentPalette
+      );
+      const referencePalette = normalizePaletteHexCollection(
+        options.referencePalette ?? previousPalette
       );
 
       if (globals.paletteBaseMode === "image") {
+        const imageGenerationOptions =
+          options.imageGenerationOptions &&
+          typeof options.imageGenerationOptions === "object"
+            ? {
+                ...(options.imageGenerationOptions as Record<string, unknown>),
+              }
+            : { ...options };
+
+        if (!Object.prototype.hasOwnProperty.call(imageGenerationOptions, "referencePalette")) {
+          imageGenerationOptions.referencePalette = referencePalette;
+        }
+
         try {
-          nextPalette = await runtimeWindow.buildImageBasedPalette?.(globals.paletteSize);
+          nextPalette = await runtimeWindow.buildImageBasedPalette?.(
+            globals.paletteSize,
+            imageGenerationOptions
+          );
         } catch (error) {
           console.error(error);
           alert("No se pudo generar una paleta desde esta imagen.");
@@ -586,7 +604,7 @@ export function initializePaletteGeneratorCore() {
           : runtimeWindow.createColorModePaletteCandidate?.(
               getCurrentPaletteAdjustmentSnapshot(),
               {
-                referencePalette: previousPalette,
+                referencePalette,
                 effectiveType,
               }
             );

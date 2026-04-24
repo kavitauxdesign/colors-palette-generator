@@ -287,6 +287,87 @@ test("color picker waits for dragging to settle before regenerating", async ({ p
   expect(dialogMessages).toEqual([]);
 });
 
+test("image priority toggle waits for changes to settle before regenerating", async ({
+  page,
+}) => {
+  const dialogMessages = await collectUnexpectedDialogs(page);
+  await gotoPaletteGenerator(page);
+
+  await selectPaletteBaseMode(page, "image");
+  await page.setInputFiles("#paletteImageInput", IMAGE_FIXTURE_PATH);
+
+  await expect.poll(() => page.locator(".color-card").count()).toBe(3);
+  await expect(page.locator("#paletteLoadingOverlay")).toBeHidden();
+
+  await page.evaluate(() => {
+    const runtimeWindow = window as any;
+    const originalGeneratePalette = runtimeWindow.generatePalette;
+    const originalGetImageColorClusters = runtimeWindow.getImageColorClusters;
+    const originalBuildImageBasedPaletteCandidate =
+      runtimeWindow.buildImageBasedPaletteCandidate;
+
+    runtimeWindow.__paletteGeneratorTestImageToggleGenerateCalls = 0;
+    runtimeWindow.__paletteGeneratorTestImageToggleClusterCalls = 0;
+    runtimeWindow.__paletteGeneratorTestImageToggleOptions = null;
+
+    runtimeWindow.generatePalette = (...args: unknown[]) => {
+      runtimeWindow.__paletteGeneratorTestImageToggleGenerateCalls += 1;
+      return originalGeneratePalette?.(...args);
+    };
+
+    runtimeWindow.getImageColorClusters = async (...args: unknown[]) => {
+      runtimeWindow.__paletteGeneratorTestImageToggleClusterCalls += 1;
+      return originalGetImageColorClusters?.(...args);
+    };
+
+    runtimeWindow.buildImageBasedPaletteCandidate = (
+      targetCount: number,
+      options: Record<string, unknown> = {}
+    ) => {
+      runtimeWindow.__paletteGeneratorTestImageToggleOptions = options;
+      return originalBuildImageBasedPaletteCandidate?.(targetCount, options);
+    };
+  });
+
+  const immediateCallCount = await page
+    .locator("#paletteImageDominantToggle")
+    .evaluate((element) => {
+      const input = element as HTMLInputElement;
+      [false, true, false].forEach((checked) => {
+        input.checked = checked;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+      return (window as any).__paletteGeneratorTestImageToggleGenerateCalls;
+    });
+
+  expect(immediateCallCount).toBe(0);
+  await expect(page.locator("#paletteImageDominantToggle")).not.toBeChecked();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__paletteGeneratorTestImageToggleGenerateCalls)
+    )
+    .toBe(1);
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__paletteGeneratorTestImageToggleClusterCalls)
+    )
+    .toBe(1);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          Array.isArray((window as any).__paletteGeneratorTestImageToggleOptions?.referencePalette)
+            ? (window as any).__paletteGeneratorTestImageToggleOptions.referencePalette.length
+            : -1
+      )
+    )
+    .toBe(0);
+  expectValidPaletteHexes(await getPaletteHexes(page), 3);
+
+  expect(dialogMessages).toEqual([]);
+});
+
 test("temperature sliders update labels and palette colors", async ({ page }) => {
   const dialogMessages = await collectUnexpectedDialogs(page);
   await gotoPaletteGenerator(page);

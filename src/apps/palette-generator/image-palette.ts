@@ -163,8 +163,11 @@ export function initializePaletteGeneratorImagePalette() {
     });
   };
 
-  runtimeWindow.buildImageBasedPalette = async function buildImageBasedPalette(targetCount: number) {
-    const result = await runtimeWindow.buildImageBasedPaletteCandidate(targetCount);
+  runtimeWindow.buildImageBasedPalette = async function buildImageBasedPalette(
+    targetCount: number,
+    options: Record<string, unknown> = {}
+  ) {
+    const result = await runtimeWindow.buildImageBasedPaletteCandidate(targetCount, options);
     const globals = runtimeWindow.PaletteGeneratorLegacyGlobals || {};
     globals.imagePaletteVariantIndex = result.variantIndex;
     runtimeWindow.syncPaletteGeneratorStoreState?.(
